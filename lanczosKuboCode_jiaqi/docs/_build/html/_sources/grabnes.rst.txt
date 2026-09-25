@@ -1,0 +1,16 @@
+.. _grabnes-code:
+
+GRABNES-code
+============
+.. f:autoprogram:: grabnes
+
+ham.f90
+-------
+
+.. f:automodule:: ham
+
+atoms.f90
+---------
+
+.. f:automodule:: atoms
+

@@ -1,0 +1,19 @@
+#!/bin/sh
+scancel 123736 
+scancel 123737 
+scancel 123738 
+scancel 123739 
+scancel 123740 
+scancel 123741 
+scancel 123742 
+scancel 123743 
+scancel 123744 
+scancel 123745 
+scancel 123746 
+scancel 123747 
+scancel 123748 
+scancel 123749 
+scancel 123750 
+scancel 123751 
+scancel 123752 
+scancel 123753 

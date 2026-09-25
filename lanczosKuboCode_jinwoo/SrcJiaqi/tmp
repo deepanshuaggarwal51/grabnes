@@ -1,0 +1,387 @@
+diff --git a/lanczosKuboCode/Src/ham.F90 b/lanczosKuboCode/Src/ham.F90
+index 31bb164..4400061 100644
+--- a/lanczosKuboCode/Src/ham.F90
++++ b/lanczosKuboCode/Src/ham.F90
+@@ -103,18 +103,6 @@ subroutine HamInit()
+    else
+       nspin = 1
+    end if
+-   call MIO_InputParameter('ReadDataFiles',readDataFiles,.false.)
+-   if (readDataFiles) then
+-      call MIO_Print('Reading in the onsite energies from generate.e','ham')
+-      call MIO_Allocate(H0,[inode1],[inode2],'H0','ham')
+-      open(222,FILE="generate.e",STATUS='old')
+-      do i=1,nAt
+-         read(222,*) H0(i)
+-      end do
+-      close(222)
+-   else
+-       call HamOnSite()
+-   end if
+    call MIO_InputParameter('Neigh.fastNN',l,.false.)
+    call MIO_InputParameter('Neigh.fastNNnotsquare',ll,.false.)
+    call MIO_InputParameter('Neigh.fastNNnotsquareNotRectangle',lll,.false.)
+@@ -221,6 +209,18 @@ subroutine HamInit()
+    else
+       call NeighList()
+    end if
++   call MIO_InputParameter('ReadDataFiles',readDataFiles,.false.)
++   if (readDataFiles) then
++      call MIO_Print('Reading in the onsite energies from generate.e','ham')
++      call MIO_Allocate(H0,[inode1],[inode2],'H0','ham')
++      open(222,FILE="generate.e",STATUS='old')
++      do i=1,nAt
++         read(222,*) H0(i)
++      end do
++      close(222)
++   else
++       call HamOnSite()
++   end if
+    !print*, "inode1, maxNeigh, inode2", inode1, maxNeigh, inode2
+    call MIO_Allocate(hopp,[1,inode1],[maxNeigh,inode2],'hopp','ham')
+    hopp = 0.0_dp
+@@ -340,6 +340,7 @@ subroutine HamOnSite()
+ 
+    use atoms,                only : indxNode, Rat, Species, indxDiv, AtomsSetFrac, AtomsSetCart, AtomsRotate
+    use atoms,                only : inode1, inode2, in1, in2, nAt, nAtC1, frac, layerIndex
++   use atoms,                only : RatInit
+    use atoms,                only : phiForEffectiveModel, interlayerDistances, displacements
+    use tbpar,                only : e0_C, g0, e0_B, e0_N, e0_C1, e0_C2
+    use cell,                 only : sCell, aG
+@@ -401,16 +402,21 @@ subroutine HamOnSite()
+    logical :: singleLayerXYZ, distanceDependentEffectiveModel, onlyBottomLayerMassTerm
+    real (dp) :: C0d, Czd, BfactorC0, BfactorCz, z0
+ 
+-   logical :: forceBilayerF2G2Intralayer, sublatticeBasis, addDisplacements
++   logical :: forceBilayerF2G2Intralayer, sublatticeBasis, addDisplacements, readRigidXYZ
+ 
+ 
+ #ifdef DEBUG
+    call MIO_Debug('HamOnSite',0)
+ #endif /* DEBUG */
+ 
+-   print*, displacements(1,:)
+-   print*, "-----"
+-   print*, displacements(2,:)
++   !print*, displacements(1,:)
++   !print*, "-----"
++   !print*, displacements(2,:)
++   call MIO_InputParameter('readRigidXYZ',readRigidXYZ,.false.)
++   if (readRigidXYZ) then
++      print*, "we replace Rat by RatInit... be careful, only tested for the specific case of the effective distant-dependent continuum model"
++      Rat = RatInit
++   end if
+ 
+    !print*, interlayerDistances
+    if (Zterm .and. nspin==2) call MIO_Kill('Spin calculation inconsistency','ham','HamOnSite')
+@@ -1781,6 +1787,7 @@ subroutine HamHopping
+    use neigh,                only : maxNeigh
+    use atoms,                only : in1, in2, nAt, nAtC1, layerIndex, interlayerDistances
+    use atoms,                only : phiForEffectiveModel, displacements
++   use atoms,                only : RatInit
+    use neigh,                only : Nneigh, NeighD, NList, neighCell, Nradii
+    use atoms,                only : Species, dIntLay, Rat, frac, AtomsSetCart, AtomsSetFrac, inode1, inode2
+    use tbpar,                only : gIntLay, gn, tbnn, g0
+@@ -1827,7 +1834,7 @@ subroutine HamHopping
+    real(dp) :: t2
+  
+    real(dp) :: n1minm1, n2minm2, dist2, distXY, distXYZ
+-   real(dp) :: aCC
++   real(dp) :: aCC, refDist
+    
+    logical :: prnt
+ 
+@@ -2123,12 +2130,13 @@ subroutine HamHopping
+    logical :: deactivateInterlayerTwisted, renormalizeHoppings, deactivateV6, deactivateV3
+    real(dp) :: epsFactor, renormalizeHoppingFactorAAp, renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp
+ 
+-   logical :: renormalizeCoupling, KoshinoSR, writeData, addDisplacements
++   logical :: renormalizeCoupling, KoshinoSR, writeData, addDisplacements, realStrain, onlyFirstNeighborRealStrain
+    real(dp) :: couplingFactor
+ 
+    real(dp) :: lc, rc, qsigma, qpi, Fc, aval, bval
+ 
+    integer :: counter1
++   logical :: readRigidXYZ
+ 
+ #ifdef DEBUG
+    call MIO_Debug('HamHopping',0)
+@@ -2137,6 +2145,12 @@ subroutine HamHopping
+    call MIO_TimerCount('ham')
+ #endif /* TIMER */
+ 
++   call MIO_InputParameter('readRigidXYZ',readRigidXYZ,.false.)
++   if (readRigidXYZ) then
++      print*, "we replace Rat by RatInit... be careful, only tested for the specific case of the effective distant-dependent continuum model"
++      Rat = RatInit
++   end if
++
+    !i = 1000
+    !j = 1
+    !print*, (NeighD(:,j,i))
+@@ -3583,6 +3597,9 @@ subroutine HamHopping
+                                  !end if
+                                  !     hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
++                              if (d > 1.5_dp) then 
++                                  delta = 0.0_dp
++                              end if
+                               hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta)
+                            end if
+                         else if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then ! this is where we assign the intralayer F2G2
+@@ -3791,6 +3808,9 @@ subroutine HamHopping
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                            end if
++                           if (d > 1.5_dp) then 
++                               delta = 0.0_dp
++                           end if
+                            hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta)
+                         else if (MIO_StringComp(BilayerModel,'Srivani')) then
+                            !print*, "adding Srivani in plane terms"
+@@ -3816,9 +3836,15 @@ subroutine HamHopping
+                                 hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                         else if (MIO_StringComp(BilayerModel,'Jeil')) then
++                           if (d > 1.5_dp) then 
++                               delta = 0.0_dp
++                           end if
+                            hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) + 1.0_dp*delta )
+                         else
+                            !print*, i, j, cmplx(gn(Species(i),Species(NList(j,i)),ilvl))
++                           if (d > 1.5_dp) then 
++                               delta = 0.0_dp
++                           end if
+                            hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta)
+                         end if
+                         exit
+@@ -4568,27 +4594,42 @@ subroutine HamHopping
+                                             kappa0 = c3_0 + c3_1 * epsKax + c3_2 * epsKax**2.0_dp
+                                             kappa6 = c10_0 + c10_1 * epsKax + c10_2 * epsKax**2.0_dp
+                                             kappa6b = c14_0 + c14_1 * epsKax + c14_2 * epsKax**2.0_dp
+-                                            p1a0AA = 11.28_dp
+-                                            p1b0AA = -11.33_dp 
+-                                            p1c0AA = 7.593_dp
+-                                            p1d0AA = 2.259_dp 
+-                                            p1h0AA = 2.074_dp 
+-                                            p1j0AA = -0.04202_dp
+-                                            p1k0AA = -1.03_dp
+-                                            p2a0AA = -2.638_dp
+-                                            p2b0AA = -0.4476_dp
+-                                            p2c0AA = 0.4556_dp
+-                                            p2d0AA = -0.4138_dp
+-                                            p2h0AA = 0.08359_dp
+-                                            p2j0AA = 0.01403_dp
+-                                            p2k0AA = -0.1982_dp
+-                                            p3a0AA = 0.474_dp
+-                                            p3b0AA =  -1.238_dp
+-                                            p3c0AA = 1.828_dp
+-                                            p3d0AA = 2.348_dp
+-                                            p3h0AA = 0.2894_dp
+-                                            p3j0AA = -0.003067_dp
+-                                            p3k0AA = 2.576_dp
++                                            !p1a0AA = 11.28_dp
++                                            !p1b0AA = -11.33_dp 
++                                            !p1c0AA = 7.593_dp
++                                            !p1d0AA = 2.259_dp 
++                                            !p1h0AA = 2.074_dp 
++                                            !p1j0AA = -0.04202_dp
++                                            !p1k0AA = -1.03_dp
++                                            !p2a0AA = -2.638_dp
++                                            !p2b0AA = -0.4476_dp
++                                            !p2c0AA = 0.4556_dp
++                                            !p2d0AA = -0.4138_dp
++                                            !p2h0AA = 0.08359_dp
++                                            !p2j0AA = 0.01403_dp
++                                            !p2k0AA = -0.1982_dp
++                                            !p3a0AA = 0.474_dp
++                                            !p3b0AA =  -1.238_dp
++                                            !p3c0AA = 1.828_dp
++                                            !p3d0AA = 2.348_dp
++                                            !p3h0AA = 0.2894_dp
++                                            !p3j0AA = -0.003067_dp
++                                            !p3k0AA = 2.576_dp
++                                            p1a0AA = 9.636_dp
++                                            p1b0AA = -7.911_dp
++                                            p1c0AA = 5.295_dp
++                                            p1d0AA = 1.530_dp
++                                            p1h0AA = 1.788_dp
++                                            p2a0AA = -2.504_dp
++                                            p2b0AA = -0.247_dp
++                                            p2c0AA = 0.289_dp
++                                            p2d0AA = -0.484_dp
++                                            p2h0AA = 0.065_dp
++                                            p3a0AA = 0.447_dp
++                                            p3b0AA = -1.004_dp
++                                            p3c0AA = 1.629_dp
++                                            p3d0AA = 2.222_dp
++                                            p3h0AA = 0.238
+                                             a0AA = p1a0AA * epsKax**2.0_dp + p2a0AA * epsKax + p3a0AA
+                                             b0AA = p1b0AA * epsKax**2.0_dp + p2b0AA * epsKax + p3b0AA
+                                             c0AA = p1c0AA * epsKax**2.0_dp + p2c0AA * epsKax + p3c0AA
+@@ -4596,27 +4637,42 @@ subroutine HamHopping
+                                             h0AA = p1h0AA * epsKax**2.0_dp + p2h0AA * epsKax + p3h0AA
+                                             j0AA = p1j0AA * epsKax**2.0_dp + p2j0AA * epsKax + p3j0AA
+                                             k0AA = p1k0AA * epsKax**2.0_dp + p2k0AA * epsKax + p3k0AA
+-                                            p1a0AB = 5.815_dp
+-                                            p1b0AB = -2.896_dp
+-                                            p1c0AB = 2.021_dp
+-                                            p1d0AB = 0.4907_dp
+-                                            p1h0AB = 0.2609_dp
+-                                            p1j0AB = -0.05488_dp
+-                                            p1k0AB = 1.705_dp
+-                                            p2a0AB = -2.106_dp
+-                                            p2b0AB = -2.119_dp
+-                                            p2c0AB = 1.516_dp
+-                                            p2d0AB = 0.181_dp
+-                                            p2h0AB = -0.4669_dp
+-                                            p2j0AB = 0.01493_dp
+-                                            p2k0AB = 0.6104_dp
+-                                            p3a0AB = 0.4734_dp
+-                                            p3b0AB = -1.514_dp
+-                                            p3c0AB = 2.041_dp
+-                                            p3d0AB = -2.245_dp
+-                                            p3h0AB = -0.354_dp
+-                                            p3j0AB = -0.002003_dp
+-                                            p3k0AB = 2.605_dp
++                                            !p1a0AB = 5.815_dp
++                                            !p1b0AB = -2.896_dp
++                                            !p1c0AB = 2.021_dp
++                                            !p1d0AB = 0.4907_dp
++                                            !p1h0AB = 0.2609_dp
++                                            !p1j0AB = -0.05488_dp
++                                            !p1k0AB = 1.705_dp
++                                            !p2a0AB = -2.106_dp
++                                            !p2b0AB = -2.119_dp
++                                            !p2c0AB = 1.516_dp
++                                            !p2d0AB = 0.181_dp
++                                            !p2h0AB = -0.4669_dp
++                                            !p2j0AB = 0.01493_dp
++                                            !p2k0AB = 0.6104_dp
++                                            !p3a0AB = 0.4734_dp
++                                            !p3b0AB = -1.514_dp
++                                            !p3c0AB = 2.041_dp
++                                            !p3d0AB = -2.245_dp
++                                            !p3h0AB = -0.354_dp
++                                            !p3j0AB = -0.002003_dp
++                                            !p3k0AB = 2.605_dp
++                                            p1a0AB = 5.498_dp
++                                            p1b0AB = -1.997_dp
++                                            p1c0AB = 1.457_dp
++                                            p1d0AB = 0.670_dp
++                                            p1h0AB = 0.404_dp
++                                            p2a0AB = -2.026_dp
++                                            p2b0AB = -1.961_dp
++                                            p2c0AB = 1.468_dp
++                                            p2d0AB = 0.044_dp 
++                                            p2h0AB = -0.521_dp
++                                            p3a0AB = 0.440_dp 
++                                            p3b0AB = -1.277_dp
++                                            p3c0AB = 1.849_dp 
++                                            p3d0AB = -2.148_dp
++                                            p3h0AB = -0.315_dp
+                                             a0AB = p1a0AB * epsKax**2.0_dp + p2a0AB * epsKax + p3a0AB
+                                             b0AB = p1b0AB * epsKax**2.0_dp + p2b0AB * epsKax + p3b0AB
+                                             c0AB = p1c0AB * epsKax**2.0_dp + p2c0AB * epsKax + p3c0AB
+@@ -4634,9 +4690,17 @@ subroutine HamHopping
+                                             c0ABV0 = 0.948_dp
+                                             c1ABV0 = -5.57_dp
+                                             c2ABV0 = 16.093_dp
+-                                            renormalizeHoppingFactorAAp  = c2AAV0 * epsKax**2.0_dp + c1AAV0 * epsKax + c0AAV0  
+-                                            renormalizeHoppingFactorABp  = c2ABV0 * epsKax**2.0_dp + c1ABV0 * epsKax + c0ABV0
+-                                            renormalizeHoppingFactorBAp  = c2ABV0 * epsKax**2.0_dp + c1ABV0 * epsKax + c0ABV0
++                                       
++                                            aval = 2.48_dp
++                                            bval = 3.19_dp
++                                            renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
++                                            aval = 18.17_dp
++                                            bval = 2.73_dp
++                                            renormalizeHoppingFactorABp  = exp((abs(NeighD(3,j,i))-bval)/aval)
++                                            renormalizeHoppingFactorBAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
++                                            !renormalizeHoppingFactorAAp  = c2AAV0 * epsKax**2.0_dp + c1AAV0 * epsKax + c0AAV0  
++                                            !renormalizeHoppingFactorABp  = c2ABV0 * epsKax**2.0_dp + c1ABV0 * epsKax + c0ABV0
++                                            !renormalizeHoppingFactorBAp  = c2ABV0 * epsKax**2.0_dp + c1ABV0 * epsKax + c0ABV0
+                                             !print*, "renormalizeHoppingFactors", renormalizeHoppingFactorAAp, renormalizeHoppingFactorABp
+ 
+                                             !print*, "lambda0 =", lambda0
+@@ -4655,9 +4719,9 @@ subroutine HamHopping
+                                         V0 = lambda0 * exp(-xi0*rbar**2.0_dp) * cos(kappa0 * rbar)
+                                         V3 = lambda3 * rbar**2.0_dp * exp(-xi3*(rbar-x3)**2.0_dp) 
+                                         if (newFittingFunctions) then
+-                                           V0AAp = a0AA*exp(-((rbar-b0AA)/c0AA)**4) * cos(d0AA*rbar - h0AA) + j0AA * (rbar-k0AA)
+-                                           V0ABp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB) + j0AB * (rbar-k0AB)
+-                                           V0BAp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB) + j0AB * (rbar-k0AB)
++                                           V0AAp = a0AA*exp(-((rbar-b0AA)/c0AA)**4) * cos(d0AA*rbar - h0AA)
++                                           V0ABp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
++                                           V0BAp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
+                                         else 
+                                            V0AAp = lambda0AAp * exp(-xi0AAp*rbar**2.0_dp)*cos(kappa0AAp*rbar) + lambda0bAAp*rbar**3.0_dp*exp(-xi0bAAp*rbar**2.0_dp)*cos(kappa0bAAp*rbar)
+                                            V0ABp = lambda0ABp * exp(-xi0ABp*rbar**2.0_dp)*cos(kappa0ABp*rbar) + lambda0bABp*rbar**2.0_dp*exp(-xi0bABp*rbar**2.0_dp)*cos(kappa0bABp*rbar) 
+@@ -5117,6 +5181,13 @@ subroutine HamHopping
+                              numberOfdel3 = numberOfDel3+1
+                           endif 
+                           !print*, delta
++                          if (d > 1.5_dp) then ! only use delta !=0 for first NN hoppings
++                                               ! useful to separate when other
++                                               ! routine asks for more distant
++                                               ! neighbors (realStrain for
++                                               ! instance)
++                              delta = 0.0_dp
++                          end if
+                           hopp(j,i) = hopp(j,i) - cmplx(1.0_dp*delta ) 
+                           exit
+                        end if
+@@ -5222,6 +5293,43 @@ subroutine HamHopping
+       !$OMP END PARALLEL DO 
+    end if 
+ 
++   ! Based on PHYSICAL REVIEW B 80, 045401 2009
++   call MIO_InputParameter('realStrain',realStrain,.false.) ! Using it to approximate HAB in effective model which accounts for real strain
++   call MIO_InputParameter('onlyFirstNeighborRealStrain',onlyFirstNeighborRealStrain,.false.) ! Using it to approximate HAB in effective model which accounts for real strain
++   acc = aG/sqrt(3.0_dp)
++   if (realStrain) then
++      !$OMP PARALLEL DO PRIVATE(dist, refDist)
++      do i=1,nAt
++         do j=1,Nneigh(i)
++            if (layerIndex(i).eq.layerIndex(NList(j,i))) then
++               dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
++               if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then 
++                   refDist = aG/sqrt(3.0_dp)
++               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then 
++                   refDist = aG
++               else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then 
++                   refDist = 2.0_dp*acc
++               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then 
++                   refDist = 3.75696_dp
++               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then 
++                   refDist = acc*3.0_dp
++               end if
++               if (onlyFirstNeighborRealStrain) then
++                   if (dist < 1.5_dp) then
++                       !print*,  "doing NN1"
++                       hopp(j,i) = hopp(j,i) * exp(-3.37_dp*(dist / (refDist)-1.0_dp))
++                   end if
++               else
++                   !print*, "not doing NN1"
++                   hopp(j,i) = hopp(j,i) * exp(-3.37_dp*(dist / (refDist)-1.0_dp))
++               end if
++            end if
++         end do
++      end do
++      !$OMP END PARALLEL DO 
++   end if
++   !print*, hopp
++
+    call MIO_InputParameter('periodicStrain',periodicStrain,.false.)
+    if (periodicStrain) then
+       call MIO_InputParameter('periodicStrainu0',u0,0.1_dp)
+@@ -5638,7 +5746,8 @@ subroutine HamHopping
+    
+    call MIO_InputParameter('WriteDataFiles',w,.false.)
+    if (w) then
+-      print*, "prefix is", prefix
++      print*, "prefix is ", prefix
++      print*, "here it is only printing the first 3 neighbor hoppings!!!"
+       call file%Open(name=trim(prefix)//'.'//'s.mag',serial=.true.)
+       !open(1,FILE='s')
+       u = file%GetUnit()

@@ -1,0 +1,36 @@
+#=================================================
+#
+# Linux platform
+# Compiler: Intel
+# Parallel mode
+#
+#=================================================
+
+F90 = mpiifort
+F90_SERIAL = ifort
+FCFLAGS = -O3 -DMPI -DDEBUG -qopenmp -DPOINTER_SIZE=8 -g -heap-arrays
+ARFLAGS = rc
+
+EXTRA_LIBS = -liomp5
+
+# Paths and flags
+OPENBLAS_PATH = /home/nleconte/openblas
+ARPACK_PATH = /home/nleconte/arpack/usr/local
+LAPACK_PATH = /lib64
+
+# Compiler flags
+FCFLAGS = -O3 -DMPI -DDEBUG -qopenmp -DPOINTER_SIZE=8 -g -heap-arrays
+EXTRA_LIBS = -liomp5
+
+# Include and library paths
+INCMKL = -I$(OPENBLAS_PATH)/include -L$(ARPACK_PATH)/lib -larpack -L$(OPENBLAS_PATH)/lib -lopenblas -L$(LAPACK_PATH) -llapack
+LIBBLAS = -L$(OPENBLAS_PATH)/lib -lopenblas
+LIBLAPACK = $(MKLROOT)/lib/intel64/libmkl_lapack95_lp64.a -Wl,--start-group $(MKLROOT)/lib/intel64/libmkl_sequential.a $(MKLROOT)/lib/intel64/libmkl_intel_lp64.a $(MKLROOT)/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread
+LIBARPACK = -L$(ARPACK_PATH)/lib -larpack
+
+INCFLAGS = $(INCMKL)
+LIBS = $(LIBMPI) $(LIBARPACK) $(LIBLAPACK) $(LIBBLAS) $(EXTRA_LIBS)
+
+# Linker flags
+LDFLAGS = -Wl,--exclude-libs,libflexiblas.so.3
+

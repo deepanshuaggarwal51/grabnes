@@ -1,0 +1,934 @@
+diff --git a/lanczosKuboCode/Src/ham.F90 b/lanczosKuboCode/Src/ham.F90
+index ce4b6d7..8e924ab 100644
+--- a/lanczosKuboCode/Src/ham.F90
++++ b/lanczosKuboCode/Src/ham.F90
+@@ -309,7 +309,7 @@ subroutine HamOnSite()
+    use atoms,                only : RatInit
+    use atoms,                only : phiForEffectiveModel, interlayerDistances, displacements
+    use tbpar,                only : e0_C, g0, e0_B, e0_N, e0_C1, e0_C2
+-   use cell,                 only : sCell, aG
++   use cell,                 only : sCell, aG, aBN
+    use constants,            only : twopi, pi
+    use parallel,             only : nDiv, procID
+    use gauss,                only : GaussPot, GaussHeight
+@@ -326,6 +326,7 @@ subroutine HamOnSite()
+    real(dp) :: AA, randomPot, randomPot2, randomPot3, tot, tot2, tot3, nImp
+    real(dp) :: rand2
+    real(dp) :: C0, Cz, Cab, Phi0, Phiz, Phiab, dx, dy, dxPrime, dyPrime, H0jj, Hzjj, Hkjj, Habjj, eps, eps2, ggg, Hjj
++   real(dp) :: dxTemp, dyTemp
+    real(dp) :: CAA, CBB, CApAp, CBpBp, PhiAA, PhiBB, PhiApAp, PhiBpBp
+    real(dp) :: CAA0, CBB0, CApAp0, CBpBp0
+    integer :: i, j,k,n1, n2, m1, m2, n
+@@ -355,7 +356,10 @@ subroutine HamOnSite()
+ 
+    logical :: randomStrain, prnt
+    logical :: deactivateUpperLayer, deactivateUpperLayers
+-   logical :: GBNtwoLayers
++   logical :: GBNtwoLayers, encapsulatedFourLayers
++   logical :: BNBNtwoLayers
++   logical :: GBNtwoLayersF2G2s, GBNuseDisplacementFile, GBNuseHarmonicApprox
++   logical :: BNBNtwoLayersF2G2s
+   
+    integer :: nnn(4)
+ 
+@@ -367,7 +371,7 @@ subroutine HamOnSite()
+    real(dp) :: epsFactor
+    real(dp) :: invertEposX, sinusFactor, sinusFactor2, cosinusFactor, cosinusFactor2
+    integer :: Efactor,iii
+-   logical :: invertE, switchHzjj
++   logical :: invertE, switchHzjj, writeData
+ 
+    logical :: singleLayerXYZ, distanceDependentEffectiveModel, onlyBottomLayerMassTerm
+    real (dp) :: C0d, Czd, BfactorC0, BfactorCz, z0, GBNAngle, moirePreFactor
+@@ -399,6 +403,9 @@ subroutine HamOnSite()
+    call MIO_Allocate(H0,[inode1],[inode2],'H0','ham')
+    call MIO_Allocate(H0Bottom,[inode1],[inode2],'H0Bottom','ham')
+    call MIO_Allocate(H0Top,[inode1],[inode2],'H0Top','ham')
++   call MIO_InputParameter('GBNtwoLayersF2G2s',GBNtwoLayersF2G2s,.false.)
++   call MIO_InputParameter('GBNtwoLayers',GBNtwoLayers,.false.)
++   call MIO_InputParameter('encapsulatedFourLayers',encapsulatedFourLayers,.false.)
+    call MIO_InputParameter('twoLayers',twoLayers,.false.)
+    call MIO_InputParameter('threeLayers',threeLayers,.false.)
+    call MIO_InputParameter('fourLayersSandwiched',fourLayersSandwiched,.false.)
+@@ -413,6 +420,7 @@ subroutine HamOnSite()
+    call MIO_InputParameter('forceBilayerF2G2Intralayer',forceBilayerF2G2Intralayer,.false.)
+    call MIO_InputParameter('readRigidXYZ',readRigidXYZ,.false.)
+    !end if
++   print*, "onsite, B, N, C1, C2", e0_B, e0_N, e0_C1, e0_C2
+    !$OMP PARALLEL DO
+    do i=1,nAt
+       if (Species(i)==3) then
+@@ -442,8 +450,33 @@ subroutine HamOnSite()
+                    H0(i) = e0_C1
+                 end if
+              else
+-                H0(i) = (e0_C1+e0_C2)/2.0_dp
++                H0(i) = (e0_C1+e0_C2)/2.0_dp ! Is this what we want for the N>2-layer systems?
+              end if
++         else if (GBNtwoLayers .or. encapsulatedFourLayers) then
++            if (GBNtwoLayersF2G2s) then 
++              ! add F2G2 model onsite parameters for G, B and N atoms
++              if (layerIndex(i) .eq. 1) then ! graphene layer
++                if (Species(i).eq.1) then
++                   H0(i) = e0_C1
++                else if (Species(i).eq.2) then
++                   H0(i) = e0_C2
++                end if
++              else if (layerIndex(i) .eq. 2) then ! BN layer
++                cycle ! already assigned 40 lines higher (search for e0_B and e0_N)
++              end if
++            !else ! add dx, dy-dependent values using first order harmonic approximation (see summary by Jiaqi)
++            !   cycle
++            end if
++         else if (BNBNtwoLayers) then
++              ! add F2G2 model parameters for BN and BN
++            cycle ! already assigned 40 lines higher
++            !if (BNBNtwoLayersF2G2s) then
++            !  if (Species(i) .eq. 3) then ! boron atoms
++            !      H0(i) = e0_B
++            !  else if (Species(i) .eq. 4) then ! nitrogen atoms
++            !      H0(i) = e0_N
++            !  end if
++            !end if
+          else if (forceBilayerF2G2Intralayer) then
+             if (Species(i)==1 .and. (layerIndex(i).eq.1)) then
+                H0(i) = e0_C1
+@@ -527,39 +560,134 @@ subroutine HamOnSite()
+       if (.not. frac) call AtomsSetFrac()
+       call MIO_InputParameter('MoireTrilayer',l,.false.)
+       call MIO_InputParameter('GBNtwoLayers',GBNtwoLayers,.false.)
++      call MIO_InputParameter('encapsulatedFourLayers',encapsulatedFourLayers,.false.)
++      call MIO_InputParameter('GBNtwoLayersF2G2s',GBNtwoLayersF2G2s,.false.)
++      call MIO_InputParameter('GBNuseDisplacementFile',GBNuseDisplacementFile,.false.)
++      call MIO_InputParameter('GBNuseHarmonicApprox',GBNuseHarmonicApprox,.false.)
+       call MIO_InputParameter('GBNAngle',GBNAngle,0.0_dp)
++      call MIO_InputParameter('WriteDataFiles',writeData,.false.)
++      if (writeData) then
++         open(588,FILE='Hjj1')
++         open(589,FILE='Hjj2')
++      end if
+       GBNAngle = GBNAngle*pi/180.0_dp
+-      if (GBNtwoLayers) then
++      if (GBNtwoLayers .or. encapsulatedFourLayers) then
+          call MIO_Print('We are working on the GBNtwoLayers system','ham')
+          if (frac) call AtomsSetCart()
+-         !$OMP PARALLEL DO PRIVATE(i,dx,dy,Hjj)
+-         do i=1,nAt  
+-           if (layerIndex(i).eq.1) then ! First layer, graphene
+-               dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
+-                         - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
+-               dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
+-                         + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
+-               if (Species(i).eq.1) then
+-                   call diagoGBN(Hjj,dx,dy,CApAp,PhiApAp,CApAp0)
+-               else if (Species(i).eq.2) then
+-                   call diagoGBN(Hjj,dx,dy,CBpBp,PhiBpBp,CBpBp0)
+-               end if
+-           else ! second layer, hBN
+-               dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
+-                         - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
+-               dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
+-                         + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
+-               if (Species(i).eq.3) then ! B
+-                   call diagoGBN(Hjj,dx,dy,CAA,PhiAA,CAA0)
+-               else if (Species(i).eq.4) then ! N
+-                   call diagoGBN(Hjj,dx,dy,CBB,PhiBB,CBB0)
+-               end if
+-           end if
+-           H0(i) = H0(i) + Hjj
+-         end do
+-         !$OMP END PARALLEL DO
+-           !else if (MIO_StringComp(str,'TwistedBilayer')) then ! I don't think it's at the right place
+-           !        ! add onsite energies
++         !if (GBNtwoLayersF2G2s) then
++            !print*, "we are not adding any other onsite energies as we are using the F2G2s from GBN, please make sure the lattice constant for the BN layer is correct: aBN= ", aBN
++            print*, "we are adding additional displacement-dependent terms for the intralayer model here, also make sure the lattice constant for the BN layer is correct: aBN= ", aBN
++         !else
++            !$OMP PARALLEL DO PRIVATE(i,dx,dy,dxTemp,dyTemp,Hjj, A, B, C)
++            do i=1,nAt  
++              if (GBNuseDisplacementFile) then
++                 dx = displacements(1,i)
++                 dy = displacements(2,i)
++                 !print*, "dx, dy", dx, dy
++              else
++                 dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
++                           - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
++                 dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
++                           + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
++              end if
++              if (GBNuseHarmonicApprox) then
++                  if (GBNtwoLayers) then
++                      if (layerIndex(i).eq.1) then ! First layer, graphene
++                          if (Species(i).eq.1) then
++                              B = -0.39969d0
++                              C = -0.4277d0
++                              A = -0.37776d0
++                          else if (Species(i).eq.2) then
++                              B = -0.42011d0
++                              C = -0.42048d0
++                              A = -0.36739d0
++                          end if
++                      else if (layerIndex(i).eq.2) then ! First layer, graphene
++                          if (Species(i).eq.3) then
++                              B = 2.3222d0
++                              C = 2.3476d0
++                              A = 2.2731d0
++                          else if (Species(i).eq.4) then
++                              B = -1.7795d0
++                              C = -1.7778d0
++                              A = -1.8324d0
++                          end if
++                      end if
++                      !if(GBNtwoLayers) then
++                      if (layerIndex(i).eq.1) then
++                         dxTemp = dx/aG
++                         dyTemp = dy/aG
++                      else if (layerIndex(i).eq.2) then
++                         dxTemp = -dx/aBN
++                         dyTemp = -dy/aBN
++                      end if
++                      !end if
++                      call harmonicApprox(dxTemp,dyTemp,A,B,C, Hjj)
++                      if (layerIndex(i).eq.1) then
++                           if (writeData) then
++                               write(588,*) Rat(1,i), Rat(2,i), Hjj
++                           end if
++                      else if (layerIndex(i).eq.2) then
++                           if (writeData) then
++                               write(589,*) Rat(1,i), Rat(2,i), Hjj
++                           end if
++                      end if
++                      Hjj = Hjj/g0
++                      !if (i.eq.1) then 
++                      !end if
++                      !print*, "Hjj=", Hjj
++                  else if (encapsulatedFourLayers) then
++                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then ! middle layers, graphene
++                          if (Species(i).eq.1) then
++                              B = -0.39969d0
++                              C = -0.4277d0
++                              A = -0.37776d0
++                          else if (Species(i).eq.2) then
++                              B = -0.42011d0
++                              C = -0.42048d0
++                              A = -0.36739d0
++                          end if
++                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then ! hBN
++                          if (Species(i).eq.3) then
++                              B = 2.3222d0
++                              C = 2.3476d0
++                              A = 2.2731d0
++                          else if (Species(i).eq.4) then
++                              B = -1.7795d0
++                              C = -1.7778d0
++                              A = -1.8324d0
++                          end if
++                      end if
++                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
++                         dxTemp = dx/aG
++                         dyTemp = dy/aG
++                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
++                         dxTemp = dx/aBN
++                         dyTemp = dy/aBN
++                      end if
++                      call harmonicApprox(dxTemp,dyTemp,A,B,C, Hjj)
++                      Hjj = Hjj/g0
++                      !print*, "Hjj=", Hjj
++                  end if
++              else
++                  if (layerIndex(i).eq.1) then ! First layer, graphene
++                      if (Species(i).eq.1) then
++                          call diagoGBN(Hjj,dx,dy,CApAp,PhiApAp,CApAp0)
++                      else if (Species(i).eq.2) then
++                          call diagoGBN(Hjj,dx,dy,CBpBp,PhiBpBp,CBpBp0)
++                      end if
++                  else ! second layer, hBN
++                      if (Species(i).eq.3) then ! B
++                          call diagoGBN(Hjj,dx,dy,CAA,PhiAA,CAA0)
++                      else if (Species(i).eq.4) then ! N
++                          call diagoGBN(Hjj,dx,dy,CBB,PhiBB,CBB0)
++                      end if
++                  end if
++              end if 
++              H0(i) = H0(i) + Hjj
++            end do
++            !$OMP END PARALLEL DO
++         !end if
+ 
+       else if (l) then
+          call MIO_Print('Moire Trilayer','ham')
+@@ -1935,7 +2063,8 @@ subroutine offdiagoGBN(Hodjj,dx,dy,Cjj,Phijj)
+    double precision:: G1
+    complex*16, intent(out) :: Hodjj
+    
+-   G1 = 4.0_dp*pi/sqrt(3.0_dp)/(aG)
++   !G1 = 4.0_dp*pi/sqrt(3.0_dp)/(aG)
++   G1 = 4.0_dp*pi/(sqrt(3.0_dp))
+    
+    Hodjj = 2.0_dp*Cjj*cos(sqrt(3.0_dp)*G1*dx/2.0_dp)*( cos(G1*dy/2.0_dp - Phijj) ) &
+  - 2.0_dp*Cjj*sin( G1*dy + Phijj )  - & 
+@@ -1946,6 +2075,67 @@ subroutine offdiagoGBN(Hodjj,dx,dy,Cjj,Phijj)
+    return
+ end subroutine offdiagoGBN
+ 
++subroutine harmonicApprox(dx,dy,A,B,C, Hjj)
++    use constants
++
++    double precision, intent(in) :: dx, dy, A, B, C
++    double precision, intent(out) :: Hjj
++    double precision :: x1, y1, x2, y2, G1, m1, m2, a1, a2, a3, a4, alpha, beta, gammma
++    double precision :: delta, Ax, Ay, acc, f1, D, c0, c1, phi
++    
++    if (abs(B-C) < 0.0000001) then
++        print*, "we have a singularity"
++        !D = (A-B)/(10^(-16))
++    else
++        D = (A-B)/(B-C)
++    end if
++
++    x1 = 0.0_dp
++    y1 = 1.0_dp/sqrt(3.0_dp)
++    x2 = 0.0_dp
++    y2 = 0.0_dp
++    G1 = 4.0_dp*pi/(sqrt(3.0_dp))
++    m1 = cos(sqrt(3.0_dp)*G1*x1/2.0_dp)
++    m2 = cos(sqrt(3.0_dp)*G1*x2/2.0_dp)
++    a1 = cos(G1*y1) - cos(G1*y2)
++    a3 = 2.0_dp*cos(G1*y1/2.0_dp) * m1 - 2.0_dp*cos(G1*y2/2.0_dp)* m2
++    alpha = a1 + a3
++    a2 = sin(G1*y1) - sin(G1*y2)
++    a4 = 2.0_dp*sin(G1*y1/2.0_dp) * m1 - 2.0_dp*sin(G1*y2/2.0_dp)* m2
++    beta = a2 - a4
++    x1 = 0.0_dp
++    y1 = 0.0_dp
++    x2 = 0.0_dp
++    y2 = 2.0_dp/sqrt(3.0_dp)
++    G1 = 4.0_dp*pi/(sqrt(3.0_dp))
++    m1 = cos(sqrt(3.0_dp)*G1*x1/2.0_dp)
++    m2 = cos(sqrt(3.0_dp)*G1*x2/2.0_dp)
++    a1 = cos(G1*y1) - cos(G1*y2)
++    a3 = 2.0_dp*cos(G1*y1/2.0_dp) * m1 - 2.0_dp*cos(G1*y2/2.0_dp)* m2
++    gammma = a1 + a3
++    a2 = sin(G1*y1) - sin(G1*y2)
++    a4 = 2.0_dp*sin(G1*y1/2.0_dp) * m1 - 2.0_dp*sin(G1*y2/2.0_dp)* m2
++    delta = a2 - a4
++    phi = atan((1.0_dp/(delta/beta*D-1.0_dp)*((delta*alpha-beta*gammma)/(beta*delta)))-(gammma)/(delta))
++    if (abs(B-C) < 0.0000001_dp) then
++        !c1 = (10^(-16))/(2.0_dp*(gammma*cos(phi)+delta*sin(phi)))
++        print*, "we have a singularity2"
++    else
++        c1= (B-C)/(2.0*(gammma*cos(phi)+delta*sin(phi)))
++    end if
++    Ax = 0.0_dp
++    Ay = 1_dp/sqrt(3.0_dp)
++    G1 = 4.0_dp*pi/(sqrt(3.0_dp))
++    c0 = A - 2.0_dp * c1 * cos(phi - G1 * Ay) - 4.0_dp * c1 * cos(G1 * Ay / 2.0_dp + phi) * cos(sqrt(3.0) * G1 * Ax / 2.0)
++    acc = 1.0_dp
++    G1 = 4.0_dp*pi/(sqrt(3.0_dp)*acc)
++    f1 = 2.0_dp*c1*cos(phi-G1*dy) + 4.0_dp*c1*cos(G1*dy/2.0_dp + phi)*cos(sqrt(3.0_dp)*G1*dx/2.0_dp)
++    Hjj = c0 + f1
++
++    return
++
++end subroutine
++
+ subroutine interlayerBL(HBL,dx,dy,tAB)
+    use constants
+    use cell,                 only : aG
+@@ -2036,7 +2226,7 @@ subroutine HamHopping
+    use magf,                 only : magfield, Bmag, HaldanePhase
+    use constants,            only : pi, fluxq, cmplx_i, twopi, uB
+    use cell,                 only : ucell, sCell
+-   use cell,                 only : aG
++   use cell,                 only : aG, aBN
+    use gauss,                only : gaussPotDefinedPositions
+    use moireBLShift,         only : tauX1, tauY1, tauX2, tauY2
+    use math
+@@ -2047,6 +2237,7 @@ subroutine HamHopping
+    real(dp) :: uvec(3), vvec(3), axb(3), vvecR(3)
+    logical :: w, BilayerOneParameter, BilayerThreeParameters, FanZhang
+    real(dp) :: Cab, tAB3, tAB4, Phiab, dx, dy, eps, realH, imagH, del(3), delta, eps2, ggg
++   real(dp) :: dxTemp, dyTemp
+    real(dp) :: PhiabG, PhiabBN
+    real(dp) :: tr1, tr2, tr3, tr4, trDelta
+    complex*16 :: Habjj, HBL
+@@ -2441,7 +2632,8 @@ subroutine HamHopping
+    real(dp) :: SrivaniCutoff
+ 
+    logical :: checking, SrivaniAA, SrivaniAB, useBNGKaxiras, fourLayers, threeLayers, middleTwist, useBNGSrivani, twoLayers, fourLayersSandwiched, fiveLayersSandwiched, sixLayersSandwiched, sevenLayersSandwiched, eightLayersSandwiched, tenLayersSandwiched, twentyLayersSandwiched
+-   logical :: GBNtwoLayers
++   logical :: GBNtwoLayers, BNBNtwoLayers, encapsulatedFourLayers
++   logical :: GBNtwoLayersF2G2s, BNBNtwoLayersF2G2s, GBNuseDisplacementFile
+    logical :: addPressureDependence
+    logical :: F2G2Model
+   
+@@ -2545,6 +2737,27 @@ subroutine HamHopping
+    real (dp) :: c1ABV0
+    real (dp) :: c2ABV0
+ 
++   real (dp) :: t2KSLGfromGBNA
++   real (dp) :: t2KSLGfromGBNB
++   real (dp) :: t3KSLGfromGBN 
++   real (dp) :: t4KSLGfromGBN 
++   real (dp) :: t5KSLGfromGBNA
++   real (dp) :: t5KSLGfromGBNB
++   real (dp) :: t6KSLGfromGBNA 
++   real (dp) :: t6KSLGfromGBNB 
++   real (dp) :: t7KSLGfromGBN 
++   real (dp) :: t8KSLGfromGBN
++   real (dp) :: t2KSLBNfromGBNA
++   real (dp) :: t2KSLBNfromGBNB
++   real (dp) :: t3KSLBNfromGBN 
++   real (dp) :: t4KSLBNfromGBN 
++   real (dp) :: t5KSLBNfromGBNA
++   real (dp) :: t5KSLBNfromGBNB
++   real (dp) :: t6KSLBNfromGBNA
++   real (dp) :: t6KSLBNfromGBNB
++   real (dp) :: t7KSLBNfromGBN 
++   real (dp) :: t8KSLBNfromGBN 
++
+    real (dp) :: signChange
+ 
+    real (dp) :: tAB
+@@ -2565,9 +2778,11 @@ subroutine HamHopping
+    real(dp) :: couplingFactor, couplingFactor2
+    logical :: differentCouplings, deactivateIntrasublattice, deactivateIntersublattice
+ 
+-   real(dp) :: lc, rc, qsigma, qpi, Fc, aval, bval
++   real(dp) :: lc, rc, qsigma, qpi, Fc, aval, bval, avalC1B, avalC2B, avalC1N , avalC2N, bvalC1B, bvalC2B, bvalC1N , bvalC2N
+    real(dp) :: GBNAngle
+ 
++   real(dp) :: aBN1 ! B to N distance
++
+    integer :: counter1, nLayers
+    logical :: readRigidXYZ, oppositedxdy, bulk, HaldaneOppositePhase, HaldaneBothLayers
+    logical :: onlyvppsigma, setnLayersToZero
+@@ -2650,6 +2865,8 @@ subroutine HamHopping
+          else
+             call MIO_InputParameter('F2G2Model',F2G2Model,.true.)
+          end if
++         call MIO_InputParameter('GBNtwoLayersF2G2s',GBNtwoLayersF2G2s,.false.)
++         call MIO_InputParameter('GBNtwoLayers',GBNtwoLayers,.false.)
+          call MIO_InputParameter('Latticepercent',eps,-0.018181818181818_dp)
+          call MIO_InputParameter('MoirePotCab',Cab,0.01134_dp)
+          call MIO_InputParameter('MoirePotCabBN',CabBN,0.004418_dp)
+@@ -2707,9 +2924,9 @@ subroutine HamHopping
+              print*, "You didnt specify any trilayer parameters, is that correct?"
+          end if
+          call MIO_InputParameter('MoirePotPhiab',Phiab,0.342084533390889_dp)
+-         call MIO_InputParameter('MoirePotPhiabG',PhiabG,26.1_dp)
++         call MIO_InputParameter('MoirePotPhiabG',PhiabG,3.5_dp)
+          PhiabG = PhiabG*pi/180.0_dp
+-         call MIO_InputParameter('MoirePotPhiabBN',PhiabBN,3.5_dp)
++         call MIO_InputParameter('MoirePotPhiabBN',PhiabBN,26.1_dp)
+          PhiabBN = PhiabBN*pi/180.0_dp
+ 
+          call MIO_InputParameter('TypeOfSystem',str,'Graphene')
+@@ -2817,7 +3034,52 @@ subroutine HamHopping
+          end if
+ 
+          if (frac) call AtomsSetCart()
+-         if (F2G2Model) then
++         if (GBNtwoLayersF2G2s) then
++            print*, "defining all the GNBtwoLayers F2G2 terms"
++            t1K = g0/g0
++            call MIO_InputParameter('SingleLayert2KSL',t2KSLGfromGBNA,-0.24463_dp)
++            call MIO_InputParameter('SingleLayert2KSL',t2KSLGfromGBNB,-0.24466_dp)
++            call MIO_InputParameter('SingleLayert3K',t3KSLGfromGBN,0.30358_dp)
++            call MIO_InputParameter('SingleLayert4K',t4KSLGfromGBN,-0.021313_dp)
++            call MIO_InputParameter('SingleLayert5KSL',t5KSLGfromGBNA,-0.059532_dp)
++            call MIO_InputParameter('SingleLayert5KSL',t5KSLGfromGBNB,-0.059609_dp)
++            call MIO_InputParameter('BilayertK6A',t6KSLGfromGBNA,0.021509_dp)
++            call MIO_InputParameter('BilayertK6A',t6KSLGfromGBNB,0.022454_dp)
++            call MIO_InputParameter('BilayertK7A',t7KSLGfromGBN,0.015464_dp)
++            call MIO_InputParameter('BilayertK8A',t8KSLGfromGBN,0.023004_dp)
++            t2KSLGfromGBNA = t2KSLGfromGBNA/g0
++            t2KSLGfromGBNB = t2KSLGfromGBNB/g0
++            t3KSLGfromGBN = t3KSLGfromGBN/g0
++            t4KSLGfromGBN = t4KSLGfromGBN/g0
++            t5KSLGfromGBNA = t5KSLGfromGBNA/g0
++            t5KSLGfromGBNB = t5KSLGfromGBNB/g0
++            t6KSLGfromGBNA = t6KSLGfromGBNA/g0
++            t6KSLGfromGBNB = t6KSLGfromGBNB/g0
++            t7KSLGfromGBN = t7KSLGfromGBN/g0
++            t8KSLGfromGBN = t8KSLGfromGBN/g0
++            call MIO_InputParameter('SingleLayert2KSL',t2KSLBNfromGBNA,-0.080464_dp)
++            call MIO_InputParameter('SingleLayert2KSL',t2KSLBNfromGBNB,-0.24597_dp)
++            call MIO_InputParameter('SingleLayert3K',t3KSLBNfromGBN,0.26486_dp)
++            call MIO_InputParameter('SingleLayert4K',t4KSLBNfromGBN,-0.049096_dp)
++            call MIO_InputParameter('SingleLayert5KSL',t5KSLBNfromGBNA,-0.051535_dp)
++            call MIO_InputParameter('SingleLayert5KSL',t5KSLBNfromGBNB,-0.040432_dp)
++            call MIO_InputParameter('BilayertK6A',t6KSLBNfromGBNA,0.035441_dp)
++            call MIO_InputParameter('BilayertK6A',t6KSLBNfromGBNB,0.023648_dp)
++            call MIO_InputParameter('BilayertK7A',t7KSLBNfromGBN,0.007505_dp)
++            call MIO_InputParameter('BilayertK8A',t8KSLBNfromGBN,0.018199_dp)
++            !call MIO_InputParameter('BilayertK7A',t7KSLBNfromGBN,0.0_dp)
++            !call MIO_InputParameter('BilayertK8A',t8KSLBNfromGBN,0.0_dp)
++            t2KSLBNfromGBNA = t2KSLBNfromGBNA/g0
++            t2KSLBNfromGBNB = t2KSLBNfromGBNB/g0
++            t3KSLBNfromGBN = t3KSLBNfromGBN/g0
++            t4KSLBNfromGBN = t4KSLBNfromGBN/g0
++            t5KSLBNfromGBNA = t5KSLBNfromGBNA/g0
++            t5KSLBNfromGBNB = t5KSLBNfromGBNB/g0
++            t6KSLBNfromGBNA = t6KSLBNfromGBNA/g0
++            t6KSLBNfromGBNB = t6KSLBNfromGBNB/g0
++            t7KSLBNfromGBN = t7KSLBNfromGBN/g0
++            t8KSLBNfromGBN = t8KSLBNfromGBN/g0
++         else if (F2G2Model) then
+             t1K = g0/g0
+             call MIO_InputParameter('SingleLayert2KSL',t2KSL,-0.21264_dp)
+             call MIO_InputParameter('SingleLayert3K',t3KSL,0.23442_dp)
+@@ -3515,6 +3777,9 @@ subroutine HamHopping
+          call MIO_InputParameter('useBNGKaxiras',useBNGKaxiras,.false.)
+          call MIO_InputParameter('twoLayers',twoLayers,.false.)
+          call MIO_InputParameter('GBNtwoLayers',GBNtwoLayers,.false.)
++         call MIO_InputParameter('encapsulatedFourLayers',encapsulatedFourLayers,.false.)
++         call MIO_InputParameter('GBNuseDisplacementFile',GBNuseDisplacementFile,.false.)
++         call MIO_InputParameter('BNBNtwoLayers',BNBNtwoLayers,.false.)
+          call MIO_InputParameter('onlyV0',onlyV0,.false.)
+          call MIO_InputParameter('GBNAngle',GBNAngle,0.0_dp)
+          GBNAngle = GBNAngle*pi/180.0_dp
+@@ -3551,6 +3816,7 @@ subroutine HamHopping
+          call MIO_InputParameter('MoireSecondMoireMassFactor',sign2,1.0_dp)
+          call MIO_InputParameter('deactivateIntrasublattice',deactivateIntrasublattice,.false.)
+          call MIO_InputParameter('deactivateIntersublattice',deactivateIntersublattice,.false.)
++         call MIO_InputParameter('WriteDataFiles',writeData,.false.)
+ 
+          if (bulk) then
+             if (twoLayers) then
+@@ -3585,6 +3851,10 @@ subroutine HamHopping
+       
+          aval = 1.34_dp
+          bval = 3.25_dp
++         !avalC1B = 1.34_dp
++         !bvalC2B = 3.25_dp
++         !avalC1N = 1.34_dp
++         !bvalC2N = 3.25_dp
+ 
+          call MIO_Allocate(HABreal,[inode1],[inode2],'H0','ham')
+          call MIO_Allocate(HABimag,[inode1],[inode2],'H0','ham')
+@@ -3593,7 +3863,7 @@ subroutine HamHopping
+          !call AtomsSetFrac() ! REMOVE THIS, jut temporary
+          !!!$OMP& PRIVATE (expFactor, dist, yDistance, DBShiftRatio,boundaryWidth, limit2, limit1, limit0), &
+          !!!$OMP& PRIVATE (nnnn), &
+-         !$OMP PARALLEL DO PRIVATE(d,nlay,delta,del,realH,imagH,Habjj,dx,dy,HBL,HAA,HAB,HBA,dxi,dxj), &
++         !$OMP PARALLEL DO PRIVATE(d,nlay,delta,del,realH,imagH,Habjj,dx,dy,dxTemp,dyTemp,HBL,HAA,HAB,HBA,dxi,dxj), &
+          !$OMP& PRIVATE (dyi,dyj,vpppi,vppsigma,posOrNeg,jj,jj1,jj2,maxDist,k,firstNN), &
+          !$OMP& PRIVATE (rbar, V0, V3, V6, theta, d122,d232, d132, d232F), &
+          !$OMP& PRIVATE (Cabd, Fc, renormalizeHoppingFactorAAp, renormalizeHoppingFactorBBp, renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp), &
+@@ -3619,6 +3889,7 @@ subroutine HamHopping
+          !$OMP& PRIVATE (V0BAp, V3BAp, V6BAp), &
+          !$OMP& PRIVATE (V0BBp, V3BBp, V6BBp), &
+          !$OMP& PRIVATE (checking, theta12, theta21, mmm,mm,kk,kkk),&
++         !$OMP& PRIVATE (aval, bval),&
+          !$OMP& PRIVATE (expFactor, dist, distXY, distXYZ), &
+          !$OMP& REDUCTION (+:numberOfDel1,numberOfDel2,numberOfDel3,numberOfInterlayerHoppings), &
+          !$OMP& REDUCTION (+:numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHAB2, numberOfHBA1, numberOfHBA2)
+@@ -3626,7 +3897,7 @@ subroutine HamHopping
+             delta = 0.0
+             nlay = (Species(i)-1)/2 + 1
+ ! ---  Assign the hopping modifications for each lattice i --- 
+-            if (l) then
++            if (l) then ! MoireOffDiag flag (next else if is the GBNOffDiag)
+                 if (MIO_StringComp(str,'MoireEncapsulatedBilayer') .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell') .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ))) then
+                    !if (Rat(3,i).lt.20.0_dp) then
+                    if (layerIndex(i).eq.1) then
+@@ -3757,30 +4028,48 @@ subroutine HamHopping
+    
+             else if (GBNOffDiag) then
+                 if (i.eq. 1) print*, "adding the offdiagonal intralyer terms for GBN"
+-                if (layerIndex(i).eq.1) then
+-                   dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
+-                             - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
+-                   dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
+-                             + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
+-                   call offdiagoGBN(Habjj,dx,dy,CabG,PhiabG)
++                if (GBNuseDisplacementFile) then
++                   dx = displacements(1,i)
++                   dy = displacements(2,i)
++                   if (layerIndex(i).eq.1) then
++                      dxTemp = dx/aG
++                      dyTemp = dy/aG
++                   else if (layerIndex(i).eq.2) then
++                      dxTemp = -dx/aBN
++                      dyTemp = -dy/aBN
++                   end if
+                 else
+                    dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
+                              - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
+                    dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
+                              + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
+-                   call offdiagoGBN(Habjj,dx,dy,CabBN,PhiabBN)
++                end if
++                if (GBNtwoLayers) then
++                   if (layerIndex(i).eq.1) then ! graphene
++                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
++                   else if (layerIndex(i).eq.2) then
++                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
++                   end if
++                else if (encapsulatedFourLayers) then
++                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then ! graphene
++                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
++                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
++                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
++                   end if
+                 end if
+                 realH = real(Habjj)
+                 imagH = imag(Habjj)
+ 
+-                if (Species(i).eq.1 .or. Species(i).eq.3) then   ! ---  C1 or B
++                if (Species(i).eq.2 .or. Species(i).eq.4) then   ! ---  C1 or B
++                !if (Species(i).eq.1 .or. Species(i).eq.3) then   ! ---  C2 or N
+     
+                    del(1) = 2.0_dp*realH/3.0_dp
+                    del(2) = ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp 
+                    del(3) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                 end if
+    
+-                if (Species(i).eq.2 .or. Species(i).eq.4) then   ! ---  C2 or N
++                if (Species(i).eq.1 .or. Species(i).eq.3) then   ! ---  C2 or N
++                !if (Species(i).eq.2 .or. Species(i).eq.4) then   ! ---  C1 or B
+     
+                   del(1) =  2.0_dp*realH/3.0_dp
+                   del(2) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp 
+@@ -3852,28 +4141,199 @@ subroutine HamHopping
+                   do ilvl=1,tbnn
+                      if (d < Nradii(ilvl,nlay)) then ! Konda, assign del1, del2, del3 to delta
+                         !hopp(j,i) = cmplx(gn(Species(i),Species(NList(j,i)),ilvl))
+-                        if (abs(NeighD(1,j,i)) < 0.01_dp) then
+-                           delta = del(1)
+-                           numberOfdel1 = numberOfDel1+1
+-                        else if (NeighD(1,j,i) < -0.02_dp ) then
+-                           !if (sign1.lt.0.0) then
+-                           !    delta = del(3)
+-                           !else
+-                              delta = del(3)
+-                           !end if
+-                           numberOfdel2 = numberOfDel2+1
+-                        else if (NeighD(1,j,i) > 0.02_dp) then
+-                           !if (sign1.lt.0.0) then
+-                           !    delta = del(2)
+-                           !else
+-                              delta = del(2)
+-                           !end if
+-                           numberOfdel3 = numberOfDel3+1
+-                        endif 
++                        if (d<1.7_dp) then
++                           if (abs(NeighD(1,j,i)) < aG/4.0_dp) then
++                              delta = del(1)
++                              numberOfDel1 = numberOfDel1+1
++                           else if (NeighD(1,j,i) < -aG/4.0_dp ) then
++                              !if (sign1.lt.0.0) then
++                              !    delta = del(3)
++                              !else
++                                 delta = del(3)
++                              !end if
++                              numberOfDel2 = numberOfDel2+1
++                           else if (NeighD(1,j,i) > aG/4.0_dp) then
++                              !if (sign1.lt.0.0) then
++                              !    delta = del(2)
++                              !else
++                                 delta = del(2)
++                              !end if
++                              numberOfDel3 = numberOfDel3+1
++                           endif 
++                        end if
+                         !print*, delta
+-                        if (MIO_StringComp(BilayerModel,'Koshino') .or. MIO_StringComp(BilayerModel,'Mayou') ) then
++                        if (GBNtwoLayers) then
++                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
++                            ! Add GBNtwoLayers F2G2 hopping terms
++                           if (layerIndex(i) .eq. 1) then ! For graphene layer
++                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i)
++                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then 
++                                  if (Species(i).eq.1) then
++                                     hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
++                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
++                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then 
++                                  if (Species(i).eq.1) then
++                                     hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aG*0.9_dp .and. dist .lt. 2.0_dp*aG*1.1_dp) then 
++                                  if (Species(i).eq.1) then
++                                     hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
++                                  end if
++                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
++                               else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
++                               else
++                                    hopp(j,i) = hopp(j,i) + 0.0_dp
++                               end if
++                           else if (layerIndex(i) .eq. 2) then ! For hBN layer
++                               if (i.eq.1) print*, "aBN=", aBN
++                               aBN1 = aBN/sqrt(3.0_dp)
++                               if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i)
++                               else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then 
++                                  if (Species(i).eq.3) then
++                                     hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
++                               else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
++                               else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then 
++                                  if (Species(i).eq.3) then
++                                     hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aBN*0.9_dp .and. dist .lt. 2.0_dp*aBN*1.1_dp) then 
++                                  if (Species(i).eq.3) then
++                                     hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
++                                  end if
++                               else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
++                               else if (dist .gt. 4.0_dp*aBN1*0.9_dp .and. dist .lt. 4.0_dp*aBN1*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
++                               else
++                                    hopp(j,i) = hopp(j,i) + 0.0_dp
++                               end if
++                           end if 
++                           if (d > 1.7_dp) then 
++                               delta = 0.0_dp
++                           end if
++                           !print*, "we are adding the gn values"
++                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta) ! Konda, use the chosen value of delta
++                        else if (encapsulatedFourLayers) then
++                            ! Add GBNtwoLayers F2G2 hopping terms
++                           if (layerIndex(i) .eq. 2 .or. layerIndex(i).eq.3) then ! For graphene layer
++                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i)
++                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then 
++                                  if (Species(i).eq.1) then
++                                     hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
++                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
++                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then 
++                                  if (Species(i).eq.1) then
++                                     hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aG*0.9_dp .and. dist .lt. 2.0_dp*aG*1.1_dp) then 
++                                  if (Species(i).eq.1) then
++                                     hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
++                                  end if
++                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
++                               else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
++                               else
++                                    hopp(j,i) = hopp(j,i) + 0.0_dp
++                               end if
++                           else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 4) then ! For hBN layer
++                               aBN1 = aBN/sqrt(3.0_dp)
++                               if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i)
++                               else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then 
++                                  if (Species(i).eq.3) then
++                                     hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
++                               else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp*aBN/aG) then  ! to account for the fact we are using aBN here
++                                  hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
++                               else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then 
++                                  if (Species(i).eq.3) then
++                                     hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
++                                  end if
++                               else if (dist .gt. 2.0_dp*aBN*0.9_dp .and. dist .lt. 2.0_dp*aBN*1.1_dp) then 
++                                  if (Species(i).eq.3) then
++                                     hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
++                                  else
++                                     hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
++                                  end if
++                               else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
++                               else if (dist .gt. 4.0_dp*aBN1*0.9_dp .and. dist .lt. 4.0_dp*aBN1*1.1_dp) then 
++                                  hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
++                               else
++                                    hopp(j,i) = hopp(j,i) + 0.0_dp
++                               end if
++                           end if 
++                           if (d > 1.5_dp) then 
++                               delta = 0.0_dp
++                           end if
++                           !print*, "we are adding the gn values"
++                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta) ! Konda, use the chosen value of delta
++                           !print*, "F2G2", hopp(j,i)
++                        !else if (BNBNtwoLayers) then
++                        !   ! Add BNBNtwoLayers F2G2 hopping terms
++                        !   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then 
++                        !      hopp(j,i) = hopp(j,i)
++                        !   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then 
++                        !      hopp(j,i) = hopp(j,i) + t2KSLBN
++                        !   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then 
++                        !      hopp(j,i) = hopp(j,i) + t3KSLBN
++                        !   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then 
++                        !      hopp(j,i) = hopp(j,i) + t4KSLBN
++                        !   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then 
++                        !      hopp(j,i) = hopp(j,i) + t5KSLBN
++                        !   else if (dist .gt. 2.0_dp*aG*0.9_dp .and. dist .lt. 2.0_dp*aG*1.1_dp) then 
++                        !        hopp(j,i) = hopp(j,i) + t6KBN
++                        !   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then 
++                        !        hopp(j,i) = hopp(j,i) + t7KBN
++                        !   else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then 
++                        !        hopp(j,i) = hopp(j,i) + t8KBN
++                        !   else
++                        !        hopp(j,i) = hopp(j,i) + 0.0_dp
++                        !   end if
++                        else if (MIO_StringComp(BilayerModel,'Koshino') .or. MIO_StringComp(BilayerModel,'Mayou') ) then
+                            if (frac) call AtomsSetCart()
+-                           !print*, "also adding Koshino"
+                            if (KoshinoIntralayer .or. MayouIntralayer) then
+                               if (MIO_StringComp(BilayerModel,'Koshino')) then
+                                  print*, "adding the inplane Koshino terms"
+@@ -4147,6 +4607,7 @@ subroutine HamHopping
+                               if (d > 1.5_dp) then 
+                                   delta = 0.0_dp
+                               end if
++                              print*, "we are adding the gn values"
+                               hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta) ! Konda, use the chosen value of delta
+                            end if
+                         else if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then ! this is where we assign the intralayer F2G2
+@@ -4404,8 +4865,7 @@ subroutine HamHopping
+                   !  (Species(i)==4 .and. Species(NList(j,i))==3)) then
+                   !   hopp(j,i) = cmplx(gBN0)
+                   !end if
+-               else if (layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1  .or. layerIndex(i)+nLayers .eq. layerIndex(jj) + 1 .or. layerIndex(i)-nLayers .eq. layerIndex(jj)-1) then ! INTERLAYER
+-               !else if (layerIndex(i)+nLayers .eq. layerIndex(jj) + 1 .or. layerIndex(i)-nLayers .eq. layerIndex(jj)-1) then ! INTERLAYER
++               else if (layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1  .or. layerIndex(i)+nLayers .eq. layerIndex(jj) + 1 .or. layerIndex(i)-nLayers .eq. layerIndex(jj)-1) then ! INTERLAYER ! nLayers is to account for bulk, make sure this variable is correctly defined
+                   !print*, "doing interlayer for ", i, jj, nLayers
+                   if (MIO_StringComp(str,'MoireEncapsulatedBilayer') .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell') .or. BernalReadXYZ) then
+                     if (frac) call AtomsSetCart()
+@@ -4585,7 +5045,75 @@ subroutine HamHopping
+                       !else
+                       !   hopp(j,i) = 0.0_dp
+                       !end if
++                   else if (GBNtwoLayers .or. encapsulatedFourLayers) then
++                      if (deactivateInterlayer) then
++                          cycle
++                      end if
++                      if (frac) call AtomsSetCart()
++                      if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1)) then ! INTERLAYER
++                          ! add the hopping terms depending if it is the C-B, C-N or C-C
++                          ! interaction
++                          if (i.eq.1) print*, "we are adding the interlayer hoppingt terms for GBN"
++                          if (Species(i).eq.1 .and. Species(NList(j,i)).eq.3) then ! C to B
++                            aval = 1.02796_dp
++                            bval = 3.047657_dp
++                          else if (Species(i).eq.3 .and. Species(NList(j,i)).eq.1) then ! C to B
++                            aval = 1.02796_dp
++                            bval = 3.047657_dp
++                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.4) then ! C to N
++                            aval = 1.19218_dp
++                            bval = 3.47553_dp
++                          else if (Species(i).eq.4 .and. Species(NList(j,i)).eq.1) then ! C to N
++                            aval = 1.19218_dp
++                            bval = 3.47553_dp
++                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.3) then ! C to B
++                            aval = 1.049223_dp
++                            bval = 3.0646389_dp
++                          else if (Species(i).eq.3 .and. Species(NList(j,i)).eq.2) then ! C to B
++                            aval = 1.049223_dp
++                            bval = 3.0646389_dp
++                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.4) then ! C to N
++                            aval = 1.16223_dp
++                            bval = 3.4799_dp
++                          else if (Species(i).eq.4 .and. Species(NList(j,i)).eq.2) then ! C to N
++                            aval = 1.16223_dp
++                            bval = 3.4799_dp
++                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.2) then ! C to C
++                            aval = 1.34_dp
++                            bval = 3.25_dp
++                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.1) then ! C to C
++                            aval = 1.34_dp
++                            bval = 3.25_dp
++                          end if
++                          renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
++                          !renormalizeHoppingFactorAAp  = 1.0_dp
++                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
++                          BLdelta = 0.184_dp*2.438977_dp
++                          vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
++                          vpppi = vpppi0 * exp(-(dist-2.438977_dp/sqrt(3.0))/(BLdelta)) * renormalizeHoppingFactorAAp
++                          hopp(j,i) = hopp(j,i) + (vpppi * (1.0_dp - ((NeighD(3,j,i))/(dist))**2.0_dp) &
++                                               + vppsigma * ((NeighD(3,j,i))/(dist))**2.0_dp)
++                      end if
++                      !print*, "TC", hopp(j,i)
++                   !else if (BNBNtwoLayers) then
++                   !   if (deactivateInterlayer) then
++                   !       cycle
++                   !   end if
++                   !   if (Species(i).eq.3 .and. Species(NList(j,i).eq.3) then ! C to B
++                   !     renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bvalCB)/avalCB)
++                   !   else if (Species(i).eq.3 .and. Species(NList(j,i).eq.4) then ! C to N
++                   !     renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bvalCN)/avalCN)
++                   !   else if (Species(i).eq.4 .and. Species(NList(j,i).eq.3) then ! C to B
++                   !     renormalizeHoppingFactorAAp = 1.0
++                   !   else if (Species(i).eq.4 .and. Species(NList(j,i).eq.4) then ! C to N
++                   !     renormalizeHoppingFactorAAp = 1.0
++                   !   end if
++                   !   vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
++                   !   vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp
++                   !   hopp(j,i) = hopp(j,i) + (vpppi * (1.0_dp - ((NeighD(3,j,i))/(dist))**2.0_dp) &
++                   !                        + vppsigma * ((NeighD(3,j,i))/(dist))**2.0_dp)
+                    else if (MIO_StringComp(BilayerModel,'Koshino')) then
++                      if (i.eq.1) print*, "we are adding Koshino type interlayer"
+                       if (deactivateInterlayer) then
+                           cycle
+                       end if
+@@ -6188,7 +6716,8 @@ subroutine HamHopping
+                     del(3) = 0.0_dp
+               end if
+               do j=1,Nneigh(i)
+-                 if (abs(NeighD(3,j,i))<0.01_dp) then
++                 !if (abs(NeighD(3,j,i))<0.01_dp) then
++                 if (layerIndex(i) .eq. layerIndex(jj)) then
+                     d = sqrt(NeighD(1,j,i)**2+NeighD(2,j,i)**2)
+                     do ilvl=1,tbnn
+                        if (d < Nradii(ilvl,nlay)) then
+@@ -6220,7 +6749,7 @@ subroutine HamHopping
+                              numberOfdel3 = numberOfDel3+1
+                           endif 
+                           !print*, delta
+-                          if (d > 1.5_dp) then ! only use delta !=0 for first NN hoppings
++                          if (d > 1.7_dp) then ! only use delta !=0 for first NN hoppings
+                                                ! useful to separate when other
+                                                ! routine asks for more distant
+                                                ! neighbors (realStrain for
+@@ -6246,7 +6775,6 @@ subroutine HamHopping
+           end do
+         !$OMP END PARALLEL DO 
+         if (writeData) then
+-            close(587)
+             close(586)
+         end if
+         end if

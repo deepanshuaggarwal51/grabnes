@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GRABNES’s documentation &#8212; grabnes 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "tex2jax_ignore|mathjax_ignore|document", "processClass": "tex2jax_process|mathjax_process|math|output_area"}})</script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="f-modindex.html" title="Fortran Module Index"
+             >fortran modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">grabnes 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">GRABNES’s documentation</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="grabnes-s-documentation">
+<h1>GRABNES’s documentation<a class="headerlink" href="#grabnes-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<div class="section" id="description">
+<h2>Description<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h2>
+<p>This page aims to introduce you to the GRABNES package (GRAphene hBN Electrinic Structure). The name itself highlights the two standard materials that can be studied using this package, by layering them into meaningful configurations. Additional 2D materials can be included as well by modifying the code. One can already build straight out-of-the box GBN, twisted bilayer graphene, twisted multilayer graphene, hBN encapsulated single layer graphene, encapsulated bilayer graphene, etc. wher one can control the twist angle and the sliding between layers. Commensurate cells will be build to account for periodic boundary conditions.</p>
+<p>In terms of Electronic Structure observables, one can calculate the electric band structure, the density of states (using Lanczos recursion as well as exact diagonalization), the unfolded spectral band structure, the local density of states, the probability density based on the wavefunction distribution, the Kubo-Greenwood conductivity, etc.</p>
+<p>If you are familiar with the field of twisted bilayer graphene, you are probably aware that the relaxation effects play an important role intthe accurate assessment of the above observables. Hence, most of the calculations require an energy minimization step that can be routinely achieved using most Molecular Dynamics packages. We provide here the means to interface it with LAMMPS where LAMMPS reads in the commensurate cell provided by our package and our package reads in the relaxed positions from LAMMPS minimization output.</p>
+</div>
+<div class="section" id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<p>GRABNES is a Fortran code. This can be daunting when you have never used this language, so to give you the opportunity to use the code without worrying about compilation issues and compiler questions, we have compiled a stable version of the code on Google Colab where you can interact with it using a Jupyter Notebook where Python is chosen as the language of choice.</p>
+</div>
+<div class="section" id="tutorial-files-from-moire-course">
+<h2>Tutorial Files from Moire Course<a class="headerlink" href="#tutorial-files-from-moire-course" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference internal" href="tutorial.html#tutorial"><span class="std std-ref">Tutorial Sessions</span></a> for some previous jupyter notebooks. These will be updated into Google Colab file.</p>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>The code is maintained on Github where you are free to clone or fork the stable or development versions of the code. Please refer to Github Documentation on how to do this. To install the code, one simply needs to modify the make.sys file to match the Compilers available on your system. The code has currently been tested using Intel Compilers. Add an empty .version file in the same folder as the make.sys file, then type <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code>, followed by <code class="docutils literal notranslate"><span class="pre">make</span></code>.</p>
+</div>
+<div class="section" id="illustrations">
+<h2>Illustrations<a class="headerlink" href="#illustrations" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="magic-angle-renormalization-in-twisted-bilayer-graphene">
+<h3>Magic Angle Renormalization in Twisted Bilayer Graphene<a class="headerlink" href="#magic-angle-renormalization-in-twisted-bilayer-graphene" title="Permalink to this headline">¶</a></h3>
+<p>We can calculate the electronic bandstructure of twisted bilayer graphene where we used our SHE model which is an improved Two-Center (TC) model which has been optimized to capture the DFT Tunneling at the K-point while allowing the user to tune it to capture the magic angle at a specific value. Here we set S so that the magic angle occurs at 1.08 degree when using the relaxed structures from an energy minimization using LAMMPS based on EXX-RPA-informed registry-dependent force fields. The intralayer terms used here in LAMMPS are either the widely used REBO2 forcefields or the machine-learning based GAP20 potential.</p>
+<a class="reference internal image-reference" href="_images/tBG.png"><img alt="Twisted Bilayer Graphene - Magic Angle Bands" class="align-center" src="_images/tBG.png" style="width: 400px;" /></a>
+</div>
+<div class="section" id="twisted-multilayer-graphene-electric-bandstructures">
+<h3>Twisted Multilayer Graphene Electric Bandstructures<a class="headerlink" href="#twisted-multilayer-graphene-electric-bandstructures" title="Permalink to this headline">¶</a></h3>
+<p>A wide variety of layered materials can be considered in GRABNES. Here we implemented the Hamiltonian part of the code in such a way that a 20 layers twisted graphene system clearly showing the family of tBG bands that are expected in such tNG system. A flag in the GRABNES input file can be added to activate a perpendicular electric field.</p>
+<a class="reference internal image-reference" href="_images/t20G.png"><img alt="Twisted Multilayer Graphene" class="align-center" src="_images/t20G.png" style="width: 400px;" /></a>
+</div>
+<div class="section" id="twisted-bilayer-graphene-band-unfolding">
+<h3>Twisted bilayer graphene: band-unfolding<a class="headerlink" href="#twisted-bilayer-graphene-band-unfolding" title="Permalink to this headline">¶</a></h3>
+<p>Our code allows to calculate the band-unfolded band structures that can help to understand experimental ARPES measurements. Here we observe good agreement between the experimental features obtained using nano-ARPES and simulated features obtained using our package.</p>
+<a class="reference internal image-reference" href="_images/ARPES.png"><img alt="Twisted Bilayer Graphene ARPES" class="align-center" src="_images/ARPES.png" style="width: 400px;" /></a>
+<p>Comparison of experimental APRES data with simulated band unfolded data using GRABNES. Figure published in <a class="reference external" href="https://www.nature.com/articles/s41567-020-0974-x">Nature Physics</a>.</p>
+</div>
+<div class="section" id="graphene-on-h-bn-gap-estimation">
+<h3>Graphene on h-BN: gap estimation<a class="headerlink" href="#graphene-on-h-bn-gap-estimation" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="h-bn-encapsulated-graphene-supermoire-features">
+<h3>h-BN encapsulated graphene: supermoire features<a class="headerlink" href="#h-bn-encapsulated-graphene-supermoire-features" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="percolating-impurity-states-in-defected-graphene">
+<h3>Percolating Impurity States in Defected Graphene<a class="headerlink" href="#percolating-impurity-states-in-defected-graphene" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="grabnes-code">
+<h2>GRABNES code<a class="headerlink" href="#grabnes-code" title="Permalink to this headline">¶</a></h2>
+<p>The documentation for the code can be found here: <a class="reference internal" href="grabnes.html#grabnes-code"><span class="std std-ref">GRABNES-code</span></a>. This is work in progress and is being generated with <a class="reference external" href="https://pypi.org/project/sphinx-fortran/">sphinx-fortran</a>.</p>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GRABNES’s documentation</a><ul>
+<li><a class="reference internal" href="#description">Description</a></li>
+<li><a class="reference internal" href="#getting-started">Getting started</a></li>
+<li><a class="reference internal" href="#tutorial-files-from-moire-course">Tutorial Files from Moire Course</a></li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#illustrations">Illustrations</a><ul>
+<li><a class="reference internal" href="#magic-angle-renormalization-in-twisted-bilayer-graphene">Magic Angle Renormalization in Twisted Bilayer Graphene</a></li>
+<li><a class="reference internal" href="#twisted-multilayer-graphene-electric-bandstructures">Twisted Multilayer Graphene Electric Bandstructures</a></li>
+<li><a class="reference internal" href="#twisted-bilayer-graphene-band-unfolding">Twisted bilayer graphene: band-unfolding</a></li>
+<li><a class="reference internal" href="#graphene-on-h-bn-gap-estimation">Graphene on h-BN: gap estimation</a></li>
+<li><a class="reference internal" href="#h-bn-encapsulated-graphene-supermoire-features">h-BN encapsulated graphene: supermoire features</a></li>
+<li><a class="reference internal" href="#percolating-impurity-states-in-defected-graphene">Percolating Impurity States in Defected Graphene</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#grabnes-code">GRABNES code</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="f-modindex.html" title="Fortran Module Index"
+             >fortran modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">grabnes 0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">GRABNES’s documentation</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2022, Nicolas Leconte.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.1.
+    </div>
+  </body>
+</html>
