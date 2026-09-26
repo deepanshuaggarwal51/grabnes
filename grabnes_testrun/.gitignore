@@ -1,0 +1,16 @@
+# Compiler and linker output
+lanczosKuboCode/build/
+lanczosKuboCode/bin/
+
+# Generated smoke-test output
+examples/*/job.out
+examples/*/generate.*
+examples/*/kpath_debug_*
+examples/*/BfactorExp.dat
+examples/*/HAB
+examples/*/dx
+examples/*/dy
+examples/*/dz
+examples/*/pos
+examples/*/v
+examples/*/*.png

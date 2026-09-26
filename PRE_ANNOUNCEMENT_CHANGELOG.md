@@ -10,7 +10,10 @@ Last updated: 2026-09-26
 
 ## Current Git state
 
-- The changes described below are staged locally but have not been committed.
+- The consolidation and initial examples were committed and pushed to `main`
+  as commit `94964340c3322751f352e44337715912ca13505f`.
+- The follow-up public update adds the `grabnes_testrun/` harness described
+  below for collaborator testing.
 - The tag `pre-code-consolidation` points to commit `6133ab7`, the repository
   state before the solver directories were consolidated.
 - Deleted files remain recoverable from that tag and from Git history.
@@ -146,11 +149,45 @@ program after the `mpitime.F90` fix, but the host linker failed with:
 ld: library 'crt1.o' not found
 ```
 
-This failure occurs while linking a small Fortran helper and indicates a local
-compiler/SDK installation problem. Consequently, a complete clean build and
-the end-to-end graphene example have not yet been verified on this machine.
+This was the result of the original build attempt with an obsolete Intel
+Homebrew compiler. A later isolated native Apple Silicon build is documented
+below.
 
-## 6. Recommended collaborator review before announcement
+## 6. Isolated native build and smoke-test harness
+
+Added `grabnes_testrun/` temporarily inside the public checkout so
+collaborators can reproduce the current Apple Silicon build while keeping all
+compiler products under one ignored test subtree. Its local `.gitignore`
+excludes `build/`, `bin/`, and generated example results from Git history.
+
+The harness contains a source snapshot with the portability fixes discovered
+during testing, an Apple Silicon `make.sys`, the graphene example, a detailed
+`BUILD_REPORT.md`, and a top-level `smoke_test.sh`. Run it with:
+
+```sh
+cd grabnes_testrun
+./smoke_test.sh
+```
+
+The test uses native Homebrew GCC 16.2, Open MPI 5.0.11, ARPACK 3.9.1_1, and
+OpenBLAS 0.3.34. A clean checked build completed on this laptop, the program
+reported `0 errors, 0 warnings`, and the generated graphene bands matched the
+reference file byte-for-byte. Compiler warnings remain in the generated
+legacy MPI wrappers and are documented in the build report.
+
+The test-copy compatibility changes include modern logical operators, safe
+handling of an unassociated single-process MPI list, corrected memory
+accounting during deallocation, support for deeply nested source paths, and
+selection of the neighbor routine intended for very small cells. These have
+not yet been promoted to the canonical solver and should be reviewed first.
+
+The harness is checkout-location independent: its scripts resolve their own
+directories, the MIO generators accept long nested paths, and `make.sys`
+discovers Homebrew library prefixes instead of hard-coding one installation
+path. The required test `make.sys` is explicitly included, while compiler
+products and generated results remain ignored.
+
+## 7. Recommended collaborator review before announcement
 
 1. Review the staged consolidation diff, especially the promoted solver source.
 2. Build on a clean Linux environment with MPI, ARPACK, LAPACK, and BLAS.
