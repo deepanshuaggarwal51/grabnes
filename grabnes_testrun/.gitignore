@@ -14,3 +14,5 @@ examples/*/dz
 examples/*/pos
 examples/*/v
 examples/*/*.png
+examples/*/__pycache__/
+examples/*/*.pyc
