@@ -39,7 +39,7 @@ subroutine CellGet()
    call MIO_InputParameter('SuperCell',sCell,1)
    call MIO_InputParameter('SuperCellAsymmetric',l,.false.)
    call MIO_InputParameter('SuperCellY',sCell2,1)
-   if (MIO_StringComp(str,'Graphene') .or. MIO_StringComp(str,'BoronNitride') & 
+   if (MIO_StringComp(str,'Graphene') .or. MIO_StringComp(str,'BoronNitride') &
     .or. MIO_StringComp(str,'MoireEncapsulatedBilayer') .or. MIO_StringComp(str,'TwistedBilayer')) then
       call MIO_InputParameter('basedOnMoireCellParamters',ll,.false.)
       if (ll) then
@@ -92,7 +92,7 @@ subroutine CellGet()
           !if (l) then
           !  ucell(:,1) = ucell(:,1)*n
           !  ucell(:,2) = ucell(:,2)*n2
-          !else 
+          !else
             ucell = ucell*n
           !end if
           ucell(:,3) = [0.0_dp,0.0_dp,h]

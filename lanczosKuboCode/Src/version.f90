@@ -1,7 +1,7 @@
 module version
 
    implicit none
-   
+
    PRIVATE
 
    character(len=*), parameter :: ver = "KUBO_VERSION"

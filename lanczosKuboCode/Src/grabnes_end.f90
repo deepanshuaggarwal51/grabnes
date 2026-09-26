@@ -1,7 +1,7 @@
 module grabnes_end
 
    implicit none
-   
+
    PRIVATE
 
    public :: GrabnesEnd

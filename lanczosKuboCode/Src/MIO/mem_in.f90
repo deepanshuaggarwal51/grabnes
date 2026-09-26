@@ -16,7 +16,7 @@ module mem
    use sys,                  only : SysIOErr, SysKill
 
    implicit none
-   
+
    PRIVATE
 
    integer, public, parameter :: Isz = [ISZ]

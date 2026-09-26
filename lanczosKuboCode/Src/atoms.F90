@@ -4,7 +4,7 @@ module atoms
    use math
 
    implicit none
-   
+
    PRIVATE
 
    real(dp), public, pointer :: Rat(:,:), RatC(:,:), RatBN(:,:), RatC1(:,:), RatC2(:,:), RatC3(:,:)
@@ -16,7 +16,7 @@ module atoms
    real(dp), public, pointer :: interlayerDistances(:), displacements(:,:)
    real(dp), public, pointer :: displacements_b(:,:), displacements_t(:,:)
    real(dp), public :: dIntLay, nEl
-   real(dp), public :: phiForEffectiveModel 
+   real(dp), public :: phiForEffectiveModel
    ! For species:
    ! 1 - Carbon site A
    ! 2 - Carbon site B
@@ -69,7 +69,7 @@ subroutine AtomsPos()
    real(dp) :: vn(3)
    integer :: shiftFactor, ncell
    character(len=3) :: spc
-   
+
    logical :: l, ll
    logical :: randomStrain
    logical :: addShift, Bernal, bridge
@@ -78,14 +78,17 @@ subroutine AtomsPos()
    logical :: createBLDomainBoundary, AtomsOrderDeactivated
    logical :: boundaryTypeArmAA, boundaryTypeArmSP
    integer :: numberOfShifts
-  
+
    real(dp) :: ggg, ORZ
 
    logical :: twoLayers, oneLayer, GBNtwoLayers, GBNuseDisplacementFile, encapsulatedFourLayers, tBGuseDisplacementFile
    logical :: t2GBN
-   logical :: fourLayers
-   logical :: fourLayersSandwiched
-   logical :: fiveLayersSandwiched
+   logical :: t2BG
+   logical :: t3BG
+  logical :: fourLayers
+  logical :: fourLayersSandwiched
+  logical :: helicalTwistedMBM
+  logical :: fiveLayersSandwiched
    logical :: sixLayersSandwiched
    logical :: sevenLayersSandwiched
    logical :: eightLayersSandwiched
@@ -350,10 +353,10 @@ subroutine AtomsPos()
       !print*, "shiftinfo", n(1), shiftFactor
       if (addShift) then
          if (Bernal) then
-            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          else if (bridge) then
-            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          end if
       else
@@ -409,10 +412,10 @@ subroutine AtomsPos()
       !print*, "shiftinfo", n(1), shiftFactor
       if (addShift) then
          if (Bernal) then
-            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          else if (bridge) then
-            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          end if
       else
@@ -429,7 +432,7 @@ subroutine AtomsPos()
       call MIO_InputParameter('createBLDomainBoundary',createBLDomainBoundary,.false.)
       m(1) = m(1)*sCell
       if (createBLDomainBoundary) then
-          if (frac) then 
+          if (frac) then
               call AtomsSetCart()
               !print*, "Using cartesian coordinates"
           end if
@@ -441,7 +444,7 @@ subroutine AtomsPos()
           limit1 = (m(1)*aG)*1.0_dp/2.0_dp
           limit2 = limit1 + boundaryWidth
           !print*, "BL Domain Boundary limits: ", limit1, limit2
-             !do i=nAtC+1,nAt 
+             !do i=nAtC+1,nAt
              !   if (Rat(1,i).gt.limit2) then
              !       Rat(2,i) = Rat(2,i) - 1.42_dp * numberOfShifts
              !   else if (Rat(1,i).gt.limit1 .and. Rat(1,i).lt.limit2) then
@@ -450,7 +453,7 @@ subroutine AtomsPos()
              !   end if
              !end do
           if (boundaryTypeArmAA) then ! check PRB 88 115409
-             do i=1,nAtC 
+             do i=1,nAtC
                 if (Rat(1,i).gt.limit2) then
                     Rat(2,i) = Rat(2,i) - (aG/sqrt(3.0_dp) + (numberOfShifts-1)*aG/sqrt(3.0_dp))
                 else if (Rat(1,i).gt.limit1 .and. Rat(1,i).lt.limit2) then
@@ -458,7 +461,7 @@ subroutine AtomsPos()
                     Rat(2,i) = Rat(2,i) - DBShiftRatio * (aG/sqrt(3.0_dp) + (numberOfShifts-1)*aG/sqrt(3.0_dp))
                 end if
              end do
-             do i=nAtC+1,nAt 
+             do i=nAtC+1,nAt
                 if (Rat(1,i).gt.limit2) then
                     Rat(2,i) = Rat(2,i) + (aG/sqrt(3.0_dp) + (numberOfShifts-1)*aG/sqrt(3.0_dp))
                 else if (Rat(1,i).gt.limit1 .and. Rat(1,i).lt.limit2) then
@@ -508,7 +511,7 @@ subroutine AtomsPos()
          Species(i) = mod(i+1,2) + 1
       end do
       !$OMP END PARALLEL DO
-   else if (MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell')) then 
+   else if (MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell')) then
       call MIO_InputParameter('CellSize',m(1),50)
       call MIO_InputParameter('MoireCellParameters',n,[0,0,0,0])
       call MIO_InputParameter('CellHeight',h,40.0_dp)
@@ -539,10 +542,10 @@ subroutine AtomsPos()
       !print*, "shiftinfo", n(1), shiftFactor
       if (addShift) then
          if (Bernal) then
-            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          else if (bridge) then
-            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          end if
       else
@@ -579,7 +582,7 @@ subroutine AtomsPos()
       m(1) = m(1)*sCell
       m(2) = 0
       !print*, m(1)
-      !print*, m(2) 
+      !print*, m(2)
       g = dIntLay/(2.0_dp*h)
       !print*, "g= ", g
       call AtomsConstruct(RatC1,m,0.0_dp,'graphene',g, 0.0_dp)
@@ -593,8 +596,8 @@ subroutine AtomsPos()
           !print*, "yShift= ", yShift, aG/3.0_dp
       end if
       if (MIO_StringComp(str,'TwistedBilayer')) then
-          !yShift = shiftFactor*aG ! Remove the shift from normal bilayer graphene 
-          yShift = (aG/3.0_dp)/(m(1)*aG)+shiftFactor*aG 
+          !yShift = shiftFactor*aG ! Remove the shift from normal bilayer graphene
+          yShift = (aG/3.0_dp)/(m(1)*aG)+shiftFactor*aG
           !print*, "yShift= ", yShift, aG/3.0_dp
       end if
       !print*, "yShift= ", yShift, aG/3.0_dp
@@ -613,7 +616,7 @@ subroutine AtomsPos()
       Rat(:,nAtC1+1:nAt) = RatC2
       call MIO_Print('Total number of atoms: '//trim(num2str(nAt)),'atoms')
       call MIO_Allocate(Species,nAt,'Species','atoms')
-      if (frac) then 
+      if (frac) then
           call AtomsSetCart()
           !print*, "hi1"
       end if
@@ -661,10 +664,10 @@ subroutine AtomsPos()
       !print*, "shiftinfo", n(1), shiftFactor
       if (addShift) then
          if (Bernal) then
-            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          else if (bridge) then
-            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG ! 
+            yShift = (aG/3.0_dp/2.0_dp)/(n(1)*aG)+shiftFactor!*aG !
             !print*, "yShift= ", yShift, aG/3.0_dp
          end if
       else
@@ -736,7 +739,7 @@ subroutine AtomsPos()
          open(4,FILE=str4,STATUS='old')
       end if
       do i=1,3
-         read(1,*) 
+         read(1,*)
       end do
       !print*, "inside atoms.f90, ucell: ", ucell
       read(1,*) nAt
@@ -787,17 +790,17 @@ subroutine AtomsPos()
             if (encapsulatedThreeLayers .and. (SpeciesTemp(i).eq.1 .or. SpeciesTemp(i).eq.2)) then
                read(4,*) displacements_b(1,i), displacements_b(2,i), displacements_b(3,i), displacements_t(1,i), displacements_t(2,i), displacements_t(3,i)
                !print*, "assigning bottom and top displacements"
-            else 
+            else
                read(4,*) (displacements(j,i),j=1,3) ! First is in x, second in y and third is the distance
             end if
          end do
       end if
       call MIO_InputParameter('invertDisplacements',invertDisplacements,.false.)
       if (invertDisplacements) then
-         do i=1,nAt 
+         do i=1,nAt
              displacements(1,i) = -displacements(1,i)
              displacements(2,i) = -displacements(2,i)
-         end do 
+         end do
       end if
       call MIO_InputParameter('readRigidXYZ',readRigidXYZ,.false.)
       if (readRigidXYZ) then
@@ -805,7 +808,7 @@ subroutine AtomsPos()
          call MIO_Allocate(RatInit,[3,nAt*sCell*sCell],'RatInit','atoms')
          open(9,FILE=str5,STATUS='old')
          do i=1,4
-            read(9,*) 
+            read(9,*)
          end do
          do i=1,nAt
             read(9,*) spc, (RatInit(j,i),j=1,3)
@@ -967,7 +970,7 @@ subroutine AtomsPos()
       in1 = 1
       in2 = nAt
    else
-      !$OMP PARALLEL 
+      !$OMP PARALLEL
       in1 = indxDiv(procID)
       in2 = indxDiv(procID+1) - 1
       !$OMP END PARALLEL
@@ -991,7 +994,7 @@ subroutine AtomsPos()
    end if
    call MIO_Allocate(layerIndex,nAt,'layerIndex','atoms')
    call MIO_Allocate(interlayerDistances,nAt,'interlayerDistance','atoms')
-   if (MIO_StringComp(str,'MoireEncapsulatedBilayer') .or. MIO_StringComp(str,'TwistedBilayer') & 
+   if (MIO_StringComp(str,'MoireEncapsulatedBilayer') .or. MIO_StringComp(str,'TwistedBilayer') &
         .or. MIO_StringComp(str,'TwistedBilayerBasedOnMoireCell') .or. MIO_StringComp(str,'MoireEncapsulatedBilayer') &
         .or. MIO_StringComp(str,'ReadXYZ') &
         .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell')) then
@@ -999,6 +1002,7 @@ subroutine AtomsPos()
       !print*, "lets assign the indices for the layers"
       call MIO_InputParameter('fourLayers',fourLayers,.false.)
       call MIO_InputParameter('fourLayersSandwiched',fourLayersSandwiched,.false.)
+      call MIO_InputParameter('helicalTwistedMBM',helicalTwistedMBM,.false.)
       call MIO_InputParameter('fiveLayersSandwiched',fiveLayersSandwiched,.false.)
       call MIO_InputParameter('sixLayersSandwiched',sixLayersSandwiched,.false.)
       call MIO_InputParameter('sevenLayersSandwiched',sevenLayersSandwiched,.false.)
@@ -1075,6 +1079,8 @@ subroutine AtomsPos()
       call MIO_InputParameter('twentyLayersZ20',twentyLayersZ20,6.6_dp)
       call MIO_InputParameter('GBNtwoLayers',GBNtwoLayers,.false.)
       call MIO_InputParameter('t2GBN',t2GBN,.false.)
+      call MIO_InputParameter('t2BG',t2BG,.false.)
+      call MIO_InputParameter('t3BG',t3BG,.false.)
       call MIO_InputParameter('encapsulatedFourLayers',encapsulatedFourLayers,.false.)
       call MIO_InputParameter('readLayerIndex',readLayerIndex,.false.)
       !if (GBNtwoLayers) then
@@ -1085,7 +1091,7 @@ subroutine AtomsPos()
       !    end if
       if (readLayerIndex) then
           call MIO_Print('We read the layer indices from an external file, make sure to provide it','atoms')
-      else if (fourLayers .or. fourLayersSandwiched .or. encapsulatedFourLayers) then
+      else if (fourLayers .or. fourLayersSandwiched .or. helicalTwistedMBM .or. encapsulatedFourLayers) then
         do i=1,nAt
           if (Rat(3,i).lt.((fourLayersZ1+fourLayersZ2)/2.0_dp)) then ! we first start by considering only the atoms in the bottom layer
              layerIndex(i) = 1
@@ -1269,6 +1275,22 @@ subroutine AtomsPos()
              layerIndex(i) = 3
           end if
         end do
+      else if (t3BG) then
+        do i=1,nAt
+          if (Rat(3,i).lt.((sixLayersZ1+sixLayersZ2)/2.0_dp)) then ! we first start by considering only the atoms in the bottom layer
+             layerIndex(i) = 1
+          elseif (Rat(3,i).gt.((sixLayersZ1+sixLayersZ2)/2.0_dp) .and. Rat(3,i) .lt. (sixLayersZ2+sixLayersZ3)/2.0_dp) then
+             layerIndex(i) = 2
+          elseif (Rat(3,i).gt.((sixLayersZ2+sixLayersZ3)/2.0_dp) .and. Rat(3,i) .lt. (sixLayersZ3+sixLayersZ4)/2.0_dp) then
+             layerIndex(i) = 3
+          elseif (Rat(3,i).gt.((sixLayersZ3+sixLayersZ4)/2.0_dp) .and. Rat(3,i) .lt. (sixLayersZ4+sixLayersZ5)/2.0_dp) then
+             layerIndex(i) = 4
+          elseif (Rat(3,i).gt.((sixLayersZ4+sixLayersZ5)/2.0_dp) .and. Rat(3,i) .lt. (sixLayersZ5+sixLayersZ6)/2.0_dp) then
+             layerIndex(i) = 5
+          elseif (Rat(3,i).gt. (sixLayersZ5+sixLayersZ6)/2.0_dp) then
+             layerIndex(i) = 6
+          end if
+        end do
       else if (oneLayer) then
         do i=1,nAt
           layerIndex(i) = 1
@@ -1298,7 +1320,7 @@ subroutine AtomsPos()
    !        layerIndex(i) = 1
    !   end do
    end if
-      
+
 
 #ifdef TIMER
    call MIO_TimerStop('atoms')
@@ -1326,7 +1348,7 @@ subroutine AtomsConstruct(X,mm,angle,label,d,yShift)
    real(dp) :: f(3)
    real(dp) :: basis(3,2)
    character(len=80) :: str
-   
+
    ncell = mm(1)**2 + mm(1)*mm(2) + mm(2)**2
    call MIO_Allocate(X,[3,ncell*2],'X','atoms')
    a = angle*pi/180.0_dp
@@ -1409,7 +1431,7 @@ subroutine AtomsConstruct(X,mm,angle,label,d,yShift)
 end subroutine AtomsConstruct
 
 subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
-   
+
    !use tbpar,                only : tbnn
    !use cell,                 only : aG, aBN,ucell
    use math
@@ -1438,27 +1460,27 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
    integer :: i,k,l,n
    !real(dp) :: dx(natoms,maxnn),dy(natoms,maxnn),dz(natoms,maxnn)
    !real(dp), intent(out) :: dr(natoms,maxnn)
-   
+
    real(dp) :: dx_t,dy_t,dz_t,d2_t
    real(dp) :: xmin,xmax,ymin,ymax,xcell,ycell,rho
-   
+
    real(dp) :: xnew(9*natoms),ynew(9*natoms),znew(9*natoms)
    integer :: ixs(9*natoms),iys(9*natoms),vecino
-   
+
    integer :: Nx,Ny,ix,iy
    integer, allocatable :: cells(:,:,:)
    integer :: NNcount,addx,addy
-   
+
    real(dp), parameter :: rad(3) = [1.0_dp/sqrt(3.0_dp),1.0_dp,2.0_dp/sqrt(3.0_dp)]
    !character(len=50) :: str
- 
+
    !integer :: ncell(3,9)
    real(dp) :: v(3)
    real(dp) :: rmax
 
    integer, pointer :: countN(:,:), cnt(:,:)
    integer :: np
-   
+
    integer :: safetycounter
 
 
@@ -1521,7 +1543,7 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
    !print*, "hola2"
    do i=1,natoms
      n=i+2*natoms
-     xnew(n)=X(1,i)+A1(1)+A2(1) ! 
+     xnew(n)=X(1,i)+A1(1)+A2(1) !
      ynew(n)=X(2,i)+A1(2)+A2(2)
      znew(n)=X(3,i)
    end do
@@ -1535,7 +1557,7 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
    !print*, "hola4"
    do i=1,natoms
      n=i+4*natoms
-     xnew(n)=X(1,i)-A1(1)+A2(1) ! 
+     xnew(n)=X(1,i)-A1(1)+A2(1) !
      ynew(n)=X(2,i)-A1(2)+A2(2)
      znew(n)=X(3,i)
    end do
@@ -1555,12 +1577,12 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
    do i=1,natoms
      n=i+7*natoms
      xnew(n)=X(1,i)-A2(1)       ! + A1(1)
-     ynew(n)=X(2,i)-A2(2)       ! + A1(2) 
+     ynew(n)=X(2,i)-A2(2)       ! + A1(2)
      znew(n)=X(3,i)
    end do
    do i=1,natoms
      n=i+8*natoms
-     xnew(n)=X(1,i)+A1(1)-A2(1)  
+     xnew(n)=X(1,i)+A1(1)-A2(1)
      ynew(n)=X(2,i)+A1(2)-A2(2)
      znew(n)=X(3,i)
    end do
@@ -1577,7 +1599,7 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
    m(:,2) = [-mm(2),mm(1)+mm(2)]
    Rcell = 0.0_dp
    Rcell(:2,:2) = matmul(ucell(:2,:2),m)
-   
+
    i1 = 0
    !!$OMP PARALLEL DO PRIVATE(f)
    do n = 1,9*natoms
@@ -1591,7 +1613,7 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
          !if (n.eq.54450) print*, "fb =", f
          i1 = i1+1
          if (i1.gt.natoms) then
-           !print*, "cycled for ", i1 
+           !print*, "cycled for ", i1
            cycle
          end if
          X(:,i1) = [mod(f(1),1.0_dp)+yShift, mod(f(2),1.0_dp)+yShift, 0.5_dp+d]
@@ -1611,7 +1633,7 @@ subroutine AtomsConstructBasedOnFastNN(X,mm,angle,label,d,yShift, natoms)
    !end do
    !close(4)
 
-   !print*, "i1 = ", i1, natoms 
+   !print*, "i1 = ", i1, natoms
 
 
 end subroutine AtomsConstructBasedOnFastNN
@@ -1633,7 +1655,7 @@ subroutine AtomsConstructAsymm(X,mm,mm2,angle,label,d,yShift)
    real(dp) :: f(3)
    real(dp) :: basis(3,2)
    character(len=80) :: str
-   
+
    ! Modified
    !ncell = mm(1)**2 + mm(1)*mm(2) + mm(2)**2
    ncell = mm(1)*mm2(1) + mm(1)*mm(2) + mm(2)**2

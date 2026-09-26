@@ -13,7 +13,7 @@
 module mpikinds
 
    implicit none
-   
+
    PRIVATE
 
    integer, parameter, public :: sp = selected_real_kind(6,30)

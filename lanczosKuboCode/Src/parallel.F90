@@ -3,7 +3,7 @@ module parallel
    use mio
 
    implicit none
-   
+
    PRIVATE
 
    integer, public, save :: xDiv, yDiv, nDiv, xSubdiv, ySubdiv

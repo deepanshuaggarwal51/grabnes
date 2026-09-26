@@ -13,7 +13,7 @@
 module parser
 
    implicit none
-   
+
    PRIVATE
 
    public :: ParserCheck

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines computational bottlenecks and optimization strategies for the TAPW (Twisted Angle Plane Wave) Chern number calculation in the `lanczosKuboCode_jinwoo` codebase. The optimizations are organized by category and impact level.
+This document outlines computational bottlenecks and optimization strategies for the TAPW (Twisted Angle Plane Wave) Chern number calculation in the `lanczosKuboCode` codebase. The optimizations are organized by category and impact level.
 
 ## Current Performance Analysis
 
@@ -370,9 +370,9 @@ end do
 ## 🔧 Implementation Notes
 
 ### Code Locations
-- **TAPW Bands**: `lanczosKuboCode_jinwoo/Src/diag.F90` lines 883-1056
-- **Chern Calculation**: `lanczosKuboCode_jinwoo/Src/diag.F90` lines 11473-12009
-- **Position Matrices**: `lanczosKuboCode_jinwoo/Src/diag.F90` lines 12057-12175 ✅ **Already optimized**
+- **TAPW Bands**: `lanczosKuboCode/Src/diag.F90` lines 883-1056
+- **Chern Calculation**: `lanczosKuboCode/Src/diag.F90` lines 11473-12009
+- **Position Matrices**: `lanczosKuboCode/Src/diag.F90` lines 12057-12175 ✅ **Already optimized**
 
 ### Dependencies
 - **MKL/BLAS**: Already used for matrix operations
@@ -431,4 +431,4 @@ call MIO_TimerStop('tapw_diag')
 ---
 
 *Last updated: September 26, 2025*  
-*Generated for: lanczosKuboCode_jinwoo TAPW Chern number calculation*
+*Generated for: lanczosKuboCode TAPW Chern number calculation*

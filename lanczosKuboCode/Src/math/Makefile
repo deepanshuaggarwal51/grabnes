@@ -28,7 +28,7 @@ libmath.a: $(MATH_OBJS) | $(LIB_DIR)
 	@$(AR) $(ARFLAGS) libmath.a $(MATH_OBJS)
 	@echo $(LIB_DIR)
 	@cp *.a $(LIB_DIR)
-	@cp *.mod $(BUILD_DIR)	
+	@cp *.mod $(BUILD_DIR)
 
 $(LIB_DIR):
 	@(mkdir $(LIB_DIR))

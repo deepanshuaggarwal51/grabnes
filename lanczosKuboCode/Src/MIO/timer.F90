@@ -65,23 +65,30 @@ subroutine TimerCount(module)
    real(dp) :: t, t1
 
    call cpu_time(t)              ! Get current time
+
+   !$OMP CRITICAL(timer_critical)
    ncalls = ncalls+1
+   !$OMP END CRITICAL(timer_critical)
 
    ! Look for existing timers for this module
    do it=ntimers,1,-1
       if(timers(it)%module == module) then
-         if (timers(it)%active) call SysKill('Timer '//trim(module)// &
-           ' already running','timer','TimerCount')
+         if (timers(it)%active) then
+            call SysKill('Timer '//trim(module)//' already running','timer','TimerCount')
+         end if
+         !$OMP CRITICAL(timer_critical)
          timers(it)%itime = t
          timers(it)%ncalls = timers(it)%ncalls+1
          timers(it)%active = .true.
          call cpu_time(t1)
          timetime = timetime + t1-t
+         !$OMP END CRITICAL(timer_critical)
          return
       end if
    end do
 
    ! New timer initialization
+   !$OMP CRITICAL(timer_critical)
    ntimers = ntimers+1
    if (ntimers > tmax) &
      call SysKill('Not enough timers, parameter tmax too small','timer',&
@@ -94,6 +101,7 @@ subroutine TimerCount(module)
 
    call cpu_time(t1)
    timetime = timetime + t1-t
+   !$OMP END CRITICAL(timer_critical)
 
 end subroutine TimerCount
 !****** Subroutine: TimerCount ************************************************
@@ -122,21 +130,27 @@ subroutine TimerStop(module)
 
    call cpu_time(t)              ! Get current time
 
+   !$OMP CRITICAL(timer_critical)
    ncalls=ncalls+1
+   !$OMP END CRITICAL(timer_critical)
+
    ! Look for existing timers
    do it=ntimers,1,-1
       if(timers(it)%module == module) then
-         if (.not. timers(it)%active) call SysKill('Timer '//trim(module)//&
-           ' not running','timer','TimerStop')
+         if (.not. timers(it)%active) then
+            call SysKill('Timer '//trim(module)//' not running','timer','TimerStop')
+         end if
+         !$OMP CRITICAL(timer_critical)
          timers(it)%ctime = timers(it)%ctime + t - timers(it)%itime
          timers(it)%active = .false.
          call cpu_time(t1)
          timetime = timetime + t1-t
+         !$OMP END CRITICAL(timer_critical)
          return
       end if
    end do
-   call cpu_time(t1)
-   timetime = timetime + t1-t
+
+   ! Timer not found
    call SysKill('Timer '//trim(module)//' not found','timer','TimerStop')
 
 end subroutine TimerStop
@@ -214,12 +228,14 @@ subroutine TimerPrint()
    call MPITimerGet(tArr(ntimers),callsArr(ntimers))
    timers(ntimers)%module = 'mpi'
 #endif /* MPI */
+   !$OMP CRITICAL(timer_critical)
    ncalls=ncalls+1
    ntimers = ntimers+1
    call cpu_time(t1)
    timetime = timetime + t1-t
    timers(ntimers)%module = 'timer'
    timers(ntimers)%ncalls = ncalls
+   !$OMP END CRITICAL(timer_critical)
    if (timers(1)%active) then
       call TimerStop(timers(1)%module)
    end if

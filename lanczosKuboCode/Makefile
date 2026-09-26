@@ -1,9 +1,8 @@
-#     Kubo3 Makefile
-#
-#     Copyright (C) 2013 Rafael Martinez-Gordillo
-#
-
+# Include make.sys
 include make.sys
+
+# Export LDFLAGS
+export LDFLAGS
 
 TIMER:=$(findstring DNOTIMER,,$(FCFLAGS))
 ifneq ($(TIMER),DNOTIMER)
@@ -14,7 +13,7 @@ endif
 endif
 
 F90_SERIAL?=$(F90)
-	
+
 ROOT_DIR:=$(PWD)
 BUILD_DIR:=$(ROOT_DIR)/build
 SRC_DIR=$(ROOT_DIR)/Src
@@ -47,12 +46,12 @@ grabnes: flags version.info
 	@echo
 	@cp -f $(SRC_DIR)/Makefile $(BUILD_DIR)
 	@(cd $(BUILD_DIR) ; $(MAKE) grabnes)
-	
+
 $(BUILD_DIR):
 	mkdir $(BUILD_DIR)
 $(BIN_DIR):
 	mkdir $(BIN_DIR)
-	
+
 .PHONY: clean flags
 clean:
 	@if [ -d $(BUILD_DIR) ] ; then \
@@ -62,12 +61,12 @@ clean:
 	fi
 	@if [ -d $(LIB_DIR) ]; then \
 	cd $(LIB_DIR) ; $(RM) *.a ; \
-	fi 
+	fi
 	@if [ -d $(BIN_DIR) ]; then \
 	cd $(BIN_DIR) ; $(RM) * ; \
 	else \
 	echo 'Nothing to clean in BIN_DIR' ; \
-	fi 
+	fi
 
 version.info: .version
 	@echo ">> Generating version file <<"; \
@@ -81,5 +80,4 @@ version.info: .version
 	echo "\$$Date\$$" >&4 ; \
 	echo $$(date) >&4 ; \
 	touch version.info
-	
-	
+

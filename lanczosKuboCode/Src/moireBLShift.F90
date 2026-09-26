@@ -3,7 +3,7 @@ module moireBLShift
    use mio
 
    implicit none
-   
+
    PRIVATE
 
    integer, save, public :: mSi=0, mSf=0, mSStep=1
@@ -27,15 +27,15 @@ subroutine moireBLShiftInit()
    call MIO_TimerCount('moireBLShift')
 #endif /* TIMER */
 
-   call MIO_InputParameter('moireBLShiftDefinedValues',u,.false.) 
-   call MIO_InputParameter('moireBLShiftRange',v,.false.) 
+   call MIO_InputParameter('moireBLShiftDefinedValues',u,.false.)
+   call MIO_InputParameter('moireBLShiftRange',v,.false.)
    if (u) then
       mSi = 0
       mSf = mSi
       mSStep = 1
       print*, "hereclup", mSi, mSf
    else if (v) then
-      call MIO_InputParameter('moireBLShiftRangeSteps',mSStep,10) 
+      call MIO_InputParameter('moireBLShiftRangeSteps',mSStep,10)
       mSi = 0
       mSf = mSi + mSStep
       print*, "hereclap", mSi, mSf
@@ -66,8 +66,8 @@ subroutine moireBLShiftValue(mS)
    call MIO_TimerCount('moireBLShift')
 #endif /* TIMER */
 
-   call MIO_InputParameter('moireBLShiftDefinedValues',u,.false.) 
-   call MIO_InputParameter('moireBLShiftRange',v,.false.) 
+   call MIO_InputParameter('moireBLShiftDefinedValues',u,.false.)
+   call MIO_InputParameter('moireBLShiftRange',v,.false.)
    if (u) then
       call MIO_InputParameter('MoireBilayerBottomXShift',tauX1,0.0_dp)
       call MIO_InputParameter('MoireBilayerBottomYShift',tauY1,0.0_dp)
@@ -82,10 +82,10 @@ subroutine moireBLShiftValue(mS)
       call MIO_InputParameter('MoireBilayerTopXMax',xmax2,0.0_dp)
       call MIO_InputParameter('MoireBilayerTopYMin',ymin2,0.0_dp)
       call MIO_InputParameter('MoireBilayerTopYMax',ymax2,0.0_dp)
-      tauX1= xmin1 + mS*(xmax1-xmin1)/mSStep 
-      tauY1= ymin1 + mS*(ymax1-ymin1)/mSStep 
-      tauX2= xmin2 + mS*(xmax2-xmin2)/mSStep 
-      tauY2= ymin2 + mS*(ymax2-ymin2)/mSStep 
+      tauX1= xmin1 + mS*(xmax1-xmin1)/mSStep
+      tauY1= ymin1 + mS*(ymax1-ymin1)/mSStep
+      tauX2= xmin2 + mS*(xmax2-xmin2)/mSStep
+      tauY2= ymin2 + mS*(ymax2-ymin2)/mSStep
       if (mSi /= mSf) then
          write(prefix,'(a,f0.4,a,f0.4,a,f0.4,a,f0.4)') 'X1_',tauX1,'_Y1_', tauY1,'_X2_',tauX2,'_Y2_',tauY2
          call MIO_Print("Writing files in folder '"//trim(prefix)//"'",'moireBLShift')

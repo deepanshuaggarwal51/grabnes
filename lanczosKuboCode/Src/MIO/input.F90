@@ -14,6 +14,9 @@ module input
 
    use file,                 only : cl_file
    use io,                   only : maxlinel, maxfnlen
+#ifdef _OPENMP
+   use omp_lib,              only : omp_in_parallel, omp_get_thread_num
+#endif
 #ifdef MPI
    use mpi
 #endif /* MPI */
@@ -27,6 +30,8 @@ module input
    integer, save :: nlines, maxrecl, uln, uin
    integer :: iostat
 
+   logical, save :: warned_parallel_once = .false.
+
    public :: InputInit
    public :: InputClose
    public :: InputParameter
@@ -37,6 +42,11 @@ module input
    interface InputParameter
       module procedure InputPar_i, InputPar_d, InputPar_r, InputPar_l, InputPar_s
       module procedure InputPar_is, InputPar_ds, InputPar_rs, InputPar_ls
+   end interface
+
+   public :: InputParameterVariable
+   interface InputParameterVariable
+      module procedure InputPar_i_variable
    end interface
 
    interface InputFindBlock
@@ -87,6 +97,30 @@ subroutine InputInit(success)
 #ifdef TIMER
    call TimerCount('input')
 #endif /* TIMER */
+#ifdef _OPENMP
+   if (omp_in_parallel()) then
+      if (.not. warned_parallel_once) then
+         warned_parallel_once = .true.
+         write(*, '(A,I0,A)') 'input: WARNING: input read inside OpenMP parallel region (thread=', omp_get_thread_num(), ')'
+      end if
+   end if
+#endif
+#ifdef _OPENMP
+   if (omp_in_parallel()) then
+      if (.not. warned_parallel_once) then
+         warned_parallel_once = .true.
+         write(*, '(A,I0,A)') 'input: WARNING: input read inside OpenMP parallel region (thread=', omp_get_thread_num(), ')'
+      end if
+   end if
+#endif
+#ifdef _OPENMP
+   if (omp_in_parallel()) then
+      if (.not. warned_parallel_once) then
+         warned_parallel_once = .true.
+         write(*, '(A,I0,A)') 'input: WARNING: input read inside OpenMP parallel region (thread=', omp_get_thread_num(), ')'
+      end if
+   end if
+#endif
 
    success = .true.
    inputfile = OptionsInputName()
@@ -203,6 +237,14 @@ subroutine InputPar_i(label,value,def,str,defstr)
 #ifdef TIMER
    call TimerCount('input')
 #endif /* TIMER */
+#ifdef _OPENMP
+   if (omp_in_parallel()) then
+      if (.not. warned_parallel_once) then
+         warned_parallel_once = .true.
+         write(*, '(A,I0,A)') 'input: WARNING: input read inside OpenMP parallel region (thread=', omp_get_thread_num(), ')'
+      end if
+   end if
+#endif
    sz = size(value)
    if (sz /= size(def)) call SysKill('Incorrect size of default value'// &
      " for parameter '"//trim(label)//"'",'input','InputParameter')
@@ -231,6 +273,77 @@ subroutine InputPar_i(label,value,def,str,defstr)
 #endif /* TIMER */
 
 end subroutine InputPar_i
+!******************************************************************************
+!> @brief Read variable-length integer array from input (stops when elements run out)
+!! @param[in] label Input parameter label
+!! @param[inout] value Array to fill (will be filled from start, elements beyond count unchanged)
+!! @param[out] count Number of elements actually read
+!! @param[in] maxCount Maximum number of elements to read (size of value array)
+!! @details Reads elements until end-of-record (error -1) or maxCount reached
+subroutine InputPar_i_variable(label,value,count,maxCount)
+
+   use parser,               only : ParserCheck
+   use sys,                  only : SysKill
+#ifdef TIMER
+   use timer,                only : TimerCount, TimerStop
+#endif /* TIMER */
+
+   implicit none
+
+   character(*), intent(in) :: label
+   integer, intent(out) :: value(:)
+   integer, intent(out) :: count
+   integer, intent(in) :: maxCount
+
+   integer :: i, ierr, id
+   integer :: sz
+   character(len=maxrecl) :: line
+
+#ifdef TIMER
+   call TimerCount('input')
+#endif /* TIMER */
+
+#ifdef _OPENMP
+   if (omp_in_parallel()) then
+      if (.not. warned_parallel_once) then
+         warned_parallel_once = .true.
+         write(*, '(A,I0,A)') 'input: WARNING: input read inside OpenMP parallel region (thread=', omp_get_thread_num(), ')'
+      end if
+   end if
+#endif
+   sz = size(value)
+   if (maxCount > sz) then
+      call TimerStop('input')
+      call SysKill('maxCount exceeds array size for parameter '//trim(label),'input','InputParameterVariable')
+   end if
+
+   count = 0
+   if (InputSearchLabel(label, line, id)) then
+      ! Read elements one by one until we run out (error -1 means element not found)
+      do i = 1, maxCount
+         call ParserCheck(value(i), line, i, ierr)
+         if (ierr == 0) then
+            ! Successfully read element i
+            count = count + 1
+         else if (ierr == -1) then
+            ! No more elements found - this is normal, stop reading
+            exit
+         else
+            ! Some other error occurred - call InputParErr and stop timer before SysKill
+            call TimerStop('input')
+            call InputParErr(label, ierr, id)
+            return
+         end if
+      end do
+   else
+      ! Parameter not found - count stays 0, values unchanged
+      count = 0
+   end if
+#ifdef TIMER
+   call TimerStop('input')
+#endif /* TIMER */
+
+end subroutine InputPar_i_variable
 !******************************************************************************
 subroutine InputPar_is(label,value,def,str,defstr)
 
@@ -272,6 +385,14 @@ subroutine InputPar_d(label,value,def,str,defstr)
 #ifdef TIMER
    call TimerCount('input')
 #endif /* TIMER */
+#ifdef _OPENMP
+   if (omp_in_parallel()) then
+      if (.not. warned_parallel_once) then
+         warned_parallel_once = .true.
+         write(0, '(A,A,A,I0)') 'input: WARNING: input read inside OpenMP parallel region for label "', trim(label), '" (thread=', omp_get_thread_num(), ')'
+      end if
+   end if
+#endif
    sz = size(value)
    if (sz /= size(def)) call SysKill('Incorrect size of default value'// &
      " for parameter '"//trim(label)//"'",'input','InputParameter')

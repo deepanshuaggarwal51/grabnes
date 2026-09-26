@@ -159,7 +159,7 @@ subroutine SysIOErr(iostat,module,function)
    case(41)
       call SysKill('severe (41): Insufficient virtual memory', &
         'ioerror')
-   
+
    case(45)
       call SysKill('severe (45): Keyword value error in OPEN statement', &
         'ioerror')
@@ -210,7 +210,7 @@ subroutine SysIOErrMPI(iostat,module,function)
    if (iostat==0) return
    if (present(module)) then
       call SysPrint('')
-#ifdef DEBUG      
+#ifdef DEBUG
       if (present(function)) then
          call SysPrint('I/O error in function '//trim(function),module)
       else

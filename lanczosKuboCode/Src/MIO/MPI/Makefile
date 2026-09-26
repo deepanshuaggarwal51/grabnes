@@ -40,7 +40,7 @@ mpi_types.f90: $(SRC_DIR)/MIO/MPI/type_gen.f90 $(SRC_DIR)/MIO/MPI/mpi_type.f90
 clean:
 	$(RM) *.mod *.o *.a
 	$(RM) type_gen mpi_types.f90
-	
+
 # PREREQUISITES OF OBJECT FILES
 mpi.o: mpitime.o mpi_inc.o mpi_types.o
 mpi_types.o: mpitime.o mpi_inc.o mpikinds.o

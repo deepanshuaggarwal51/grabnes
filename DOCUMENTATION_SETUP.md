@@ -35,7 +35,7 @@ GENERATE_HTML          = NO
 RECURSIVE              = YES
 
 # CRITICAL: Restrict input to avoid noise
-INPUT                  = lanczosKuboCode_jinwoo/Src/ham.F90
+INPUT                  = lanczosKuboCode/Src/ham.F90
 
 FILE_PATTERNS          = *.f90 *.F90
 EXTENSION_MAPPING      = F90=Fortran f90=Fortran
@@ -53,7 +53,7 @@ EXTRACT_ANON_NSPACES   = YES
 ```
 
 **Why These Settings Matter:**
-- `INPUT = lanczosKuboCode_jinwoo/Src/ham.F90`: Focuses Doxygen on one file, avoiding noise from other files
+- `INPUT = lanczosKuboCode/Src/ham.F90`: Focuses Doxygen on one file, avoiding noise from other files
 - `EXTRACT_ALL = YES`: Forces Doxygen to extract all documented items, even if it's unsure about them
 - `OPTIMIZE_FOR_FORTRAN = YES`: Enables Fortran-specific parsing optimizations
 
@@ -214,13 +214,13 @@ numpy==2.1.2
 ## Common Pitfalls
 
 ### ❌ Don't Do This
-- Use `INPUT = lanczosKuboCode_jinwoo/Src` (too broad, creates noise)
+- Use `INPUT = lanczosKuboCode/Src` (too broad, creates noise)
 - Use `.. doxygenindex::` (shows files, not functions)
 - Set `QUIET = YES` (hides important warnings)
 - Skip `EXTRACT_ALL = YES` (may miss documented items)
 
 ### ✅ Do This Instead
-- Use `INPUT = lanczosKuboCode_jinwoo/Src/ham.F90` (focused, clean)
+- Use `INPUT = lanczosKuboCode/Src/ham.F90` (focused, clean)
 - Use `.. doxygennamespace:: ham` (shows functions with docs)
 - Set `QUIET = NO` (shows warnings for debugging)
 - Always use `EXTRACT_ALL = YES` (ensures extraction)
@@ -259,7 +259,7 @@ your-docs-repo/
 │   ├── index.rst             # Main index page
 │   ├── api.rst               # API documentation
 │   └── requirements.txt      # Python dependencies
-└── lanczosKuboCode_jinwoo/
+└── lanczosKuboCode/
     └── Src/
         └── ham.F90           # Your documented Fortran file
 ```

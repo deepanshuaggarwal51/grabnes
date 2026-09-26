@@ -3,7 +3,7 @@ module interface
    use mio
 
    implicit none
-   
+
    PRIVATE
 
    integer, parameter :: maxEdgeNeigh=30

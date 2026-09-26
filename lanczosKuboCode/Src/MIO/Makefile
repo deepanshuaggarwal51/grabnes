@@ -27,7 +27,7 @@ endif
 # LIST OF OBJECT FILES
 MIO_OBJS := io.o sys.o format.o precision.o timer.o debug.o \
             file.o mem.o input.o options.o string.o parser.o \
-            omp.o          
+            omp.o
 
 MPI_COMP := $(findstring MPI,$(findstring -DMPI,$(FCFLAGS)))
 ifeq ($(MPI_COMP),MPI)
@@ -74,7 +74,7 @@ libmpi.a: | $(MPI_DIR)
 $(MPI_DIR):
 	@(mkdir $(MPI_DIR))
 
-mem.f90: $(SRC_DIR)/MIO/mem_gen.f90 $(SRC_DIR)/MIO/mem_temp.f90 
+mem.f90: $(SRC_DIR)/MIO/mem_gen.f90 $(SRC_DIR)/MIO/mem_temp.f90
 mem.f90: $(SRC_DIR)/MIO/mem_in.f90
 	$(F90_SERIAL) -o mem_gen $(SRC_DIR)/MIO/mem_gen.f90
 	@./mem_gen $(SRC_DIR)/MIO/mem_in.f90 $(SRC_DIR)/MIO/mem_temp.f90 mem.f90

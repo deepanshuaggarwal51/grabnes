@@ -3,7 +3,7 @@ module tbpar
    use mio
 
    implicit none
-   
+
    PRIVATE
 
    real(dp), public, save :: g0 ! Hopping parameter
@@ -74,7 +74,7 @@ subroutine TBInit()
    call MIO_InputParameter('TB.InterLayerHopping',gIntLay,0.39_dp)
    gIntLay = gIntLay/g0
    if (tbnn>=2) then
-      if (MIO_InputSearchLabel('&begin TB.Hoppings.1',line,id)) then 
+      if (MIO_InputSearchLabel('&begin TB.Hoppings.1',line,id)) then
           do i=2,tbnn
              call MIO_InputBlock('TB.Hoppings.'//trim(num2str(i)),gn(:,:,i))
           end do
@@ -82,8 +82,8 @@ subroutine TBInit()
           do i=2,tbnn
              call MIO_InputParameter('HaldaneT2',t2,0.0_dp)
              gn(2,1,i) = 0.0_dp !t2  ! We add t2 in the hams.f90 file for the Haldane model
-             gn(1,1,i) = 0.0_dp !t2 
-             gn(2,2,i) = 0.0_dp !t2 
+             gn(1,1,i) = 0.0_dp !t2
+             gn(2,2,i) = 0.0_dp !t2
           end do
           print*, "HaldaneT2 = ", t2
       end if

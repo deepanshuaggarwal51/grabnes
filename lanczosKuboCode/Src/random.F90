@@ -4,7 +4,7 @@ module random
    use mio
 
    implicit none
-   
+
    PRIVATE
 
    !public :: RandSeed

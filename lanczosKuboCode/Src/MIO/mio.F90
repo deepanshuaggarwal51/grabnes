@@ -16,6 +16,7 @@ module mio
    use file
    use format
    use input,      MIO_InputParameter => InputParameter
+   use input,      MIO_InputParameterVariable => InputParameterVariable
    use input,      MIO_InputFindBlock =>  InputFindBlock, &
                    MIO_InputBlock => InputBlock, &
                    MIO_InputSearchLabel => InputSearchLabel
@@ -69,6 +70,7 @@ module mio
 
    ! input module
    public :: MIO_InputParameter
+   public :: MIO_InputParameterVariable
 
    ! mem module
    public :: MIO_Allocate

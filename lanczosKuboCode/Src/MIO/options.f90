@@ -15,7 +15,7 @@ module options
    use io,                   only : maxfnlen
 
    implicit none
-   
+
    PRIVATE
 
    character(len=maxfnlen) :: input

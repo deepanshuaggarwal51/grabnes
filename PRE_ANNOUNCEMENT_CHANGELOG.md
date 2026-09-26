@@ -1,0 +1,179 @@
+# GRABNES pre-announcement collaboration log
+
+This document records repository changes made with Codex assistance while the
+public GRABNES repository is being prepared for a broader announcement. The
+repository is already publicly accessible, but the work described here should
+be treated as pre-release consolidation until collaborators have reviewed and
+committed it.
+
+Last updated: 2026-09-26
+
+## Current Git state
+
+- The changes described below are staged locally but have not been committed.
+- The tag `pre-code-consolidation` points to commit `6133ab7`, the repository
+  state before the solver directories were consolidated.
+- Deleted files remain recoverable from that tag and from Git history.
+
+## 1. Public examples scaffold
+
+Added an `examples/` entry point for new users:
+
+```text
+examples/
+├── README.md
+├── 01_graphene_bands/
+│   ├── README.md
+│   ├── Gendata.in
+│   ├── run.sh
+│   ├── plot.py
+│   └── reference/
+│       └── bands.dat
+├── 02_graphene_dos/
+└── 03_twisted_bilayer_bands/
+```
+
+The first example is based on the pristine-graphene band calculation from the
+Twistronics 2023 tutorial. It contains:
+
+- a cleaned, minimal GRABNES input;
+- a path-independent launcher that accepts an optional `GRABNES_BIN` override;
+- a plotting script using Python 3 and Matplotlib;
+- known-good reference band data copied exactly from the tutorial output; and
+- instructions describing the calculation and its important input controls.
+
+The plotting and shell scripts passed syntax checks, and the reference data
+were verified byte-for-byte against the tutorial result. The two later example
+directories are intentionally placeholders for the DOS and twisted-bilayer
+workflows.
+
+## 2. Solver directory consolidation
+
+The repository previously contained three competing solver trees:
+
+- `lanczosKuboCode/`
+- `lanczosKuboCode_jiaqi/`
+- `lanczosKuboCode_jinwoo/`
+
+Investigation of the private repository history showed that the `jinwoo` tree
+contains the active development line through September 2026, including recent
+TAPW, Berry-link, Wilson-loop, orbital-moment, and semiclassical-orbit work.
+The `jiaqi` source tree was also present byte-for-byte inside
+`lanczosKuboCode_jinwoo/SrcJiaqi/`.
+
+The latest `jinwoo` implementation was therefore promoted to the canonical
+`lanczosKuboCode/` path. The `_jiaqi` and `_jinwoo` directories were removed.
+The embedded duplicate `SrcJiaqi/` tree was also removed.
+
+All repository documentation references were changed from
+`lanczosKuboCode_jinwoo` to `lanczosKuboCode`, including:
+
+- `Doxyfile`
+- `DOCUMENTATION_SETUP.md`
+- `SOC_IMPLEMENTATION_SUMMARY.md`
+- `TAPW_CHERN_OPTIMIZATION_GUIDE.md`
+
+The generated Chern-file header in `Src/diag.F90` now identifies the producer
+as `GRABNES` instead of referring to the former personal directory name.
+
+## 3. Repository cleanup
+
+Removed material that should not be maintained in the public source tree:
+
+- compiled executables and object, module, and archive files;
+- tracked `build/` and `bin/` output;
+- generated Sphinx documentation under `docs/_build/`;
+- notebook checkpoints and Python bytecode;
+- editor swap files and `.DS_Store`;
+- backup and temporary Makefiles;
+- personal `_prathap` source snapshots;
+- the obsolete `diag.F90.org.reduck96` snapshot; and
+- other generated sparse-matrix binaries and module files.
+
+The three solver directories previously occupied approximately 81 MB in the
+working tree. The consolidated canonical directory is approximately 6.6 MB.
+This does not shrink existing Git history; it only cleans the checked-out tree
+and future commits.
+
+Expanded `lanczosKuboCode/.gitignore` so that local build products,
+documentation output, notebook state, editor files, and backup files are not
+accidentally committed again.
+
+## 4. Build and documentation improvements
+
+Replaced the placeholder solver README with current information covering:
+
+- GRABNES's purpose;
+- required compilers and numerical libraries;
+- configuration and compilation;
+- executable location and invocation;
+- cleanup; and
+- the link to the first public example.
+
+Added `lanczosKuboCode/make.sys.example`, a portable GNU-oriented starting
+configuration using `mpif90`, `gfortran`, OpenMP, ARPACK, LAPACK, and BLAS.
+Site-specific configurations remain available under `lanczosKuboCode/Sys/`.
+
+Made the nested clean rules tolerate partially created `MIO/` and `math/`
+build directories that do not yet contain Makefiles.
+
+Moved the `action` argument declaration in `Src/MIO/MPI/mpitime.F90` outside
+the `TIMER` preprocessor guard. Without this change, GNU Fortran rejected the
+subroutine when `TIMER` was not defined because `implicit none` left `action`
+undeclared.
+
+Trailing whitespace was removed mechanically from the promoted Fortran and
+Makefile sources. No intended program logic was changed by that formatting
+cleanup.
+
+## 5. Verification performed
+
+The following checks completed successfully:
+
+- exactly one `lanczosKuboCode*` directory remains;
+- no repository text references the removed `_jiaqi` or `_jinwoo` paths;
+- no compiled objects, modules, archives, binaries, caches, swap files, or
+  listed backup patterns remain in the canonical tree;
+- `git diff --cached --check` reports no whitespace errors;
+- the example shell and Python files pass syntax checks; and
+- the graphene reference data match the Twistronics 2023 result exactly.
+
+The consolidated source build was attempted with the local Homebrew GNU
+Fortran and Open MPI installation. Compilation reached the generated MPI helper
+program after the `mpitime.F90` fix, but the host linker failed with:
+
+```text
+ld: library 'crt1.o' not found
+```
+
+This failure occurs while linking a small Fortran helper and indicates a local
+compiler/SDK installation problem. Consequently, a complete clean build and
+the end-to-end graphene example have not yet been verified on this machine.
+
+## 6. Recommended collaborator review before announcement
+
+1. Review the staged consolidation diff, especially the promoted solver source.
+2. Build on a clean Linux environment with MPI, ARPACK, LAPACK, and BLAS.
+3. Run `examples/01_graphene_bands/run.sh` and compare the resulting bands with
+   `reference/bands.dat`.
+4. Decide whether the two sparse-diagonalization test programs should be
+   integrated into a maintained test suite or removed.
+5. Add the planned graphene DOS and twisted-bilayer examples.
+6. Add a repository license, `CITATION.cff`, software DOI, and manuscript
+   references before the broader announcement.
+7. Replace the current internal-group top-level README with a public-facing
+   project landing page.
+
+## Recovery
+
+To inspect the repository before consolidation without changing the current
+working tree:
+
+```sh
+git show pre-code-consolidation
+git ls-tree -r --name-only pre-code-consolidation
+```
+
+Collaborators should avoid resetting the current work blindly. Review the
+staged changes first, then commit them as one consolidation commit or split
+them into examples, cleanup, and solver-promotion commits as appropriate.

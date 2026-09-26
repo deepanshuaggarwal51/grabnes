@@ -40,9 +40,9 @@ contains
 !
 !******************************************************************************
 subroutine MPITimer(action)
+   integer, intent(in) :: action
 #ifdef TIMER
 
-   integer, intent(in) :: action
    real(dp) :: t
 
    call cpu_time(t)

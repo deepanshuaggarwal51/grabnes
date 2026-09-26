@@ -186,11 +186,11 @@ LambdaPIA 0.001
    - Add hopping components beyond onsite terms
 
 ## Key Files Location
-- **Hamiltonian module:** `/lanczosKuboCode_jinwoo/Src/ham.F90`
-- **Diagonalization module:** `/lanczosKuboCode_jinwoo/Src/diag.F90`
-- **Calculation control:** `/lanczosKuboCode_jinwoo/Src/calc.F90`
-- **Magnetic field module:** `/lanczosKuboCode_jinwoo/Src/magf.F90`
-- **SCF module:** `/lanczosKuboCode_jinwoo/Src/scf.F90`
+- **Hamiltonian module:** `/lanczosKuboCode/Src/ham.F90`
+- **Diagonalization module:** `/lanczosKuboCode/Src/diag.F90`
+- **Calculation control:** `/lanczosKuboCode/Src/calc.F90`
+- **Magnetic field module:** `/lanczosKuboCode/Src/magf.F90`
+- **SCF module:** `/lanczosKuboCode/Src/scf.F90`
 
 ## Important Notes
 

@@ -3,7 +3,7 @@ module gauss
    use mio
 
    implicit none
-   
+
    PRIVATE
 
 !#ifdef MPI

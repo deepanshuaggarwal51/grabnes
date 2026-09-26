@@ -15,7 +15,7 @@ module string
    use io,                   only : maxlinel
 
    implicit none
-   
+
    PRIVATE
 
    public :: StringComp

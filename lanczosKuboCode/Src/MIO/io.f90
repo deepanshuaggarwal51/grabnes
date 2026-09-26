@@ -13,7 +13,7 @@
 module io
 
    implicit none
-   
+
    PRIVATE
 
    integer, public, save :: stdin = 5, stdout = 6, stderr = 0

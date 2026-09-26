@@ -3,7 +3,7 @@ module hybrid
    use mio
 
    implicit none
-   
+
    PRIVATE
 
    public :: HybridGen

@@ -3,10 +3,10 @@ module scf
    use mio
 
    implicit none
-   
+
    PRIVATE
 
-   public :: SCFGetCharge
+   public :: SCFGetCharge, SCFInit
 
    complex(dp), pointer :: ZWork(:)=>NULL()
    real(dp), pointer :: DWork(:)=>NULL()

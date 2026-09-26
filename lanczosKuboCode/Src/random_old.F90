@@ -8,7 +8,7 @@ module random
 #define USE_MPI 1
 #include <sprng_f.h>
 #endif /* MPI */
-   
+
    PRIVATE
 
 #ifdef MPI

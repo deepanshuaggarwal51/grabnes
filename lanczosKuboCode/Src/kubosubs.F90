@@ -4,7 +4,7 @@ module kubosubs
    use atoms,               only : in1, in2, nAt, inode1, inode2
 
    implicit none
-   
+
    PRIVATE
 
    public :: KuboRecursion
