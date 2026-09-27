@@ -20,7 +20,7 @@ if [ ! -x "$grabnes_bin" ]; then
 fi
 
 cd "$example_dir"
-rm -f generate.bands job.out
+rm -f generate.bands job.out file.13 file.14
 "$grabnes_bin" Gendata.in > job.out
 
 if [ ! -s generate.bands ]; then
@@ -29,4 +29,4 @@ if [ ! -s generate.bands ]; then
 fi
 
 printf '%s\n' "Created $example_dir/generate.bands"
-printf '%s\n' "Run 'python3 plot.py' to create graphene_bands.png."
+printf '%s\n' "Run 'python3 plot.py' to create twisted_bilayer_bands.png."

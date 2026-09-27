@@ -23,6 +23,7 @@ Bands.NumPoints 20
 
 TB.NeighLevels 1
 Neigh.CompareAll .true.
+nonBulkSmall .true.
 
-WriteDataFiles .true.
-WritePos .true.
+WriteDataFiles .false.
+WritePos .false.

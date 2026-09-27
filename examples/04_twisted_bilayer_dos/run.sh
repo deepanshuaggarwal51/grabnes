@@ -20,13 +20,13 @@ if [ ! -x "$grabnes_bin" ]; then
 fi
 
 cd "$example_dir"
-rm -f generate.bands job.out
+rm -f generate.diag.DOS job.out file.13 file.14
 "$grabnes_bin" Gendata.in > job.out
 
-if [ ! -s generate.bands ]; then
-    printf '%s\n' "GRABNES finished without creating generate.bands." >&2
+if [ ! -s generate.diag.DOS ]; then
+    printf '%s\n' "GRABNES finished without creating generate.diag.DOS." >&2
     exit 1
 fi
 
-printf '%s\n' "Created $example_dir/generate.bands"
-printf '%s\n' "Run 'python3 plot.py' to create graphene_bands.png."
+printf '%s\n' "Created $example_dir/generate.diag.DOS"
+printf '%s\n' "Run 'python3 plot.py' to create twisted_bilayer_dos.png."

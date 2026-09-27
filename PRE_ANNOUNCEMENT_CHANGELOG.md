@@ -6,14 +6,15 @@ repository is already publicly accessible, but the work described here should
 be treated as pre-release consolidation until collaborators have reviewed and
 committed it.
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 
 ## Current Git state
 
 - The consolidation and initial examples were committed and pushed to `main`
   as commit `94964340c3322751f352e44337715912ca13505f`.
 - The follow-up public update adds the `grabnes_testrun/` harness described
-  below for collaborator testing.
+  below for collaborator testing in commits `e57b597` and `47cef60`.
+- The next public update completes the four-example suite described below.
 - The tag `pre-code-consolidation` points to commit `6133ab7`, the repository
   state before the solver directories were consolidated.
 - Deleted files remain recoverable from that tag and from Git history.
@@ -26,29 +27,30 @@ Added an `examples/` entry point for new users:
 examples/
 ├── README.md
 ├── 01_graphene_bands/
-│   ├── README.md
-│   ├── Gendata.in
-│   ├── run.sh
-│   ├── plot.py
-│   └── reference/
-│       └── bands.dat
 ├── 02_graphene_dos/
-└── 03_twisted_bilayer_bands/
+├── 03_twisted_bilayer_bands/
+└── 04_twisted_bilayer_dos/
 ```
 
-The first example is based on the pristine-graphene band calculation from the
-Twistronics 2023 tutorial. It contains:
+Each directory now contains a minimal `Gendata.in`, location-independent
+`run.sh`, Python/Matplotlib `plot.py`, focused README, and known-good reference
+data. The launchers automatically find either the canonical executable or the
+temporary verified `grabnes_testrun` executable and still accept an explicit
+`GRABNES_BIN` override.
 
-- a cleaned, minimal GRABNES input;
-- a path-independent launcher that accepts an optional `GRABNES_BIN` override;
-- a plotting script using Python 3 and Matplotlib;
-- known-good reference band data copied exactly from the tutorial output; and
-- instructions describing the calculation and its important input controls.
+The examples are:
 
-The plotting and shell scripts passed syntax checks, and the reference data
-were verified byte-for-byte against the tutorial result. The two later example
-directories are intentionally placeholders for the DOS and twisted-bilayer
-workflows.
+- pristine graphene bands along `K - Gamma - M - K'`;
+- pristine graphene DOS from exact diagonalization on a `30 x 30` k-grid;
+- bands of the 76-atom `(m,n)=(3,2)` commensurate twisted bilayer; and
+- DOS of the same twisted bilayer on an `8 x 8` k-grid.
+
+The small 13.17-degree twisted cell is intentional: it demonstrates the full
+moire-cell workflow while remaining a laptop-scale test. The DOS examples use
+deterministic exact diagonalization rather than the much larger stochastic
+Kubo calculations from the 2023 tutorial. All four calculations completed with
+`0 errors, 0 warnings`, and a second end-to-end run reproduced every reference
+dataset numerically.
 
 ## 2. Solver directory consolidation
 

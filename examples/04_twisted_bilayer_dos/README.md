@@ -1,0 +1,19 @@
+# 04: Twisted-bilayer graphene density of states
+
+This example uses exact diagonalization on an `8 x 8` k-point grid to compute
+the density of states of the same 76-atom `(m,n) = (3,2)` commensurate cell as
+example 03. Gaussian broadening produces a compact, deterministic laptop test.
+
+## Run
+
+```sh
+./run.sh
+python3 plot.py
+```
+
+The calculation writes `generate.diag.DOS` and `job.out`; the plotting step
+writes `twisted_bilayer_dos.png`. If no calculated file exists, the plotter
+uses `reference/dos.dat`.
+
+For a smoother production DOS, increase `KGrid` and
+`NumberofEnergyPoints`, and reduce `Epsilon` after checking convergence.
