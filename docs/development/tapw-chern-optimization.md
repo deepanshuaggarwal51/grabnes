@@ -1,5 +1,9 @@
 # TAPW Chern Number Calculation Optimization Guide
 
+> **Development proposal.** Complexity estimates and projected speedups below
+> are hypotheses until accompanied by reproducible profiler output. Apply
+> optimizations only with numerical-regression coverage.
+
 ## Overview
 
 This document outlines computational bottlenecks and optimization strategies for the TAPW (Twisted Angle Plane Wave) Chern number calculation in the `lanczosKuboCode` codebase. The optimizations are organized by category and impact level.

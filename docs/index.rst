@@ -1,14 +1,26 @@
-JeilJungGroupCodes documentation
-================================
+GRABNES documentation
+=====================
+
+GRABNES is a Fortran code for electronic-structure and quantum-transport
+calculations in layered two-dimensional materials. Start with the validated
+examples linked from the repository README.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Guides
 
-API Reference
--------------
+   user-guide/tapw-soc-input
+   development/building-documentation
+   development/soc-implementation
+   development/tapw-chern-optimization
+   development/known-issues/berry-curvature
+
+Fortran API reference
+---------------------
+
+The API pages are generated from the maintained source tree by Doxygen and
+Breathe.
 
 .. doxygenindex::
-   :project: jjgc
-
+   :project: grabnes
 

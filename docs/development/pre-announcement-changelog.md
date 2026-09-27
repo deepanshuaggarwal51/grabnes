@@ -8,13 +8,33 @@ committed it.
 
 Last updated: 2026-09-27
 
+## Documentation and test organization (working tree)
+
+- Expanded the root README into the public quick-start and repository map.
+- Corrected the Sphinx and Doxygen project identity to GRABNES.
+- Moved user, theory, development, test, and debugging material out of the
+  repository root into `docs/`, `tests/`, and `tools/`.
+- Replaced overlapping historical SOC/TAPW plans with one source-reviewed
+  implementation-status page.
+- Converted the standalone TAPW mathematical checks into deterministic pytest
+  tests and consolidated shared Brillouin-zone parsing code.
+
+Validation on this laptop: all four TAPW pytest cases pass; both TAPW plotting
+commands generated PNG files from a synthetic debug fixture; Python syntax and
+the Git whitespace check pass. A warnings-as-errors Sphinx build of all guide
+content also passes. The full API build still requires Doxygen, which is not
+installed on this laptop but is installed by the Read the Docs configuration.
+
+These changes are included in the documentation-cleanup update for
+collaborator review.
+
 ## Current Git state
 
 - The consolidation and initial examples were committed and pushed to `main`
   as commit `94964340c3322751f352e44337715912ca13505f`.
 - The follow-up public update adds the `grabnes_testrun/` harness described
   below for collaborator testing in commits `e57b597` and `47cef60`.
-- The next public update completes the four-example suite described below.
+- Commit `68dd8b9` completes the four-example suite described below.
 - The tag `pre-code-consolidation` points to commit `6133ab7`, the repository
   state before the solver directories were consolidated.
 - Deleted files remain recoverable from that tag and from Git history.

@@ -1,5 +1,10 @@
 # Single-Layer Graphene SOC Benchmark Tests
 
+> **Validation plan, not yet an automated test suite.** Historical completion
+> marks below describe manual development checks. Promote a case to a supported
+> regression only after committing its input, observable, tolerance, and
+> reference output under this directory.
+
 ## Overview
 This document provides a systematic test suite for validating all SOC terms on single-layer graphene, starting from simplest to most complex.
 

@@ -1,5 +1,10 @@
 # Berry Curvature Calculation Problem Summary
 
+> **Unresolved research issue.** This note records a specific TAPW debugging
+> state and is not a statement about the validated public examples. Numerical
+> values and ruled-out causes should be rechecked against the current source
+> before further work. Last classified: 2026-09-27.
+
 ## 🎯 Current Problem
 
 **We are seeing unphysically large Berry curvature values** in the TAPW (Twisted Angle Plane Wave) Chern number calculation, leading to Chern numbers that are ~1000x too large compared to expected values.

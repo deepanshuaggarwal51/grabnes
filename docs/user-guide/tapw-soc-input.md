@@ -1,5 +1,10 @@
 # TAPW + SOC Input Parameters
 
+> **Experimental interface.** TAPW with SOC is not yet covered by a public
+> end-to-end reference example. Confirm parameter names against
+> `lanczosKuboCode/Src/calc.F90` and `ham.F90`, record the commit used, and
+> validate the result before using it in production work.
+
 ## Required Parameters to Activate TAPW + SOC
 
 ### Core Flags
@@ -129,4 +134,3 @@ SOCLayers 1 2
 
 # NOTE: Do NOT set Diag.calculateChern for bands-only calculation
 ```
-

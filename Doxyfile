@@ -1,5 +1,6 @@
-PROJECT_NAME           = "JeilJungGroupCodes"
-PROJECT_NUMBER         = 1.0
+PROJECT_NAME           = "GRABNES"
+PROJECT_BRIEF          = "Graphene and Boron Nitride Electronic Structure"
+PROJECT_NUMBER         = "pre-release"
 OUTPUT_DIRECTORY       = docs/_build/doxygen
 GENERATE_XML           = YES
 XML_OUTPUT             = xml
@@ -14,4 +15,5 @@ EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
 QUIET                  = YES
 WARN_IF_UNDOCUMENTED   = NO
-
+WARN_IF_DOC_ERROR      = YES
+WARN_AS_ERROR          = NO

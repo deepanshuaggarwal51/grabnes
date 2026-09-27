@@ -1,0 +1,13 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv-docs/
+
+# Generated documentation
+docs/_build/
+
+# Platform and editor files
+.DS_Store
+*.swp
+*.swo
