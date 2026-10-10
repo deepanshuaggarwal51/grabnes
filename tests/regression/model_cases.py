@@ -519,37 +519,16 @@ COMPILER_DEPENDENT = {
     'sys_MoireEncapsulatedBilayer+removeF2G2Flag',
     'sys_Trilayer',
     'sys_Trilayer+TrilayerAddShift',
-    'tbg+BLKaxiras+BilayerOneParameter',
-    'tbg+BLKaxiras+BilayerThreeParameters',
-    'tbg+BLKaxiras+addExponentialDecayForDihedral',
-    'tbg+BLKaxiras+addPressureDependence=F',
-    'tbg+BLKaxiras+changeLatticeParameterForSrivaniModel',
-    'tbg+BLKaxiras+deactivateV3',
-    'tbg+BLKaxiras+deactivateV6',
-    'tbg+BLKaxiras+findThetasGeometrically',
-    'tbg+BLKaxiras+newFittingFunctions',
-    'tbg+BLKaxiras+oldParameterSet',
-    'tbg+BLKaxiras+onlyV0',
-    'tbg+BLKaxiras+oppositedxdy',
-    'tbg+BLKaxiras+sublatticeDependent',
-    'tbg+BLKaxiras+sublatticeIndependent',
-    'tbg+BLKaxiras+switchV3Sign',
-    'tbg+BLKaxiras+useBNGKaxiras',
-    'tbg+BLKaxiras+useBNGSrivani',
-    'tbg+BLKaxiras+useOnlyVAB',
-    'tbg+BLKaxiras+useTheta',
-    'tbg+BLKaxiras+useThetaIJ',
-    'tbg+TypeOfBL_BLKaxiras',
-    'tbg+TypeOfBL_BLKaxiras+NeighLevels1',
     'tbg+twistedBLAddShift',
 }
 
 # The on-site potentials that differ with Intel only (sinusModulation, SquareFunction*, SquareChecker2219, PNP,
 # Zterm1D) are functions of the Cartesian x or y of an atom that are not periodic in the hexagonal cell: atoms on
 # the cell boundary are placed on one side or the other depending on rounding, which changes their value.
-# The BLKaxiras interlayer model on the generated twisted bilayer uses values that are not set: the GNU
-# builds refuse it (non-finite hoppings); with Intel the outcome changes from build to build.
-COMPILER_DEPENDENT |= {c for c in CASES if c.startswith("tbg+") and "BLKaxiras" in c}
+# The BLKaxiras interlayer model on the generated twisted bilayer was in this list until the switches of the
+# Srivani model, which its branch of the loop tests, were read for it as well (October 2026): they were
+# undefined and the leftover memory decided the outcome. Now every compiler refuses these cases in the same
+# way (the model lacks parameters for this configuration).
 # TrilayerBasedOnMoireCell: non-finite hoppings with the optimised GNU build only, and not in every build.
 COMPILER_DEPENDENT |= {c for c in CASES if c.startswith("sys_Trilayer")}
 # realisticBubbles: the number of bubbles is drawn at random. With none the switch does nothing; with one or

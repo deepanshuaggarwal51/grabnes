@@ -5457,6 +5457,9 @@ subroutine HamHopping
 #endif /* DEBUG */
          end if
          ! constants of the interlayer model that do not depend on the bond
+         ! bond lengths of the two lattices (they were recomputed for every bond inside the loop)
+         aCC = aG/sqrt(3.0_dp)
+         aBN1 = aBN/sqrt(3.0_dp)
          call HamHopSrivaniConstants()
          ! ---------------------------------------------------------------------
          !!!$OMP& PRIVATE (expFactor, dist, yDistance, DBShiftRatio,boundaryWidth, limit2, limit1, limit0), &
@@ -6218,7 +6221,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 2) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6304,7 +6306,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 2) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6452,7 +6453,6 @@ subroutine HamHopping
                                         hopp(j,i) = hopp(j,i) + 0.0_dp
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 3) then ! For hBN layer
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6539,7 +6539,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 3) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6634,7 +6633,6 @@ subroutine HamHopping
                                         hopp(j,i) = hopp(j,i) + 0.0_dp
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 4) then ! For hBN layer
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6721,7 +6719,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 4) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6816,7 +6813,6 @@ subroutine HamHopping
                                         hopp(j,i) = hopp(j,i) + 0.0_dp
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 5) then ! For hBN layer
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -6904,7 +6900,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 5) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7001,7 +6996,6 @@ subroutine HamHopping
                                         hopp(j,i) = hopp(j,i) + 0.0_dp
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 6) then ! For hBN layer
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7090,7 +7084,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 6) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7187,7 +7180,6 @@ subroutine HamHopping
                                         hopp(j,i) = hopp(j,i) + 0.0_dp
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 7) then ! For hBN layer
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7276,7 +7268,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 7) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7452,7 +7443,6 @@ subroutine HamHopping
                                     hopp(j,i) = hopp(j,i) + 0.0_dp
                                end if
                            else if (layerIndex(i) .eq. 1) then ! For hBN layer
-                               aBN1 = aBN/sqrt(3.0_dp)
                                if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                   countBN1 = countBN1+1
                                   hopp(j,i) = hopp(j,i)
@@ -7588,7 +7578,6 @@ subroutine HamHopping
                                     hopp(j,i) = hopp(j,i) + 0.0_dp
                                end if
                            else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 4) then ! For hBN layer
-                               aBN1 = aBN/sqrt(3.0_dp)
                                if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                   countBN1 = countBN1+1
                                   hopp(j,i) = hopp(j,i)
@@ -7684,7 +7673,6 @@ subroutine HamHopping
                                    end if
                                else if (layerIndex(i) .eq. 1) then ! For hBN layer
                                    !if (i.eq.1) print*, "aBN=", aBN
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7812,7 +7800,6 @@ subroutine HamHopping
                                         hopp(j,i) = hopp(j,i) + 0.0_dp
                                    end if
                                else if (layerIndex(i) .eq. 1) then ! For hBN layer
-                                   aBN1 = aBN/sqrt(3.0_dp)
                                    if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
                                       countBN1 = countBN1+1
                                       hopp(j,i) = hopp(j,i)
@@ -7897,7 +7884,6 @@ subroutine HamHopping
                               end if
                            else
                               dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                              aCC = aG/sqrt(3.0_dp)
                               if (useBNGKaxiras) then
                                  if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
                                       hopp(j,i) = hopp(j,i)
@@ -8163,7 +8149,6 @@ subroutine HamHopping
                         ! this is where we assign the intralayer F2G2
                         else if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           aCC = aG/sqrt(3.0_dp)
                            if (useBNGKaxiras) then
                               if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
                                    hopp(j,i) = hopp(j,i)
@@ -8382,7 +8367,6 @@ subroutine HamHopping
                            hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
                         else if (MIO_StringComp(BilayerModel,'Srivani')) then
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           aCC = aG/sqrt(3.0_dp)
                            if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
                                 hopp(j,i) = hopp(j,i) + t1K
                            else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
@@ -11032,6 +11016,15 @@ subroutine HamHopInterlayerParameters()
    call MIO_Debug('HamHopInterlayerParameters',0)
 #endif /* DEBUG */
 
+         ! Switches of the Srivani model. The loop over the bonds tests them for the Kaxiras model as well (the two
+         ! models share a branch), so they are read for both: read for BLSrivani only, they were undefined in a
+         ! BLKaxiras run and the leftover memory decided which parameters were used.
+         call MIO_InputParameter('Interlayer.UseBNGSrivani',useBNGSrivani,.false.)
+         call MIO_InputParameter('Interlayer.Oppositedxdy',oppositedxdy,.false.)
+         call MIO_InputParameter('Interlayer.SublatticeDependent',sublatticeDependent,.false.)
+         call MIO_InputParameter('Interlayer.UseThetaIJ',useThetaIJ,.false.)
+         call MIO_InputParameter('Interlayer.UseTheta',useTheta,.false.)
+         call MIO_InputParameter('Interlayer.SublatticeIndependent',sublatticeIndependent,.false.)
          if (MIO_StringComp(BilayerModel,'BLKaxiras')) then
             call MIO_InputParameter('Interlayer.UseBNGKaxiras',useBNGKaxiras,.false.)
             tAB = 0.29_dp
@@ -11118,12 +11111,6 @@ subroutine HamHopInterlayerParameters()
                end if
             end if
          else if (MIO_StringComp(BilayerModel,'BLSrivani')) then
-            call MIO_InputParameter('Interlayer.UseBNGSrivani',useBNGSrivani,.false.)
-            call MIO_InputParameter('Interlayer.Oppositedxdy',oppositedxdy,.false.)
-            call MIO_InputParameter('Interlayer.SublatticeDependent',sublatticeDependent,.false.)
-            call MIO_InputParameter('Interlayer.UseThetaIJ',useThetaIJ,.false.)
-            call MIO_InputParameter('Interlayer.UseTheta',useTheta,.false.)
-            call MIO_InputParameter('Interlayer.SublatticeIndependent',sublatticeIndependent,.false.)
             if (useBNGSrivani) then
                 lambda0_CB = 0.3905_dp/g0
                 epsilon0_CB = 1.5426_dp
