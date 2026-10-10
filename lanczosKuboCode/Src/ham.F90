@@ -8510,1251 +8510,26 @@ subroutine HamHopping
                         .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ)) &
                         .or. MIO_StringComp(str,'TwistedBilayerBasedOnMoireCell')) then
                    if(MIO_StringComp(BilayerModel,'Jeil')) then
-                         dxi = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(1,i) &
-                                     - ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(2,i)) + xShift
-                         dyi = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(2,i) &
-                                     + ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(1,i)) + yShift
-                         dxj = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(1,NList(j,i)) &
-                                     - ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(2,NList(j,i))) + xShift
-                         dyj = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(2,NList(j,i)) &
-                                     + ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(1,NList(j,i))) + yShift
-                         dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                         expFactor = exp(-dist/10.0_dp) * ((NeighD(3,j,i))/(dist))**2.0_dp
-                         if (Species(i)==Species(NList(j,i))) then
-                              !either AA' or BB' (Habjj,dx,dy,Cab,Phiab
-                              if (layerIndex(i)==1) then
-                                  posOrNeg = 1.0_dp
-                                  call interlayerBLAA(HAA,dxi,dyi,tbt,posOrNeg)
-                                  hopp(j,i) =  hopp(j,i) + HAA*expFactor
-                                  numberOfHAA1 = numberOfHAA1 + 1
-                              else if(layerIndex(i)==2) then
-                                  posOrNeg = -1.0_dp
-                                  call interlayerBLAA(HAA,dxj,dyj,tbt,posOrNeg)
-                                  hopp(j,i) = hopp(j,i) +  HAA*expFactor
-                                  numberOfHAA2 = numberOfHAA2 + 1
-                              end if
-                         else if (Species(i) < Species(NList(j,i))) then  ! i -> A, j -> B
-                              if (layerIndex(i)==1) then
-                                  ! AB'
-                                  posOrNeg = 1.0_dp
-                                  call interlayerBLAB(HAB,dxi,dyi,tbt,posOrNeg)
-                                  hopp(j,i) = hopp(j,i) + HAB*expFactor
-                                  numberOfHAB1 = numberOfHAB1 + 1
-                              else if(layerIndex(i)==2) then
-                                  ! BA'
-                                  posOrNeg = -1.0_dp
-                                  call interlayerBLBA(HBA,dxj,dyj,tbt,posOrNeg)
-                                  hopp(j,i) = hopp(j,i) +  HBA*expFactor
-                                  numberOfHBA2 = numberOfHBA2 + 1
-                              end if
-                         else if (Species(i) > Species(NList(j,i))) then  ! i -> B, j -> A
-                              if (layerIndex(i)==1) then
-                                  ! BA'
-                                  posOrNeg = 1.0_dp
-                                  call interlayerBLBA(HBA,dxi,dyi,tbt,posOrNeg)
-                                  hopp(j,i) = hopp(j,i) +  HBA*expFactor
-                                  numberOfHBA1 = numberOfHBA1 + 1
-                              else if (layerIndex(i)==2) then
-                                  ! AB'
-                                  posOrNeg = -1.0_dp
-                                  call interlayerBLAB(HAB,dxj,dyj,tbt,posOrNeg)
-                                  hopp(j,i) = hopp(j,i) + HAB*expFactor
-                                  numberOfHAB2 = numberOfHAB2 + 1
-                              end if
-                         end if
-                   ! Adds the interlayer TC model
+                         call HamHopInterlayerJeil(i, j, dist, numberOfHAA1, numberOfHAA2, numberOfHAB1, &
+                               numberOfHBA2, numberOfHBA1, numberOfHAB2)
                    else if (GBNtwoLayers .or. encapsulatedThreeLayers .or. encapsulatedFourLayers &
                          .or. encapsulatedFiveLayers .or. encapsulatedSixLayers .or. encapsulatedSevenLayers &
                          .or. t3GwithBN .or. BNt2GBN .or. t2GBN) then
-                      if (deactivateInterlayert2GBN1to2 .and. ((layerIndex(i).eq. 1 .and. layerIndex(jj).eq.2) &
-                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
-                          cycle
-                      else if (deactivateInterlayert2GBN2to3 &
-                            .and. ((layerIndex(i).eq. 2 .and. layerIndex(jj).eq.3) &
-                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
-                          cycle
-                      else if (deactivateInterlayer) then
-                          cycle
-                      end if
-                      if (frac) call AtomsSetCart()
-                      if (threeLayerShort) then
-                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                          if (dist<0.2_dp) then ! on top of each other
-                             hopp(j,i) = hopp(j,i) + tB1A2
-                             numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                          ! First nearest neighbors surrounding the atom in the middle of the hexagon
-                          else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
-                             if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
-                                hopp(j,i) = hopp(j,i) + tA1A2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else ! Different sublattice
-                                hopp(j,i) = hopp(j,i) + tA1B2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             end if
-                          else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! g1 term
-                             if (Species(i).eq.Species(NList(j,i))) then
-                                hopp(j,i) = hopp(j,i) + tA1A1_1
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else
-                                hopp(j,i) = hopp(j,i) + tB1A2_1
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             end if
-                          else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then ! f2 term
-                             if (Species(i).eq.Species(NList(j,i))) then
-                                hopp(j,i) = hopp(j,i) + tA1A2_2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else
-                                hopp(j,i) = hopp(j,i) + tA1B2_2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             end if
-                          else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! g2 term
-                             if (Species(i).ne.Species(NList(j,i))) then
-                                hopp(j,i) = hopp(j,i) + tA1A1_2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else
-                                hopp(j,i) = hopp(j,i) + tB1A2_2
-                             end if
-                          else
-                             hopp(j,i) = hopp(j,i) + 0.0_dp
-                          end if
-                      else if (((layerIndex(i) .eq. 2 .and. layerIndex(jj) .eq. 3) &
-                            .or. (layerIndex(i) .eq. 3 .and. layerIndex(jj) .eq. 2)) .and. encapsulatedFourLayersF2G2) then
-                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                          if (dist<0.2_dp) then
-                             hopp(j,i) = hopp(j,i) + tBA0
-                             numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                          ! First nearest neighbors surrounding the atom in the middle of the hexagon
-                          else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
-                             if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
-                                hopp(j,i) = hopp(j,i) + tAA1
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else ! Different sublattice
-                                hopp(j,i) = hopp(j,i) + tAB1
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             end if
-                          else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
-                             if (Species(i).eq.Species(NList(j,i))) then
-                                hopp(j,i) = hopp(j,i) + tBA2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else
-                                hopp(j,i) = hopp(j,i) + tBA2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             end if
-                          ! Second neirest neighbor from central atom in middle of hexagon
-                          else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
-                             if (Species(i).eq.Species(NList(j,i))) then
-                                hopp(j,i) = hopp(j,i) + tAA2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else
-                                hopp(j,i) = hopp(j,i) + tAB2
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             end if
-                          else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! BA' (corresponds to g2, not g5)
-                             if (Species(i).ne.Species(NList(j,i))) then
-                                hopp(j,i) = hopp(j,i) + tBA5
-                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                             else
-                                hopp(j,i) = hopp(j,i)
-                             end if
-                          else
-                             hopp(j,i) = hopp(j,i) + 0.0_dp
-                          end if
-                      else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1)) then ! INTERLAYER
-                          if (deactivateInterlayerBG .and. ((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
-                                .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
-                              cycle
-                          else if (deactivateInterlayer) then
-                              cycle
-                          else if (deactivateInterlayer12 .and. ((layerIndex(i).eq.1 .and. layerIndex(jj).eq.2) &
-                                .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
-                              cycle
-                          else if (deactivateInterlayer23 .and. ((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
-                                .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
-                              cycle
-                          else if (deactivateInterlayer34 .and. ((layerIndex(i).eq.3 .and. layerIndex(jj).eq.4) &
-                                .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.3))) then
-                              cycle
-                          end if
-                          if (deactivateIntraSublatticeForC .and. (Species(i).lt.3 .and. Species(jj).lt.3) &
-                                .and. (Species(i).eq.Species(jj))) then
-                              cycle
-                          end if
-                          ! add the hopping terms depending if it is the C-B, C-N or C-C
-                          ! interaction
-                          ! (atom 1 is handled by one thread, so the flag needs no protection)
-                          if (i.eq.1 .and. .not. saidHTCGBN) then
-                             call MIO_Print('Adding the interlayer terms for the HTC model for G and BN interactions','ham')
-                             saidHTCGBN = .true.
-                          end if
-                          if (Species(i).eq.1 .and. Species(NList(j,i)).eq.3) then ! C to B
-                            aval = 1.02796_dp
-                            bval = 3.047657_dp
-                          else if (Species(i).eq.3 .and. Species(NList(j,i)).eq.1) then ! C to B
-                            aval = 1.02796_dp
-                            bval = 3.047657_dp
-                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.4) then ! C to N
-                            aval = 1.19218_dp
-                            bval = 3.47553_dp
-                          else if (Species(i).eq.4 .and. Species(NList(j,i)).eq.1) then ! C to N
-                            aval = 1.19218_dp
-                            bval = 3.47553_dp
-                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.3) then ! C to B
-                            aval = 1.049223_dp
-                            bval = 3.0646389_dp
-                          else if (Species(i).eq.3 .and. Species(NList(j,i)).eq.2) then ! C to B
-                            aval = 1.049223_dp
-                            bval = 3.0646389_dp
-                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.4) then ! C to N
-                            aval = 1.16223_dp
-                            bval = 3.4799_dp
-                          else if (Species(i).eq.4 .and. Species(NList(j,i)).eq.2) then ! C to N
-                            aval = 1.16223_dp
-                            bval = 3.4799_dp
-                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.2) then ! C to C
-                            aval = 1.34_dp
-                            bval = 3.25_dp
-                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.1) then ! C to C
-                            aval = 1.34_dp
-                            bval = 3.25_dp
-                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.1) then ! C to C
-                            aval = 1.34_dp
-                            bval = 3.25_dp
-                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.2) then ! C to C
-                            aval = 1.34_dp
-                            bval = 3.25_dp
-                          end if
-                          renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
-                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          if ((Species(i).eq.1 .and. Species(jj) .eq. 2) &
-                                .or. (Species(i).eq.2 .and. Species(jj) .eq. 1) &
-                                .or. (Species(i).eq.1 .and. Species(jj) .eq. 1) &
-                                .or. (Species(i).eq.2 .and. Species(jj) .eq. 2)) then
-                             BLdelta = 0.184_dp*aG
-                             vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
-                             vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp ! inplane
-                          else
-                             BLdelta = 0.184_dp*2.438977_dp
-                             vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
-                             vpppi = vpppi0 * exp(-(dist-2.438977_dp/sqrt(3.0))/(BLdelta)) * renormalizeHoppingFactorAAp
-                          end if
-                          hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
-                                               pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
-                      end if
-                          !
-                          !
-                          !
-                          !
+                      if (HamHopInterlayerGBN(i, jj, dist, j, numberOfInterlayerHoppings, aval, bval, &
+                            renormalizeHoppingFactorAAp, BLdelta, vppsigma, vpppi)) cycle
                    else if (BNBNtwoLayers) then
-                      if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1)) then ! INTERLAYER
-                          ! add the hopping terms depending if it is the C-B, C-N or C-C
-                          ! interaction
-                          if (i.eq.1 .and. .not. saidHTCBNBN) then
-                             call MIO_Print('Adding the interlayer terms for the HTC model for BN and BN interactions '// &
-                               'based on Fengpings parametrization','ham')
-                             saidHTCBNBN = .true.
-                          end if
-                      end if
+                      call HamHopInterlayerBNBN(i, jj)
                    else if (MIO_StringComp(BilayerModel,'Koshino').or. MIO_StringComp(BilayerModel,'HTC') &
                          .or. MIO_StringComp(SinglelayerModel,'HTC')) then
-                      if (i.eq.1 &
-                            .and. j.eq.1) call MIO_Print('We add interlayer interactions for sandwiched systems, tBG, etc','ham')
-                      if (deactivateInterlayer) then
-                          cycle
-                      else if (deactivateInterlayer12 .and. ((layerIndex(i).eq.1 .and. layerIndex(jj).eq.2) &
-                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
-                          cycle
-                      else if (deactivateInterlayer23 .and. ((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
-                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
-                          cycle
-                      else if (deactivateInterlayer34 .and. ((layerIndex(i).eq.3 .and. layerIndex(jj).eq.4) &
-                            .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.3))) then
-                          cycle
-                      else if (deactivateInterlayert2BG2to3 &
-                            .and. ((layerIndex(i).eq. 2 .and. layerIndex(jj).eq.3) &
-                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
-                          cycle
-                      else if (deactivateInterlayert3BG1to2 &
-                            .and. ((layerIndex(i).eq. 1 .and. layerIndex(jj).eq.2) &
-                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
-#ifdef DEBUG
-                          call MIO_Print("deactivated layer t3BG1to2",'ham')
-#endif /* DEBUG */
-                          cycle
-                      else if (deactivateInterlayert3BG2to3 &
-                            .and. ((layerIndex(i).eq. 2 .and. layerIndex(jj).eq.3) &
-                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
-#ifdef DEBUG
-                          call MIO_Print("deactivated layer t3BG2to3",'ham')
-#endif /* DEBUG */
-                          cycle
-                      else if (deactivateInterlayert3BG3to4 &
-                            .and. ((layerIndex(i).eq. 3 .and. layerIndex(jj).eq.4) &
-                            .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.3))) then
-#ifdef DEBUG
-                          call MIO_Print("deactivated layer t3BG3to4",'ham')
-#endif /* DEBUG */
-                          cycle
-                      else if (deactivateInterlayert3BG4to5 &
-                            .and. ((layerIndex(i).eq. 4 .and. layerIndex(jj).eq.5) &
-                            .or. (layerIndex(i).eq.5 .and. layerIndex(jj).eq.4))) then
-#ifdef DEBUG
-                          call MIO_Print("deactivated layer t3BG4to5",'ham')
-#endif /* DEBUG */
-                          cycle
-                      else if (deactivateInterlayert3BG5to6 &
-                            .and. ((layerIndex(i).eq. 5 .and. layerIndex(jj).eq.6) &
-                            .or. (layerIndex(i).eq.6 .and. layerIndex(jj).eq.5))) then
-#ifdef DEBUG
-                          call MIO_Print("deactivated layer t3BG5to6",'ham')
-#endif /* DEBUG */
-                          cycle
-                      end if
-                      if (frac) call AtomsSetCart()
-                        if ((.not.((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
-                              .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2) &
-                              .or. (layerIndex(i).eq.5 .and. layerIndex(jj).eq.4) &
-                              .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.5)) ) .and. (fourLayers .or. t3BG)) then
-                          ! INTERLAYER
-                          if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                                .and. BilayerThreeParameters) then
-                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                              if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
-                                 hopp(j,i) = hopp(j,i) -tAB1
-                                 numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                              else if (dist>aCC*0.95_dp .and. dist<aCC*1.05_dp .and. BilayerThreeParameters) then
-                                 if (Species(i).eq.Species(NList(j,i))) then
-                                    hopp(j,i) = hopp(j,i) -tAB4
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 else
-                                    hopp(j,i) = hopp(j,i) -tAB3
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 end if
-                              else if (dist>aCC*0.95_dp*2.0_dp .and. dist<aCC*1.05_dp*2.0_dp .and. BilayerThreeParameters) then
-                                 if (Species(i).eq.Species(NList(j,i))) then
-                                    hopp(j,i) = hopp(j,i) -tAB4
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 else
-                                    hopp(j,i) = hopp(j,i) -tAB3
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 end if
-                              else
-                                 hopp(j,i) = hopp(j,i) + 0.0_dp
-                              end if
-                          ! INTERLAYER
-                          else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                                .and. BilayerOneParameter) then
-                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                              if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
-                                 hopp(j,i) = hopp(j,i) -tAB1
-                                 numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                              else
-                                 hopp(j,i) = hopp(j,i) + 0.0_dp
-                              end if
-                          ! INTERLAYER
-                          else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                                .and. F2G2Model) then
-                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                              if (dist<0.2_dp) then
-                                 !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 0", delta
-                                 hopp(j,i) = hopp(j,i) + tBA0
-                                 numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                              ! First nearest neighbors surrounding the atom in the middle of the hexagon
-                              else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
-                                 if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AA", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AA", delta
-                                    hopp(j,i) = hopp(j,i) + tAA1
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 else ! Different sublattice
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AB", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AB", delta
-                                    hopp(j,i) = hopp(j,i) + tAB1
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 end if
-                              else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
-                                 if (Species(i).eq.Species(NList(j,i))) then
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2", delta
-                                    hopp(j,i) = hopp(j,i) + tBA2
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 else
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2 bis", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2 bis", delta
-                                    hopp(j,i) = hopp(j,i) + tBA2
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 end if
-                              ! Second neirest neighbor from central atom in middle of hexagon
-                              else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
-                                 if (Species(i).eq.Species(NList(j,i))) then
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AA 2 ", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AA 2", delta
-                                    hopp(j,i) = hopp(j,i) + tAA2
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 else
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AB 2 ", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AB 2", delta
-                                    hopp(j,i) = hopp(j,i) + tAB2
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 end if
-                              ! BA' (corresponds to g2, not g5)
-                              else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then
-                                 if (Species(i).ne.Species(NList(j,i))) then
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 ", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5", delta
-                                    hopp(j,i) = hopp(j,i) + tBA5
-                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                                 else
-                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 bis ", delta
-                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5 bis", delta
-                                    hopp(j,i) = hopp(j,i)
-                                 end if
-                              else
-                                 !if (i.eq.1) print*, "assigning interlayer F2G2 terms BA 5 bis ", delta
-                                 hopp(j,i) = hopp(j,i) + 0.0_dp
-                              end if
-                          end if
-                        else ! among others, this is used for the sandwiched systems
-                          if (strainedMoire) then
-                             dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
-                                         +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          else
-                             dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          end if
-                          if (KoshinoSR) then
-                              aval = 1.34_dp
-                              bval = 3.25_dp
-                              renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
-                          else
-                              renormalizeHoppingFactorAAp  = 1.0_dp
-                          end if
-                          if (Species(i).eq.Species(NList(j,i)) .and. deactivateIntrasublattice) then
-                              hopp(j,i) = 0.0d0
-                          else if (Species(i).ne.Species(NList(j,i)) .and. deactivateIntersublattice) then
-                              hopp(j,i) = 0.0d0
-                          else
-                              vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
-                              vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp
-                              ! onlyvppsigma: drop the pi term (Vpppi -> 0); the helper handles the rest.
-                              hopp(j,i) = hopp(j,i) + interlayerTwoCenter(merge(0.0_dp,vpppi,onlyvppsigma), vppsigma, &
-                                                 NeighD(:,j,i), dist, pzNormal(:,i), pzNormal(:,NList2(j,i)), &
-                                                 corrugatedInterlayerTwoCenter)
-                          end if
-                        end if
+                      if (HamHopInterlayerTwoCenter(i, j, jj, dist, numberOfInterlayerHoppings, aval, bval, &
+                            renormalizeHoppingFactorAAp, vppsigma, BLdelta, vpppi)) cycle
                    else if (MIO_StringComp(BilayerModel,'Mayou')) then
-                      if (deactivateInterlayer) then
-                          cycle
-                      end if
-                      if (frac) call AtomsSetCart()
-                      if (strainedMoire) then
-                         dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
-                                     +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                      else
-                         dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                      end if
-                      Fc = 1.0_dp/(1.0_dp+exp((dist-rc)/lc))
-                      vppsigma = vppsigma0 * exp(qsigma*(1.0_dp-dist/interlayerdistance)) * Fc * renormalizeHoppingFactorAAp
-                      vpppi = vpppi0 * exp(qpi*(1.0_dp - dist/aCC)) * Fc * renormalizeHoppingFactorAAp
-                      hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
-                                        pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
+                      if (HamHopInterlayerMayou(dist, j, i, Fc, vppsigma, renormalizeHoppingFactorAAp, vpppi)) cycle
                    else if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then
-                      if (deactivateInterlayer) then
-                          cycle
-                      end if
-                      !First, theta12
-                      !do ix=-1,1; do iy=-1,1
-
-                      jj = NList(j,i)
-                      if ((.not.((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
-                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) .and. fourLayers) then
-                        ! INTERLAYER
-                        if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                              .and. BilayerThreeParameters) then
-                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
-                               hopp(j,i) = hopp(j,i) -tAB1
-                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                            else if (dist>aCC*0.95_dp .and. dist<aCC*1.05_dp .and. BilayerThreeParameters) then
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  hopp(j,i) = hopp(j,i) -tAB4
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  hopp(j,i) = hopp(j,i) -tAB3
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else if (dist>aCC*0.95_dp*2.0_dp .and. dist<aCC*1.05_dp*2.0_dp .and. BilayerThreeParameters) then
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  hopp(j,i) = hopp(j,i) -tAB4
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  hopp(j,i) = hopp(j,i) -tAB3
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else
-                               hopp(j,i) = hopp(j,i) + 0.0_dp
-                            end if
-                        ! INTERLAYER
-                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                              .and. BilayerOneParameter) then
-                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
-                               hopp(j,i) = hopp(j,i) -tAB1
-                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                            else
-                               hopp(j,i) = hopp(j,i) + 0.0_dp
-                            end if
-                        ! INTERLAYER
-                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                              .and. F2G2Model) then
-                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            if (dist<0.2_dp) then
-                               !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 0", delta
-                               hopp(j,i) = hopp(j,i) + tBA0
-                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                            ! First nearest neighbors surrounding the atom in the middle of the hexagon
-                            else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
-                               if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AA", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AA", delta
-                                  hopp(j,i) = hopp(j,i) + tAA1
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else ! Different sublattice
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AB", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AB", delta
-                                  hopp(j,i) = hopp(j,i) + tAB1
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2", delta
-                                  hopp(j,i) = hopp(j,i) + tBA2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2 bis", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2 bis", delta
-                                  hopp(j,i) = hopp(j,i) + tBA2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            ! Second neirest neighbor from central atom in middle of hexagon
-                            else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AA 2 ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AA 2", delta
-                                  hopp(j,i) = hopp(j,i) + tAA2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AB 2 ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AB 2", delta
-                                  hopp(j,i) = hopp(j,i) + tAB2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! BA' (corresponds to g2, not g5)
-                               if (Species(i).ne.Species(NList(j,i))) then
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5", delta
-                                  hopp(j,i) = hopp(j,i) + tBA5
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 bis ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5 bis", delta
-                                  hopp(j,i) = hopp(j,i)
-                               end if
-                            else
-                               !if (i.eq.1) print*, "assigning interlayer F2G2 terms BA 5 bis ", delta
-                               hopp(j,i) = hopp(j,i) + 0.0_dp
-                            end if
-                        else
-                          if (strainedMoire) then
-                             dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
-                                         +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          else
-                             dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          end if
-                          vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta))
-                 !epsx    x(j,i) = -u0 * 2.0_dp * pi / LMoire * cos(2.0_dp * pi * nPeriod * Rat(1,i) / LMoire)
-                          vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) ! inplane
-                          hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
-                                            pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
-                        end if
-                      else if (((layerIndex(i).eq.1 .and. layerIndex(jj).eq.2) &
-                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1)) .and. threeLayers .and. (.not. middleTwist)) then
-                        ! INTERLAYER
-                        if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                              .and. BilayerThreeParameters) then
-                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
-                               hopp(j,i) = hopp(j,i) -tAB1
-                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                            else if (dist>aCC*0.95_dp .and. dist<aCC*1.05_dp .and. BilayerThreeParameters) then
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  hopp(j,i) = hopp(j,i) -tAB4
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  hopp(j,i) = hopp(j,i) -tAB3
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else if (dist>aCC*0.95_dp*2.0_dp .and. dist<aCC*1.05_dp*2.0_dp .and. BilayerThreeParameters) then
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  hopp(j,i) = hopp(j,i) -tAB4
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  hopp(j,i) = hopp(j,i) -tAB3
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else
-                               hopp(j,i) = hopp(j,i) + 0.0_dp
-                            end if
-                        ! INTERLAYER USING F2G2 model for bottom 2 layers
-                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                              .and. F2G2Model) then
-                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            if (dist<0.2_dp) then
-                               !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 0", delta
-                               hopp(j,i) = hopp(j,i) + tBA0
-                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                            ! First nearest neighbors surrounding the atom in the middle of the hexagon
-                            else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
-                               if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AA", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AA", delta
-                                  hopp(j,i) = hopp(j,i) + tAA1
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else ! Different sublattice
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AB", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AB", delta
-                                  hopp(j,i) = hopp(j,i) + tAB1
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2", delta
-                                  hopp(j,i) = hopp(j,i) + tBA2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2 bis", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2 bis", delta
-                                  hopp(j,i) = hopp(j,i) + tBA2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            ! Second neirest neighbor from central atom in middle of hexagon
-                            else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
-                               if (Species(i).eq.Species(NList(j,i))) then
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AA 2 ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AA 2", delta
-                                  hopp(j,i) = hopp(j,i) + tAA2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AB 2 ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AB 2", delta
-                                  hopp(j,i) = hopp(j,i) + tAB2
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               end if
-                            else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! BA' (corresponds to g2, not g5)
-                               if (Species(i).ne.Species(NList(j,i))) then
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5", delta
-                                  hopp(j,i) = hopp(j,i) + tBA5
-                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                               else
-                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 bis ", delta
-                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5 bis", delta
-                                  hopp(j,i) = hopp(j,i)
-                               end if
-                            else
-                               !if (i.eq.1) print*, "assigning interlayer F2G2 terms BA 5 bis ", delta
-                               hopp(j,i) = hopp(j,i) + 0.0_dp
-                            end if
-                        ! INTERLAYER
-                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
-                              .and. BilayerOneParameter) then
-                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
-                               hopp(j,i) = hopp(j,i) -tAB1
-                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
-                            else
-                               hopp(j,i) = hopp(j,i) + 0.0_dp
-                            end if
-                        else
-                          if (strainedMoire) then
-                             dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
-                                         +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          else
-                             dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                          end if
-                          vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta))
-                 !epsx    x(j,i) = -u0 * 2.0_dp * pi / LMoire * cos(2.0_dp * pi * nPeriod * Rat(1,i) / LMoire)
-                          vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) ! inplane
-                          hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
-                                            pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
-                        end if
-
-                      ! adding the kaxiras or srivani hopping terms between layers
-                      else if ((layerIndex(i) .eq. layerIndex(jj) +1) .or. (layerIndex(i) .eq. layerIndex(jj) - 1)) then
-
-                          if (deactivateInterlayerTwisted) then
-                              cycle
-                          end if
-
-                          d122 = NeighD(1,j,i)**2.0_dp + NeighD(2,j,i)**2.0_dp
-                          ! probably layer condition not important alreayd in interlayer part of code
-                          if (d122.lt.KaxirasCutoff2 .and. layerIndex(i) .ne. layerIndex(jj)) then
-                              if (d122.eq.0) then
-                                 theta12 = 0.0_dp
-                                 theta21 = 0.0_dp
-                              else if (findThetasGeometrically) then
-                                 !if (i.eq.1 .and. j.eq.1) print*, "we are assigning the thetas geometrically"
-                                 uvec(1) = NeighD(1,j,i)
-                                 uvec(2) = NeighD(2,j,i)
-                                 uvec(1) = 0.0_dp
-                                 vvec(2) = 0.0_dp
-                                 vvec(3) = 0.0_dp
-                                 ! Attom 1 in top layer (seems like top layer is the unrotated one)
-                                 if (layerIndex(i).gt.layerIndex(jj)) then
-                                     if (Species(i).eq.Species(jj)) then
-                                        if (Species(i).eq.1) then
-                                             vvec(2) = -aCC ! AAp
-                                        else
-                                             vvec(2) = aCC ! BBp
-                                        end if
-                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
-                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
-                                        vvecR(3) = vvec(3)
-                                        theta12 = atan2(norm2(cross(-uvec, vvecR)), dot_product(-uvec, vvecR))
-                                        theta21 = atan2(norm2(cross(uvec, vvec)), dot_product(uvec, vvec)) ! Same for AAp and BBp
-                                     else
-                                        if (Species(i).eq.1) then
-                                             vvec(2) = aCC ! ABp
-                                        else
-                                             vvec(2) = -aCC ! BAp
-                                        end if
-                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
-                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
-                                        vvecR(3) = vvec(3)
-                                        theta12 = atan2(norm2(cross(-uvec, vvecR)), dot_product(-uvec, vvecR))
-                                        ! inverted for ABp and BAp
-                                        theta21 = atan2(norm2(cross(uvec, -vvec)), dot_product(uvec, -vvec))
-                                     end if
-                                 else if (layerIndex(i).lt.layerIndex(jj)) then ! Atom 1 in bottom layer
-                                     if (Species(i).eq.Species(jj)) then
-                                        if (Species(i).eq.1) then
-                                             vvec(2) = -aCC ! AAp
-                                        else
-                                             vvec(2) = aCC ! BBp
-                                        end if
-                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
-                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
-                                        vvecR(3) = vvec(3)
-                                        theta12 = atan2(norm2(cross(-uvec, vvec)), dot_product(-uvec, vvec))
-                                        theta21 = atan2(norm2(cross(uvec, vvecR)), dot_product(uvec, vvecR)) ! Same for AAp and BBp
-                                     else
-                                        if (Species(i).eq.1) then
-                                             vvec(2) = aCC ! ABp
-                                        else
-                                             vvec(2) = -aCC ! BAp
-                                        end if
-                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
-                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
-                                        vvecR(3) = vvec(3)
-                                        theta12 = atan2(norm2(cross(-uvec, vvec)), dot_product(-uvec, vvec))
-                                        ! inverted for ABp and BAp
-                                        theta21 = atan2(norm2(cross(uvec, -vvecR)), dot_product(uvec, -vvecR))
-                                     end if
-                                     theta21 = theta21 !- twistAngleGrad
-                                 end if
-
-                              else
-                                 checking = .false.
-                                 d232 = 0.0_dp
-                                 d132 = 0.0_dp
-                                 d232F = 100.0_dp
-                                 ! for theta12
-                                 do kk=1, Nneigh(jj)
-                                     mm = NList(kk,jj)
-                                     if(layerIndex(mm).eq.layerIndex(jj)) then
-                                        d232 = NeighD(1,kk,jj)**2.0_dp + NeighD(2,kk,jj)**2.0_dp
-                                        if (d232 .lt. d232F) then
-                                           d232F = d232
-                                           if (d232F .lt. 1.43_dp**2.0_dp .and. d232F .gt. 0.0_dp) then
-                                                checking = .true.
-                                                exit
-                                           end if
-                                        end if
-                                     end if
-                                 end do
-                                 !if (checking .eq. .false.) print*, "check1 not good"
-                                 checking = .false.
-
-                                 do kkk=1,Nneigh(i)
-                                     mmm = NList(kkk,i)
-                                     if (mmm.eq.mm) then
-                                        checking = .true.
-                                        d132 = NeighD(1,kkk,i)**2.0_dp + NeighD(2,kkk,i)**2.0_dp
-                                        !if (layerIndex(mmm).eq.layerIndex(i) .or. d132.eq.0.0_dp) print*, "WARNING2", d132, layerIndex(mmm), layerIndex(i)
-                                        exit
-                                     end if
-                                 end do
-                                 !if (checking .eq. .false.) print*, "check2 not good"
-                                 checking = .false.
-
-                                 if (d232F.lt.0.1_dp .or. d132.le.0.0_dp) print*, "WARNING3", d232F, d132
-                                     theta12 = acos(max(-1.0_dp, &
-                                           min(1.0_dp,(d122 + d232F - d132) / (2.0_dp * sqrt(d122) * sqrt(d232F)))))
-                                 !if (isnan(theta12)) print*, "theta12", d122, d232F, d132
-
-                                 ! for theta21
-                                 d232 = 0.0_dp
-                                 d132 = 0.0_dp
-                                 d232F = 100.0_dp
-                                 do kkk=1,Nneigh(i)
-                                     mmm = NList(kkk,i)
-                                     if(layerIndex(mmm).eq.layerIndex(i)) then
-                                        d132 = NeighD(1,kkk,i)**2.0_dp + NeighD(2,kkk,i)**2.0_dp
-                                        if (d132 .lt. 1.43_dp**2.0_dp .and. d132 .gt. 0.0_dp) then
-                                            checking = .true.
-                                            exit
-                                        end if
-                                     end if
-                                 end do
-                                 !if (checking .eq. .false.) print*, "check3 not good"
-                                 checking = .false.
-
-                                 do kk=1, Nneigh(jj)
-                                     mm = NList(kk,jj)
-                                     if(mm.eq.mmm) then
-                                        checking = .true.
-                                        d232 = NeighD(1,kk,jj)**2.0_dp + NeighD(2,kk,jj)**2.0_dp
-                                        !if (layerIndex(mm).eq.layerIndex(jj) .or. d232.eq.0.0_dp) print*, "WARNING5", d232, layerIndex(mm), layerIndex(jj)
-                                        exit
-                                     end if
-                                 end do
-                                 !if (checking .eq. .false.) print*, "check4 not good"
-                                 checking = .false.
-
-                                 !if (d232F.lt.0.1_dp .or. d132.le.0.0_dp) print*, "WARNING4"
-                                     theta21 = acos(max(-1.0_dp, &
-                                           min(1.0_dp,(d122 + d132 - d232) / (2.0_dp * sqrt(d122) * sqrt(d132)))))
-                                 !if (isnan(theta21)) print*, "theta21", d122, d132, d232
-
-                              end if
-
-                              dist = sqrt(d122)
-                              rbar = dist /aGSrivani
-                              if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then
-                                   if (useBNGSrivani) then
-                                            epsKax = -(1.0_dp - abs((NeighD(3,j,i)))/(interlayerdistance))
-                                            ! AA'
-                                            a0AA = p1a0AA * epsKax**2.0_dp + p2a0AA * epsKax + p3a0AA
-                                            b0AA = p1b0AA * epsKax**2.0_dp + p2b0AA * epsKax + p3b0AA
-                                            c0AA = p1c0AA * epsKax**2.0_dp + p2c0AA * epsKax + p3c0AA
-                                            d0AA = p1d0AA * epsKax**2.0_dp + p2d0AA * epsKax + p3d0AA
-                                            h0AA = p1h0AA * epsKax**2.0_dp + p2h0AA * epsKax + p3h0AA
-                                            a0AA = a0AA/g0
-                                            a3AA = p1a3AA * epsKax**2.0_dp + p2a3AA * epsKax + p3a3AA
-                                            b3AA = p1b3AA * epsKax**2.0_dp + p2b3AA * epsKax + p3b3AA
-                                            c3AA = p1c3AA * epsKax**2.0_dp + p2c3AA * epsKax + p3c3AA
-                                            d3AA = p1d3AA * epsKax**2.0_dp + p2d3AA * epsKax + p3d3AA
-                                            a3AA = a3AA/g0
-                                            a6AA = p1a6AA * epsKax**2.0_dp + p2a6AA * epsKax + p3a6AA
-                                            b6AA = p1b6AA * epsKax**2.0_dp + p2b6AA * epsKax + p3b6AA
-                                            c6AA = p1c6AA * epsKax**2.0_dp + p2c6AA * epsKax + p3c6AA
-                                            d6AA = p1d6AA * epsKax**2.0_dp + p2d6AA * epsKax + p3d6AA
-                                            a6AA = a6AA/g0
-                                            ! AB'
-                                            a0AB = p1a0AB * epsKax**2.0_dp + p2a0AB * epsKax + p3a0AB
-                                            b0AB = p1b0AB * epsKax**2.0_dp + p2b0AB * epsKax + p3b0AB
-                                            c0AB = p1c0AB * epsKax**2.0_dp + p2c0AB * epsKax + p3c0AB
-                                            d0AB = p1d0AB * epsKax**2.0_dp + p2d0AB * epsKax + p3d0AB
-                                            h0AB = p1h0AB * epsKax**2.0_dp + p2h0AB * epsKax + p3h0AB
-                                            a0AB = a0AB/g0
-                                            a3AB = p1a3AB * epsKax**2.0_dp + p2a3AB * epsKax + p3a3AB
-                                            b3AB = p1b3AB * epsKax**2.0_dp + p2b3AB * epsKax + p3b3AB
-                                            c3AB = p1c3AB * epsKax**2.0_dp + p2c3AB * epsKax + p3c3AB
-                                            d3AB = p1d3AB * epsKax**2.0_dp + p2d3AB * epsKax + p3d3AB
-                                            a3AB = a3AB/g0
-                                            a6AB = p1a6AB * epsKax**2.0_dp + p2a6AB * epsKax + p3a6AB
-                                            b6AB = p1b6AB * epsKax**2.0_dp + p2b6AB * epsKax + p3b6AB
-                                            c6AB = p1c6AB * epsKax**2.0_dp + p2c6AB * epsKax + p3c6AB
-                                            d6AB = p1d6AB * epsKax**2.0_dp + p2d6AB * epsKax + p3d6AB
-                                            a6AB = a6AB/g0
-                                            ! BA'
-                                            a0BA = p1a0BA * epsKax**2.0_dp + p2a0BA * epsKax + p3a0BA
-                                            b0BA = p1b0BA * epsKax**2.0_dp + p2b0BA * epsKax + p3b0BA
-                                            c0BA = p1c0BA * epsKax**2.0_dp + p2c0BA * epsKax + p3c0BA
-                                            d0BA = p1d0BA * epsKax**2.0_dp + p2d0BA * epsKax + p3d0BA
-                                            h0BA = p1h0BA * epsKax**2.0_dp + p2h0BA * epsKax + p3h0BA
-                                            a0BA = a0BA/g0
-                                            a3BA = p1a3BA * epsKax**2.0_dp + p2a3BA * epsKax + p3a3BA
-                                            b3BA = p1b3BA * epsKax**2.0_dp + p2b3BA * epsKax + p3b3BA
-                                            c3BA = p1c3BA * epsKax**2.0_dp + p2c3BA * epsKax + p3c3BA
-                                            d3BA = p1d3BA * epsKax**2.0_dp + p2d3BA * epsKax + p3d3BA
-                                            a3BA = a3BA/g0
-                                            a6BA = p1a6BA * epsKax**2.0_dp + p2a6BA * epsKax + p3a6BA
-                                            b6BA = p1b6BA * epsKax**2.0_dp + p2b6BA * epsKax + p3b6BA
-                                            c6BA = p1c6BA * epsKax**2.0_dp + p2c6BA * epsKax + p3c6BA
-                                            d6BA = p1d6BA * epsKax**2.0_dp + p2d6BA * epsKax + p3d6BA
-                                            a6BA = a6BA/g0
-                                            ! BA'
-                                            a0BB = p1a0BB * epsKax**2.0_dp + p2a0BB * epsKax + p3a0BB
-                                            b0BB = p1b0BB * epsKax**2.0_dp + p2b0BB * epsKax + p3b0BB
-                                            c0BB = p1c0BB * epsKax**2.0_dp + p2c0BB * epsKax + p3c0BB
-                                            d0BB = p1d0BB * epsKax**2.0_dp + p2d0BB * epsKax + p3d0BB
-                                            h0BB = p1h0BB * epsKax**2.0_dp + p2h0BB * epsKax + p3h0BB
-                                            a0BB = a0BB/g0
-                                            a3BB = p1a3BB * epsKax**2.0_dp + p2a3BB * epsKax + p3a3BB
-                                            b3BB = p1b3BB * epsKax**2.0_dp + p2b3BB * epsKax + p3b3BB
-                                            c3BB = p1c3BB * epsKax**2.0_dp + p2c3BB * epsKax + p3c3BB
-                                            d3BB = p1d3BB * epsKax**2.0_dp + p2d3BB * epsKax + p3d3BB
-                                            a3BB = a3BB/g0
-                                            a6BB = p1a6BB * epsKax**2.0_dp + p2a6BB * epsKax + p3a6BB
-                                            b6BB = p1b6BB * epsKax**2.0_dp + p2b6BB * epsKax + p3b6BB
-                                            c6BB = p1c6BB * epsKax**2.0_dp + p2c6BB * epsKax + p3c6BB
-                                            d6BB = p1d6BB * epsKax**2.0_dp + p2d6BB * epsKax + p3d6BB
-                                            a6BB = a6BB/g0
-                                            V0AAp = a0AA*exp(-((rbar-b0AA)/c0AA)**4) * cos(d0AA*rbar - h0AA)
-                                            V0ABp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
-                                            V0BAp = a0BA*exp(-((rbar-b0BA)/c0BA)**4) * cos(d0BA*rbar - h0BA)
-                                            V0BBp = a0BB*exp(-((rbar-b0BB)/c0BB)**4) * cos(d0BB*rbar - h0BB)
-
-                                            if (onlyV0) then
-                                                V3AAp = 0.0_dp
-                                                V3ABp = 0.0_dp
-                                                V3BAp = 0.0_dp
-                                                V3BBp = 0.0_dp
-
-                                                V6AAp = 0.0_dp
-                                                V6ABp = 0.0_dp
-                                                V6BAp = 0.0_dp
-                                                V6BBp = 0.0_dp
-                                            else
-                                                V3AAp = a3AA*rbar*exp(-b3AA*(rbar-c3AA)**2) * sin(d3AA*rbar)
-                                                V3ABp = a3AB*rbar*exp(-b3AB*(rbar-c3AB)**2) * sin(d3AB*rbar)
-                                                V3BAp = a3BA*rbar*exp(-b3BA*(rbar-c3BA)**2) * sin(d3BA*rbar)
-                                                V3BBp = a3BB*rbar*exp(-b3BB*(rbar-c3BB)**2) * sin(d3BB*rbar)
-
-                                                V6AAp = a6AA*rbar*exp(-b6AA*(rbar-c6AA)**2) * sin(d6AA*rbar)
-                                                V6ABp = a6AB*rbar*exp(-b6AB*(rbar-c6AB)**2) * sin(d6AB*rbar)
-                                                V6BAp = a6BA*rbar*exp(-b6BA*(rbar-c6BA)**2) * sin(d6BA*rbar)
-                                                V6BBp = a6BB*rbar*exp(-b6BB*(rbar-c6BB)**2) * sin(d6BB*rbar)
-                                            end if
-                                            signChange = 1.0_dp
-                                            if (layerIndex(i).eq.1) then ! graphene layer
-                                                if (oppositedxdy) then
-                                                   theta = atan2(NeighD(1,j,i),NeighD(2,j,i))
-                                                else
-                                                   theta = atan2(-NeighD(1,j,i),-NeighD(2,j,i))
-                                                end if
-                                                if (Species(i).eq.1 .and. Species(jj).eq.3) then ! AAp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta12)) &
-                                                               + V6AAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
-                                                               + V6AAp*(cos(6.0_dp*theta))) * renormalizeHoppingFactorAAp
-                                                     end if
-                                                else if (Species(i).eq.2 .and. Species(jj).eq.4) then ! BBp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta12)) &
-                                                               + V6BBp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBBp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta)) &
-                                                               + V6BBp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBBp
-                                                     end if
-                                                else if (Species(i).eq.1 .and. Species(jj).eq.4) then ! ABp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               + signChange * V3ABp * (cos(3.0_dp*theta12)) &
-                                                               + V6ABp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               + signChange * V3ABp * (cos(3.0_dp*theta)) &
-                                                               + V6ABp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorABp
-                                                     end if
-                                                else if (Species(i).eq.2 .and. Species(jj).eq.3) then ! BAp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta12)) &
-                                                               + V6BAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
-                                                               + V6BAp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBAp
-                                                     end if
-                                                end if
-                                            else if (layerIndex(i).eq.2) then ! hBN layer
-                                                if (oppositedxdy) then
-                                                   theta = atan2(-NeighD(1,j,i),-NeighD(2,j,i))
-                                                else
-                                                   theta = atan2(NeighD(1,j,i),NeighD(2,j,i)) ! AAp
-                                                end if
-                                                if (Species(i).eq.3 .and. Species(jj).eq.1) then
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta21)) &
-                                                               + V6AAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
-                                                               + V6AAp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorAAp
-                                                     end if
-                                                else if (Species(i).eq.4 .and. Species(jj).eq.2) then ! BBp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta21)) &
-                                                               + V6BBp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBBp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta)) &
-                                                               + V6BBp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBBp
-                                                     end if
-                                                else if (Species(i).eq.4 .and. Species(jj).eq.1) then ! ABp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               + signChange * V3ABp * (cos(3.0_dp*theta21)) &
-                                                               + V6ABp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               + signChange * V3ABp * (cos(3.0_dp*theta)) &
-                                                               + V6ABp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorABp
-                                                     end if
-                                                else if (Species(i).eq.3 .and. Species(jj).eq.2) then ! BAp
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta21)) &
-                                                               + V6BAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
-                                                               + V6BAp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBAp
-                                                     end if
-                                                end if
-                                            end if
-                                   else
-                                        epsKax = -(1.0_dp - abs((NeighD(3,j,i)))/(interlayerdistance))
-                                        if (addPressureDependence) then
-                                            lambda0 = c1_0 + c1_1 * epsKax + c1_2 * epsKax**2.0_dp
-                                            lambda3 = c4_0 + c4_1 * epsKax + c4_2 * epsKax**2.0_dp
-                                            lambda6 = c7_0 + c7_1 * epsKax + c7_2 * epsKax**2.0_dp
-                                            lambda6b = c11_0 + c11_1 * epsKax + c11_2 * epsKax**2.0_dp
-                                            lambda0 = lambda0/g0
-                                            if (switchV3Sign) then
-                                                lambda3 = -lambda3/g0
-                                            else
-                                                lambda3 = lambda3/g0
-                                            end if
-                                            lambda6 = lambda6/g0
-                                            lambda6b = lambda6b/g0
-                                            xi0 = c2_0 + c2_1 * epsKax + c2_2 * epsKax**2.0_dp
-                                            xi3 = c5_0 + c5_1 * epsKax + c5_2 * epsKax**2.0_dp
-                                            xi6 = c8_0 + c8_1 * epsKax + c8_2 * epsKax**2.0_dp
-                                            xi6b = c12_0 + c12_1 * epsKax + c12_2 * epsKax**2.0_dp
-                                            x3 = c6_0 + c6_1 * epsKax + c6_2 * epsKax**2.0_dp
-                                            x6 = c9_0 + c9_1 * epsKax + c9_2 * epsKax**2.0_dp
-                                            x6b = c13_0 + c13_1 * epsKax + c13_2 * epsKax**2.0_dp
-                                            kappa0 = c3_0 + c3_1 * epsKax + c3_2 * epsKax**2.0_dp
-                                            kappa6 = c10_0 + c10_1 * epsKax + c10_2 * epsKax**2.0_dp
-                                            kappa6b = c14_0 + c14_1 * epsKax + c14_2 * epsKax**2.0_dp
-                                            a0AA = p1a0AA * epsKax**2.0_dp + p2a0AA * epsKax + p3a0AA
-                                            b0AA = p1b0AA * epsKax**2.0_dp + p2b0AA * epsKax + p3b0AA
-                                            c0AA = p1c0AA * epsKax**2.0_dp + p2c0AA * epsKax + p3c0AA
-                                            d0AA = p1d0AA * epsKax**2.0_dp + p2d0AA * epsKax + p3d0AA
-                                            h0AA = p1h0AA * epsKax**2.0_dp + p2h0AA * epsKax + p3h0AA
-                                            j0AA = p1j0AA * epsKax**2.0_dp + p2j0AA * epsKax + p3j0AA
-                                            k0AA = p1k0AA * epsKax**2.0_dp + p2k0AA * epsKax + p3k0AA
-                                            a0AB = p1a0AB * epsKax**2.0_dp + p2a0AB * epsKax + p3a0AB
-                                            b0AB = p1b0AB * epsKax**2.0_dp + p2b0AB * epsKax + p3b0AB
-                                            c0AB = p1c0AB * epsKax**2.0_dp + p2c0AB * epsKax + p3c0AB
-                                            d0AB = p1d0AB * epsKax**2.0_dp + p2d0AB * epsKax + p3d0AB
-                                            h0AB = p1h0AB * epsKax**2.0_dp + p2h0AB * epsKax + p3h0AB
-                                            j0AB = p1j0AB * epsKax**2.0_dp + p2j0AB * epsKax + p3j0AB
-                                            k0AB = p1k0AB * epsKax**2.0_dp + p2k0AB * epsKax + p3k0AB
-                                            a0AA = a0AA/g0
-                                            j0AA = j0AA/g0
-                                            a0AB = a0AB/g0
-                                            j0AB = j0AB/g0
-
-                                            aval = 2.48_dp
-                                            bval = 3.19_dp
-                                            renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
-                                            renormalizeHoppingFactorBBp  = exp((abs(NeighD(3,j,i))-bval)/aval)
-                                            aval = 18.17_dp
-                                            bval = 2.73_dp
-                                            renormalizeHoppingFactorABp  = exp((abs(NeighD(3,j,i))-bval)/aval)
-                                            renormalizeHoppingFactorBAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
-
-                                        end if
-                                            V0 = lambda0 * exp(-xi0*rbar**2.0_dp) * cos(kappa0 * rbar)
-                                            V3 = lambda3 * rbar**2.0_dp * exp(-xi3*(rbar-x3)**2.0_dp)
-                                            if (newFittingFunctions) then
-                                               V0AAp = a0AA*exp(-((rbar-b0AA)/c0AA)**4) * cos(d0AA*rbar - h0AA)
-                                               V0ABp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
-                                               V0BAp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
-                                            else
-                                               V0AAp = lambda0AAp * exp(-xi0AAp*rbar**2.0_dp)*cos(kappa0AAp*rbar) &
-                                                     + lambda0bAAp*rbar**3.0_dp*exp(-xi0bAAp*rbar**2.0_dp)*cos(kappa0bAAp*rbar)
-                                               V0ABp = lambda0ABp * exp(-xi0ABp*rbar**2.0_dp)*cos(kappa0ABp*rbar) &
-                                                     + lambda0bABp*rbar**2.0_dp*exp(-xi0bABp*rbar**2.0_dp)*cos(kappa0bABp*rbar)
-                                               V0BAp = lambda0BAp * exp(-xi0BAp*rbar**2.0_dp)*cos(kappa0BAp*rbar) &
-                                                     + lambda0bBAp*rbar**2.0_dp*exp(-xi0bBAp*rbar**2.0_dp)*cos(kappa0bBAp*rbar)
-                                            end if
-                                            if (deactivateV3) then
-                                               V3 = 0.0_dp
-                                               V3AAp = 0.0_dp
-                                               V3ABp = 0.0_dp
-                                               V3BAp = 0.0_dp
-                                            else
-                                               V3AAp = 0.0_dp
-                                               V3ABp = lambda3ABp*rbar**2.0_dp * exp(-xi3ABp*(rbar-x3ABp)**2.0_dp) &
-                                                     + lambda3bABp *rbar**3.0_dp * exp(-xi3bABp*(rbar-x3bABp)**2.0_dp)
-                                               V3BAp = lambda3BAp*rbar**2.0_dp * exp(-xi3BAp*(rbar-x3BAp)**2.0_dp) &
-                                                     + lambda3bBAp *rbar**3.0_dp * exp(-xi3bBAp*(rbar-x3bBAp)**2.0_dp)
-                                            end if
-                                            V6AAp = 0.0_dp
-                                            V6ABp = 0.0_dp
-                                            V6BAp = 0.0_dp
-                                            !    call V6  =
-                                            if (oldParameterSet) then
-                                                V6 = lambda6 * exp(-xi6*(rbar-x6)**2.0_dp) * sin(kappa6 * rbar)
-                                            else if (deactivateV6) then
-                                                V6 = lambda6 * exp(-xi6*(rbar-x6)**2.0_dp) * sin(kappa6 * rbar)
-                                            else
-                                                V6 = lambda6 * rbar * exp(-xi6*(rbar-x6)**2.0_dp) * sin(kappa6 * rbar) + lambda6b * rbar**2.0_dp*exp(-xi6b*(rbar-x6b)**2.0_dp) * sin(kappa6b * rbar)
-                                            end if
-                                            if (deactivateV6) then
-                                               V6 = 0.0_dp
-                                            end if
-                                        if (sublatticeDependent) then
-                                          if (fourLayers) then
-                                            if (layerIndex(i).eq.2) then
-                                                      !+ V6BAp*(cos(6.0_dp*theta12) + cos(6.0_dp*theta21))) ! The minus sign is added at the end here
-                                                      hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                            + V3BAp * (cos(3.0_dp*theta12) + cos(3.0_dp*theta21)))
-                                            else if (layerIndex(i).eq.3) then
-                                                      !+ V6BAp*(cos(6.0_dp*theta12) + cos(6.0_dp*theta21))) ! The minus sign is added at the end here
-                                                      hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                            + V3BAp * (cos(3.0_dp*theta12) + cos(3.0_dp*theta21)))
-                                            end if
-                                          else if (twoLayers) then
-                                            !          !print*, "holaaaaaaa1"
-                                            !          !print*, "holaaaaaaa2"
-                                            !          !print*, "holaaaaaaa3"
-                                            !          !print*, "holaaaaaaa4"
-                                            !         !print*, "holaaaaaaa5"
-                                            !          !print*, "holaaaaaaa6"
-                                            signChange = 1.0_dp
-                                            if (layerIndex(i).eq.1) then
-                                                if (Species(i).eq.Species(jj)) then
-                                                     theta = atan2(NeighD(2,j,i),NeighD(1,j,i))
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta12)) &
-                                                               + V6AAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
-                                                               + V6AAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
-                                                     end if
-                                                else if (Species(i).eq.1 .and. Species(jj).eq.2) then
-                                                     theta = atan2(NeighD(2,j,i),NeighD(1,j,i))
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               - signChange * V3ABp * (cos(3.0_dp*theta12)) &
-                                                               + V6ABp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               - signChange * V3ABp * (cos(3.0_dp*theta)) &
-                                                               + V6ABp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
-                                                     end if
-                                                else if (Species(i).eq.2 .and. Species(jj).eq.1) then
-                                                     theta = atan2(NeighD(2,j,i),NeighD(1,j,i))
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta12)) &
-                                                               + V6BAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
-                                                               + V6BAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
-                                                     end if
-                                                end if
-                                            else if (layerIndex(i).eq.2) then
-                                                if (Species(i).eq.Species(jj)) then
-                                                     theta = atan2(-NeighD(2,j,i),-NeighD(1,j,i))
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta21)) &
-                                                               + V6AAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
-                                                               + V6AAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
-                                                     end if
-                                                else if (Species(i).eq.2 .and. Species(jj).eq.1) then
-                                                     theta = atan2(-NeighD(2,j,i),-NeighD(1,j,i))
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               - signChange * V3ABp * (cos(3.0_dp*theta21)) &
-                                                               + V6ABp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
-                                                               - signChange * V3ABp * (cos(3.0_dp*theta)) &
-                                                               + V6ABp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
-                                                     end if
-                                                else if (Species(i).eq.1 .and. Species(jj).eq.2) then
-                                                     theta = atan2(-NeighD(2,j,i),-NeighD(1,j,i))
-                                                     if (useThetaIJ) then
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta21)) &
-                                                               + V6BAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
-                                                     else
-                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
-                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
-                                                               + V6BAp*(cos(6.0_dp*theta12) &
-                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
-                                                     end if
-                                                end if
-                                            end if
-                                          end if
-                                        else
-                                          !if (i.eq.1 .and. j.eq.1) print*, "doing sublattice independent"
-                                          if (layerIndex(i).eq.1) then
-                                              theta = atan2(-NeighD(1,j,i),-NeighD(2,j,i))
-                                          else if (layerIndex(i).eq.2) then
-                                              theta = atan2(NeighD(1,j,i),NeighD(2,j,i))
-                                          end if
-                                          if (useTheta) then
-                                              ! The minus sign is added at the end here
-                                              hopp(j,i) = hopp(j,i) -(V0 + V3 * (cos(3.0_dp*theta)) + V6*(cos(6.0_dp*theta)))
-                                          else ! Kaxiras model
-                                              !* renormalizeHoppingFactorAAp
-                                              hopp(j,i) = hopp(j,i) -(V0 &
-                                                    + V3 * (cos(3.0_dp*theta12) + cos(3.0_dp*theta21)) &
-                                                    + V6*(cos(6.0_dp*theta12) + cos(6.0_dp*theta21)))
-                                          end if
-                                        end if
-                                        if (addExponentialDecayForDihedral) then
-                                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                                            hopp(j,i) = hopp(j,i) * exp(-(dist-interlayerdistance)/(BLdelta))
-                                        end if
-                                   end if
-                              end if
-                          else
-                              hopp(j,i) = hopp(j,i) + 0.0_dp
-                          end if
-                      else
-                          hopp(j,i) = hopp(j,i)
-                      end if
+                      if (HamHopInterlayerKaxirasSrivani(jj, j, i, dist, numberOfInterlayerHoppings, vppsigma, &
+                            BLdelta, vpppi, twistAngleGrad, checking, kk, mm, kkk, mmm, renormalizeHoppingFactorAAp, &
+                            renormalizeHoppingFactorBBp, renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp, &
+                            aval, bval)) cycle
                    end if
                    if (renormalizeCoupling) then
                       if (differentCouplings) then ! This works for tBG on hBN, maybe need to update for other layered combinations
@@ -11655,6 +10430,1624 @@ subroutine HamHopSrivaniConstants()
    end if
 
 end subroutine HamHopSrivaniConstants
+
+!> Interlayer hopping of the Kaxiras and Srivani models (TypeOfBL BLKaxiras, BLSrivani)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping. The result is .true. where the bond is to be skipped (cycle).
+!! The variables declared after the arguments are used by this model only; they are marked as not set on
+!! entry, so that a value left from another bond cannot be used by mistake.
+function HamHopInterlayerKaxirasSrivani(jj, j, i, dist, numberOfInterlayerHoppings, vppsigma, BLdelta, vpppi, &
+      twistAngleGrad, checking, kk, mm, kkk, mmm, renormalizeHoppingFactorAAp, renormalizeHoppingFactorBBp, &
+      renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp, aval, bval) result(skipBond)
+
+   integer, intent(inout) :: jj
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dist
+   integer, intent(inout) :: numberOfInterlayerHoppings
+   real(dp), intent(inout) :: vppsigma
+   real(dp), intent(inout) :: BLdelta
+   real(dp), intent(inout) :: vpppi
+   real(dp), intent(inout) :: twistAngleGrad
+   logical, intent(inout) :: checking
+   integer, intent(inout) :: kk
+   integer, intent(inout) :: mm
+   integer, intent(inout) :: kkk
+   integer, intent(inout) :: mmm
+   real(dp), intent(inout) :: renormalizeHoppingFactorAAp
+   real(dp), intent(inout) :: renormalizeHoppingFactorBBp
+   real(dp), intent(inout) :: renormalizeHoppingFactorABp
+   real(dp), intent(inout) :: renormalizeHoppingFactorBAp
+   real(dp), intent(inout) :: aval
+   real(dp), intent(inout) :: bval
+   logical :: skipBond
+
+   real(dp) :: d122
+   real(dp) :: theta12
+   real(dp) :: theta21
+   real(dp) :: uvec(3)
+   real(dp) :: vvec(3)
+   real(dp) :: vvecR(3)
+   real(dp) :: d232
+   real(dp) :: d132
+   real(dp) :: d232F
+   real(dp) :: rbar
+   real(dp) :: epsKax
+   real(dp) :: a0AA
+   real(dp) :: b0AA
+   real(dp) :: c0AA
+   real(dp) :: d0AA
+   real(dp) :: h0AA
+   real(dp) :: a3AA
+   real(dp) :: b3AA
+   real(dp) :: c3AA
+   real(dp) :: d3AA
+   real(dp) :: a6AA
+   real(dp) :: b6AA
+   real(dp) :: c6AA
+   real(dp) :: d6AA
+   real(dp) :: a0AB
+   real(dp) :: b0AB
+   real(dp) :: c0AB
+   real(dp) :: d0AB
+   real(dp) :: h0AB
+   real(dp) :: a3AB
+   real(dp) :: b3AB
+   real(dp) :: c3AB
+   real(dp) :: d3AB
+   real(dp) :: a6AB
+   real(dp) :: b6AB
+   real(dp) :: c6AB
+   real(dp) :: d6AB
+   real(dp) :: a0BA
+   real(dp) :: b0BA
+   real(dp) :: c0BA
+   real(dp) :: d0BA
+   real(dp) :: h0BA
+   real(dp) :: a3BA
+   real(dp) :: b3BA
+   real(dp) :: c3BA
+   real(dp) :: d3BA
+   real(dp) :: a6BA
+   real(dp) :: b6BA
+   real(dp) :: c6BA
+   real(dp) :: d6BA
+   real(dp) :: a0BB
+   real(dp) :: b0BB
+   real(dp) :: c0BB
+   real(dp) :: d0BB
+   real(dp) :: h0BB
+   real(dp) :: a3BB
+   real(dp) :: b3BB
+   real(dp) :: c3BB
+   real(dp) :: d3BB
+   real(dp) :: a6BB
+   real(dp) :: b6BB
+   real(dp) :: c6BB
+   real(dp) :: d6BB
+   real(dp) :: V0AAp
+   real(dp) :: V0ABp
+   real(dp) :: V0BAp
+   real(dp) :: V0BBp
+   real(dp) :: V3AAp
+   real(dp) :: V3ABp
+   real(dp) :: V3BAp
+   real(dp) :: V3BBp
+   real(dp) :: V6AAp
+   real(dp) :: V6ABp
+   real(dp) :: V6BAp
+   real(dp) :: V6BBp
+   real(dp) :: signChange
+   real(dp) :: theta
+   real(dp) :: lambda0
+   real(dp) :: lambda3
+   real(dp) :: lambda6
+   real(dp) :: lambda6b
+   real(dp) :: xi0
+   real(dp) :: xi3
+   real(dp) :: xi6
+   real(dp) :: xi6b
+   real(dp) :: x3
+   real(dp) :: x6
+   real(dp) :: x6b
+   real(dp) :: kappa0
+   real(dp) :: kappa6
+   real(dp) :: kappa6b
+   real(dp) :: j0AA
+   real(dp) :: k0AA
+   real(dp) :: j0AB
+   real(dp) :: k0AB
+   real(dp) :: V0
+   real(dp) :: V3
+   real(dp) :: V6
+
+   skipBond = .false.
+   d122 = hamUnset
+   theta12 = hamUnset
+   theta21 = hamUnset
+   uvec = hamUnset
+   vvec = hamUnset
+   vvecR = hamUnset
+   d232 = hamUnset
+   d132 = hamUnset
+   d232F = hamUnset
+   rbar = hamUnset
+   epsKax = hamUnset
+   a0AA = hamUnset
+   b0AA = hamUnset
+   c0AA = hamUnset
+   d0AA = hamUnset
+   h0AA = hamUnset
+   a3AA = hamUnset
+   b3AA = hamUnset
+   c3AA = hamUnset
+   d3AA = hamUnset
+   a6AA = hamUnset
+   b6AA = hamUnset
+   c6AA = hamUnset
+   d6AA = hamUnset
+   a0AB = hamUnset
+   b0AB = hamUnset
+   c0AB = hamUnset
+   d0AB = hamUnset
+   h0AB = hamUnset
+   a3AB = hamUnset
+   b3AB = hamUnset
+   c3AB = hamUnset
+   d3AB = hamUnset
+   a6AB = hamUnset
+   b6AB = hamUnset
+   c6AB = hamUnset
+   d6AB = hamUnset
+   a0BA = hamUnset
+   b0BA = hamUnset
+   c0BA = hamUnset
+   d0BA = hamUnset
+   h0BA = hamUnset
+   a3BA = hamUnset
+   b3BA = hamUnset
+   c3BA = hamUnset
+   d3BA = hamUnset
+   a6BA = hamUnset
+   b6BA = hamUnset
+   c6BA = hamUnset
+   d6BA = hamUnset
+   a0BB = hamUnset
+   b0BB = hamUnset
+   c0BB = hamUnset
+   d0BB = hamUnset
+   h0BB = hamUnset
+   a3BB = hamUnset
+   b3BB = hamUnset
+   c3BB = hamUnset
+   d3BB = hamUnset
+   a6BB = hamUnset
+   b6BB = hamUnset
+   c6BB = hamUnset
+   d6BB = hamUnset
+   V0AAp = hamUnset
+   V0ABp = hamUnset
+   V0BAp = hamUnset
+   V0BBp = hamUnset
+   V3AAp = hamUnset
+   V3ABp = hamUnset
+   V3BAp = hamUnset
+   V3BBp = hamUnset
+   V6AAp = hamUnset
+   V6ABp = hamUnset
+   V6BAp = hamUnset
+   V6BBp = hamUnset
+   signChange = hamUnset
+   theta = hamUnset
+   lambda0 = hamUnset
+   lambda3 = hamUnset
+   lambda6 = hamUnset
+   lambda6b = hamUnset
+   xi0 = hamUnset
+   xi3 = hamUnset
+   xi6 = hamUnset
+   xi6b = hamUnset
+   x3 = hamUnset
+   x6 = hamUnset
+   x6b = hamUnset
+   kappa0 = hamUnset
+   kappa6 = hamUnset
+   kappa6b = hamUnset
+   j0AA = hamUnset
+   k0AA = hamUnset
+   j0AB = hamUnset
+   k0AB = hamUnset
+   V0 = hamUnset
+   V3 = hamUnset
+   V6 = hamUnset
+
+                      if (deactivateInterlayer) then
+                          skipBond = .true.
+                          return
+                      end if
+                      !First, theta12
+                      !do ix=-1,1; do iy=-1,1
+
+                      jj = NList(j,i)
+                      if ((.not.((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
+                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) .and. fourLayers) then
+                        ! INTERLAYER
+                        if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                              .and. BilayerThreeParameters) then
+                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
+                               hopp(j,i) = hopp(j,i) -tAB1
+                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                            else if (dist>aCC*0.95_dp .and. dist<aCC*1.05_dp .and. BilayerThreeParameters) then
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  hopp(j,i) = hopp(j,i) -tAB4
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  hopp(j,i) = hopp(j,i) -tAB3
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else if (dist>aCC*0.95_dp*2.0_dp .and. dist<aCC*1.05_dp*2.0_dp .and. BilayerThreeParameters) then
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  hopp(j,i) = hopp(j,i) -tAB4
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  hopp(j,i) = hopp(j,i) -tAB3
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else
+                               hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                        ! INTERLAYER
+                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                              .and. BilayerOneParameter) then
+                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
+                               hopp(j,i) = hopp(j,i) -tAB1
+                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                            else
+                               hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                        ! INTERLAYER
+                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                              .and. F2G2Model) then
+                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            if (dist<0.2_dp) then
+                               !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 0", delta
+                               hopp(j,i) = hopp(j,i) + tBA0
+                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                            ! First nearest neighbors surrounding the atom in the middle of the hexagon
+                            else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
+                               if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AA", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AA", delta
+                                  hopp(j,i) = hopp(j,i) + tAA1
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else ! Different sublattice
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AB", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AB", delta
+                                  hopp(j,i) = hopp(j,i) + tAB1
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2", delta
+                                  hopp(j,i) = hopp(j,i) + tBA2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2 bis", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2 bis", delta
+                                  hopp(j,i) = hopp(j,i) + tBA2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            ! Second neirest neighbor from central atom in middle of hexagon
+                            else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AA 2 ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AA 2", delta
+                                  hopp(j,i) = hopp(j,i) + tAA2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AB 2 ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AB 2", delta
+                                  hopp(j,i) = hopp(j,i) + tAB2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! BA' (corresponds to g2, not g5)
+                               if (Species(i).ne.Species(NList(j,i))) then
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5", delta
+                                  hopp(j,i) = hopp(j,i) + tBA5
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 bis ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5 bis", delta
+                                  hopp(j,i) = hopp(j,i)
+                               end if
+                            else
+                               !if (i.eq.1) print*, "assigning interlayer F2G2 terms BA 5 bis ", delta
+                               hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                        else
+                          if (strainedMoire) then
+                             dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
+                                         +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          else
+                             dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          end if
+                          vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta))
+                 !epsx    x(j,i) = -u0 * 2.0_dp * pi / LMoire * cos(2.0_dp * pi * nPeriod * Rat(1,i) / LMoire)
+                          vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) ! inplane
+                          hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
+                                            pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
+                        end if
+                      else if (((layerIndex(i).eq.1 .and. layerIndex(jj).eq.2) &
+                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1)) .and. threeLayers .and. (.not. middleTwist)) then
+                        ! INTERLAYER
+                        if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                              .and. BilayerThreeParameters) then
+                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
+                               hopp(j,i) = hopp(j,i) -tAB1
+                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                            else if (dist>aCC*0.95_dp .and. dist<aCC*1.05_dp .and. BilayerThreeParameters) then
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  hopp(j,i) = hopp(j,i) -tAB4
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  hopp(j,i) = hopp(j,i) -tAB3
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else if (dist>aCC*0.95_dp*2.0_dp .and. dist<aCC*1.05_dp*2.0_dp .and. BilayerThreeParameters) then
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  hopp(j,i) = hopp(j,i) -tAB4
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  hopp(j,i) = hopp(j,i) -tAB3
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else
+                               hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                        ! INTERLAYER USING F2G2 model for bottom 2 layers
+                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                              .and. F2G2Model) then
+                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            if (dist<0.2_dp) then
+                               !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 0", delta
+                               hopp(j,i) = hopp(j,i) + tBA0
+                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                            ! First nearest neighbors surrounding the atom in the middle of the hexagon
+                            else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
+                               if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AA", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AA", delta
+                                  hopp(j,i) = hopp(j,i) + tAA1
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else ! Different sublattice
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AB", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AB", delta
+                                  hopp(j,i) = hopp(j,i) + tAB1
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2", delta
+                                  hopp(j,i) = hopp(j,i) + tBA2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2 bis", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2 bis", delta
+                                  hopp(j,i) = hopp(j,i) + tBA2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            ! Second neirest neighbor from central atom in middle of hexagon
+                            else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
+                               if (Species(i).eq.Species(NList(j,i))) then
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AA 2 ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AA 2", delta
+                                  hopp(j,i) = hopp(j,i) + tAA2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AB 2 ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AB 2", delta
+                                  hopp(j,i) = hopp(j,i) + tAB2
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               end if
+                            else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! BA' (corresponds to g2, not g5)
+                               if (Species(i).ne.Species(NList(j,i))) then
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5", delta
+                                  hopp(j,i) = hopp(j,i) + tBA5
+                                  numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                               else
+                                  !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 bis ", delta
+                                  !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5 bis", delta
+                                  hopp(j,i) = hopp(j,i)
+                               end if
+                            else
+                               !if (i.eq.1) print*, "assigning interlayer F2G2 terms BA 5 bis ", delta
+                               hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                        ! INTERLAYER
+                        else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                              .and. BilayerOneParameter) then
+                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
+                               hopp(j,i) = hopp(j,i) -tAB1
+                               numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                            else
+                               hopp(j,i) = hopp(j,i) + 0.0_dp
+                            end if
+                        else
+                          if (strainedMoire) then
+                             dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
+                                         +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          else
+                             dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          end if
+                          vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta))
+                 !epsx    x(j,i) = -u0 * 2.0_dp * pi / LMoire * cos(2.0_dp * pi * nPeriod * Rat(1,i) / LMoire)
+                          vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) ! inplane
+                          hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
+                                            pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
+                        end if
+
+                      ! adding the kaxiras or srivani hopping terms between layers
+                      else if ((layerIndex(i) .eq. layerIndex(jj) +1) .or. (layerIndex(i) .eq. layerIndex(jj) - 1)) then
+
+                          if (deactivateInterlayerTwisted) then
+                              skipBond = .true.
+                              return
+                          end if
+
+                          d122 = NeighD(1,j,i)**2.0_dp + NeighD(2,j,i)**2.0_dp
+                          ! probably layer condition not important alreayd in interlayer part of code
+                          if (d122.lt.KaxirasCutoff2 .and. layerIndex(i) .ne. layerIndex(jj)) then
+                              if (d122.eq.0) then
+                                 theta12 = 0.0_dp
+                                 theta21 = 0.0_dp
+                              else if (findThetasGeometrically) then
+                                 !if (i.eq.1 .and. j.eq.1) print*, "we are assigning the thetas geometrically"
+                                 uvec(1) = NeighD(1,j,i)
+                                 uvec(2) = NeighD(2,j,i)
+                                 uvec(1) = 0.0_dp
+                                 vvec(2) = 0.0_dp
+                                 vvec(3) = 0.0_dp
+                                 ! Attom 1 in top layer (seems like top layer is the unrotated one)
+                                 if (layerIndex(i).gt.layerIndex(jj)) then
+                                     if (Species(i).eq.Species(jj)) then
+                                        if (Species(i).eq.1) then
+                                             vvec(2) = -aCC ! AAp
+                                        else
+                                             vvec(2) = aCC ! BBp
+                                        end if
+                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
+                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
+                                        vvecR(3) = vvec(3)
+                                        theta12 = atan2(norm2(cross(-uvec, vvecR)), dot_product(-uvec, vvecR))
+                                        theta21 = atan2(norm2(cross(uvec, vvec)), dot_product(uvec, vvec)) ! Same for AAp and BBp
+                                     else
+                                        if (Species(i).eq.1) then
+                                             vvec(2) = aCC ! ABp
+                                        else
+                                             vvec(2) = -aCC ! BAp
+                                        end if
+                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
+                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
+                                        vvecR(3) = vvec(3)
+                                        theta12 = atan2(norm2(cross(-uvec, vvecR)), dot_product(-uvec, vvecR))
+                                        ! inverted for ABp and BAp
+                                        theta21 = atan2(norm2(cross(uvec, -vvec)), dot_product(uvec, -vvec))
+                                     end if
+                                 else if (layerIndex(i).lt.layerIndex(jj)) then ! Atom 1 in bottom layer
+                                     if (Species(i).eq.Species(jj)) then
+                                        if (Species(i).eq.1) then
+                                             vvec(2) = -aCC ! AAp
+                                        else
+                                             vvec(2) = aCC ! BBp
+                                        end if
+                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
+                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
+                                        vvecR(3) = vvec(3)
+                                        theta12 = atan2(norm2(cross(-uvec, vvec)), dot_product(-uvec, vvec))
+                                        theta21 = atan2(norm2(cross(uvec, vvecR)), dot_product(uvec, vvecR)) ! Same for AAp and BBp
+                                     else
+                                        if (Species(i).eq.1) then
+                                             vvec(2) = aCC ! ABp
+                                        else
+                                             vvec(2) = -aCC ! BAp
+                                        end if
+                                        vvecR(1) = vvec(1)*cos(twistAngleGrad) - vvec(2)*sin(twistAngleGrad)
+                                        vvecR(2) = vvec(1)*sin(twistAngleGrad) + vvec(2)*cos(twistAngleGrad)
+                                        vvecR(3) = vvec(3)
+                                        theta12 = atan2(norm2(cross(-uvec, vvec)), dot_product(-uvec, vvec))
+                                        ! inverted for ABp and BAp
+                                        theta21 = atan2(norm2(cross(uvec, -vvecR)), dot_product(uvec, -vvecR))
+                                     end if
+                                     theta21 = theta21 !- twistAngleGrad
+                                 end if
+
+                              else
+                                 checking = .false.
+                                 d232 = 0.0_dp
+                                 d132 = 0.0_dp
+                                 d232F = 100.0_dp
+                                 ! for theta12
+                                 do kk=1, Nneigh(jj)
+                                     mm = NList(kk,jj)
+                                     if(layerIndex(mm).eq.layerIndex(jj)) then
+                                        d232 = NeighD(1,kk,jj)**2.0_dp + NeighD(2,kk,jj)**2.0_dp
+                                        if (d232 .lt. d232F) then
+                                           d232F = d232
+                                           if (d232F .lt. 1.43_dp**2.0_dp .and. d232F .gt. 0.0_dp) then
+                                                checking = .true.
+                                                exit
+                                           end if
+                                        end if
+                                     end if
+                                 end do
+                                 !if (checking .eq. .false.) print*, "check1 not good"
+                                 checking = .false.
+
+                                 do kkk=1,Nneigh(i)
+                                     mmm = NList(kkk,i)
+                                     if (mmm.eq.mm) then
+                                        checking = .true.
+                                        d132 = NeighD(1,kkk,i)**2.0_dp + NeighD(2,kkk,i)**2.0_dp
+                                        !if (layerIndex(mmm).eq.layerIndex(i) .or. d132.eq.0.0_dp) print*, "WARNING2", d132, layerIndex(mmm), layerIndex(i)
+                                        exit
+                                     end if
+                                 end do
+                                 !if (checking .eq. .false.) print*, "check2 not good"
+                                 checking = .false.
+
+                                 if (d232F.lt.0.1_dp .or. d132.le.0.0_dp) print*, "WARNING3", d232F, d132
+                                     theta12 = acos(max(-1.0_dp, &
+                                           min(1.0_dp,(d122 + d232F - d132) / (2.0_dp * sqrt(d122) * sqrt(d232F)))))
+                                 !if (isnan(theta12)) print*, "theta12", d122, d232F, d132
+
+                                 ! for theta21
+                                 d232 = 0.0_dp
+                                 d132 = 0.0_dp
+                                 d232F = 100.0_dp
+                                 do kkk=1,Nneigh(i)
+                                     mmm = NList(kkk,i)
+                                     if(layerIndex(mmm).eq.layerIndex(i)) then
+                                        d132 = NeighD(1,kkk,i)**2.0_dp + NeighD(2,kkk,i)**2.0_dp
+                                        if (d132 .lt. 1.43_dp**2.0_dp .and. d132 .gt. 0.0_dp) then
+                                            checking = .true.
+                                            exit
+                                        end if
+                                     end if
+                                 end do
+                                 !if (checking .eq. .false.) print*, "check3 not good"
+                                 checking = .false.
+
+                                 do kk=1, Nneigh(jj)
+                                     mm = NList(kk,jj)
+                                     if(mm.eq.mmm) then
+                                        checking = .true.
+                                        d232 = NeighD(1,kk,jj)**2.0_dp + NeighD(2,kk,jj)**2.0_dp
+                                        !if (layerIndex(mm).eq.layerIndex(jj) .or. d232.eq.0.0_dp) print*, "WARNING5", d232, layerIndex(mm), layerIndex(jj)
+                                        exit
+                                     end if
+                                 end do
+                                 !if (checking .eq. .false.) print*, "check4 not good"
+                                 checking = .false.
+
+                                 !if (d232F.lt.0.1_dp .or. d132.le.0.0_dp) print*, "WARNING4"
+                                     theta21 = acos(max(-1.0_dp, &
+                                           min(1.0_dp,(d122 + d132 - d232) / (2.0_dp * sqrt(d122) * sqrt(d132)))))
+                                 !if (isnan(theta21)) print*, "theta21", d122, d132, d232
+
+                              end if
+
+                              dist = sqrt(d122)
+                              rbar = dist /aGSrivani
+                              if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then
+                                   if (useBNGSrivani) then
+                                            epsKax = -(1.0_dp - abs((NeighD(3,j,i)))/(interlayerdistance))
+                                            ! AA'
+                                            a0AA = p1a0AA * epsKax**2.0_dp + p2a0AA * epsKax + p3a0AA
+                                            b0AA = p1b0AA * epsKax**2.0_dp + p2b0AA * epsKax + p3b0AA
+                                            c0AA = p1c0AA * epsKax**2.0_dp + p2c0AA * epsKax + p3c0AA
+                                            d0AA = p1d0AA * epsKax**2.0_dp + p2d0AA * epsKax + p3d0AA
+                                            h0AA = p1h0AA * epsKax**2.0_dp + p2h0AA * epsKax + p3h0AA
+                                            a0AA = a0AA/g0
+                                            a3AA = p1a3AA * epsKax**2.0_dp + p2a3AA * epsKax + p3a3AA
+                                            b3AA = p1b3AA * epsKax**2.0_dp + p2b3AA * epsKax + p3b3AA
+                                            c3AA = p1c3AA * epsKax**2.0_dp + p2c3AA * epsKax + p3c3AA
+                                            d3AA = p1d3AA * epsKax**2.0_dp + p2d3AA * epsKax + p3d3AA
+                                            a3AA = a3AA/g0
+                                            a6AA = p1a6AA * epsKax**2.0_dp + p2a6AA * epsKax + p3a6AA
+                                            b6AA = p1b6AA * epsKax**2.0_dp + p2b6AA * epsKax + p3b6AA
+                                            c6AA = p1c6AA * epsKax**2.0_dp + p2c6AA * epsKax + p3c6AA
+                                            d6AA = p1d6AA * epsKax**2.0_dp + p2d6AA * epsKax + p3d6AA
+                                            a6AA = a6AA/g0
+                                            ! AB'
+                                            a0AB = p1a0AB * epsKax**2.0_dp + p2a0AB * epsKax + p3a0AB
+                                            b0AB = p1b0AB * epsKax**2.0_dp + p2b0AB * epsKax + p3b0AB
+                                            c0AB = p1c0AB * epsKax**2.0_dp + p2c0AB * epsKax + p3c0AB
+                                            d0AB = p1d0AB * epsKax**2.0_dp + p2d0AB * epsKax + p3d0AB
+                                            h0AB = p1h0AB * epsKax**2.0_dp + p2h0AB * epsKax + p3h0AB
+                                            a0AB = a0AB/g0
+                                            a3AB = p1a3AB * epsKax**2.0_dp + p2a3AB * epsKax + p3a3AB
+                                            b3AB = p1b3AB * epsKax**2.0_dp + p2b3AB * epsKax + p3b3AB
+                                            c3AB = p1c3AB * epsKax**2.0_dp + p2c3AB * epsKax + p3c3AB
+                                            d3AB = p1d3AB * epsKax**2.0_dp + p2d3AB * epsKax + p3d3AB
+                                            a3AB = a3AB/g0
+                                            a6AB = p1a6AB * epsKax**2.0_dp + p2a6AB * epsKax + p3a6AB
+                                            b6AB = p1b6AB * epsKax**2.0_dp + p2b6AB * epsKax + p3b6AB
+                                            c6AB = p1c6AB * epsKax**2.0_dp + p2c6AB * epsKax + p3c6AB
+                                            d6AB = p1d6AB * epsKax**2.0_dp + p2d6AB * epsKax + p3d6AB
+                                            a6AB = a6AB/g0
+                                            ! BA'
+                                            a0BA = p1a0BA * epsKax**2.0_dp + p2a0BA * epsKax + p3a0BA
+                                            b0BA = p1b0BA * epsKax**2.0_dp + p2b0BA * epsKax + p3b0BA
+                                            c0BA = p1c0BA * epsKax**2.0_dp + p2c0BA * epsKax + p3c0BA
+                                            d0BA = p1d0BA * epsKax**2.0_dp + p2d0BA * epsKax + p3d0BA
+                                            h0BA = p1h0BA * epsKax**2.0_dp + p2h0BA * epsKax + p3h0BA
+                                            a0BA = a0BA/g0
+                                            a3BA = p1a3BA * epsKax**2.0_dp + p2a3BA * epsKax + p3a3BA
+                                            b3BA = p1b3BA * epsKax**2.0_dp + p2b3BA * epsKax + p3b3BA
+                                            c3BA = p1c3BA * epsKax**2.0_dp + p2c3BA * epsKax + p3c3BA
+                                            d3BA = p1d3BA * epsKax**2.0_dp + p2d3BA * epsKax + p3d3BA
+                                            a3BA = a3BA/g0
+                                            a6BA = p1a6BA * epsKax**2.0_dp + p2a6BA * epsKax + p3a6BA
+                                            b6BA = p1b6BA * epsKax**2.0_dp + p2b6BA * epsKax + p3b6BA
+                                            c6BA = p1c6BA * epsKax**2.0_dp + p2c6BA * epsKax + p3c6BA
+                                            d6BA = p1d6BA * epsKax**2.0_dp + p2d6BA * epsKax + p3d6BA
+                                            a6BA = a6BA/g0
+                                            ! BA'
+                                            a0BB = p1a0BB * epsKax**2.0_dp + p2a0BB * epsKax + p3a0BB
+                                            b0BB = p1b0BB * epsKax**2.0_dp + p2b0BB * epsKax + p3b0BB
+                                            c0BB = p1c0BB * epsKax**2.0_dp + p2c0BB * epsKax + p3c0BB
+                                            d0BB = p1d0BB * epsKax**2.0_dp + p2d0BB * epsKax + p3d0BB
+                                            h0BB = p1h0BB * epsKax**2.0_dp + p2h0BB * epsKax + p3h0BB
+                                            a0BB = a0BB/g0
+                                            a3BB = p1a3BB * epsKax**2.0_dp + p2a3BB * epsKax + p3a3BB
+                                            b3BB = p1b3BB * epsKax**2.0_dp + p2b3BB * epsKax + p3b3BB
+                                            c3BB = p1c3BB * epsKax**2.0_dp + p2c3BB * epsKax + p3c3BB
+                                            d3BB = p1d3BB * epsKax**2.0_dp + p2d3BB * epsKax + p3d3BB
+                                            a3BB = a3BB/g0
+                                            a6BB = p1a6BB * epsKax**2.0_dp + p2a6BB * epsKax + p3a6BB
+                                            b6BB = p1b6BB * epsKax**2.0_dp + p2b6BB * epsKax + p3b6BB
+                                            c6BB = p1c6BB * epsKax**2.0_dp + p2c6BB * epsKax + p3c6BB
+                                            d6BB = p1d6BB * epsKax**2.0_dp + p2d6BB * epsKax + p3d6BB
+                                            a6BB = a6BB/g0
+                                            V0AAp = a0AA*exp(-((rbar-b0AA)/c0AA)**4) * cos(d0AA*rbar - h0AA)
+                                            V0ABp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
+                                            V0BAp = a0BA*exp(-((rbar-b0BA)/c0BA)**4) * cos(d0BA*rbar - h0BA)
+                                            V0BBp = a0BB*exp(-((rbar-b0BB)/c0BB)**4) * cos(d0BB*rbar - h0BB)
+
+                                            if (onlyV0) then
+                                                V3AAp = 0.0_dp
+                                                V3ABp = 0.0_dp
+                                                V3BAp = 0.0_dp
+                                                V3BBp = 0.0_dp
+
+                                                V6AAp = 0.0_dp
+                                                V6ABp = 0.0_dp
+                                                V6BAp = 0.0_dp
+                                                V6BBp = 0.0_dp
+                                            else
+                                                V3AAp = a3AA*rbar*exp(-b3AA*(rbar-c3AA)**2) * sin(d3AA*rbar)
+                                                V3ABp = a3AB*rbar*exp(-b3AB*(rbar-c3AB)**2) * sin(d3AB*rbar)
+                                                V3BAp = a3BA*rbar*exp(-b3BA*(rbar-c3BA)**2) * sin(d3BA*rbar)
+                                                V3BBp = a3BB*rbar*exp(-b3BB*(rbar-c3BB)**2) * sin(d3BB*rbar)
+
+                                                V6AAp = a6AA*rbar*exp(-b6AA*(rbar-c6AA)**2) * sin(d6AA*rbar)
+                                                V6ABp = a6AB*rbar*exp(-b6AB*(rbar-c6AB)**2) * sin(d6AB*rbar)
+                                                V6BAp = a6BA*rbar*exp(-b6BA*(rbar-c6BA)**2) * sin(d6BA*rbar)
+                                                V6BBp = a6BB*rbar*exp(-b6BB*(rbar-c6BB)**2) * sin(d6BB*rbar)
+                                            end if
+                                            signChange = 1.0_dp
+                                            if (layerIndex(i).eq.1) then ! graphene layer
+                                                if (oppositedxdy) then
+                                                   theta = atan2(NeighD(1,j,i),NeighD(2,j,i))
+                                                else
+                                                   theta = atan2(-NeighD(1,j,i),-NeighD(2,j,i))
+                                                end if
+                                                if (Species(i).eq.1 .and. Species(jj).eq.3) then ! AAp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta12)) &
+                                                               + V6AAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
+                                                               + V6AAp*(cos(6.0_dp*theta))) * renormalizeHoppingFactorAAp
+                                                     end if
+                                                else if (Species(i).eq.2 .and. Species(jj).eq.4) then ! BBp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta12)) &
+                                                               + V6BBp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBBp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta)) &
+                                                               + V6BBp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBBp
+                                                     end if
+                                                else if (Species(i).eq.1 .and. Species(jj).eq.4) then ! ABp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               + signChange * V3ABp * (cos(3.0_dp*theta12)) &
+                                                               + V6ABp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               + signChange * V3ABp * (cos(3.0_dp*theta)) &
+                                                               + V6ABp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorABp
+                                                     end if
+                                                else if (Species(i).eq.2 .and. Species(jj).eq.3) then ! BAp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta12)) &
+                                                               + V6BAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
+                                                               + V6BAp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBAp
+                                                     end if
+                                                end if
+                                            else if (layerIndex(i).eq.2) then ! hBN layer
+                                                if (oppositedxdy) then
+                                                   theta = atan2(-NeighD(1,j,i),-NeighD(2,j,i))
+                                                else
+                                                   theta = atan2(NeighD(1,j,i),NeighD(2,j,i)) ! AAp
+                                                end if
+                                                if (Species(i).eq.3 .and. Species(jj).eq.1) then
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta21)) &
+                                                               + V6AAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
+                                                               + V6AAp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorAAp
+                                                     end if
+                                                else if (Species(i).eq.4 .and. Species(jj).eq.2) then ! BBp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta21)) &
+                                                               + V6BBp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBBp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0BBp + V3BBp * (cos(3.0_dp*theta)) &
+                                                               + V6BBp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBBp
+                                                     end if
+                                                else if (Species(i).eq.4 .and. Species(jj).eq.1) then ! ABp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               + signChange * V3ABp * (cos(3.0_dp*theta21)) &
+                                                               + V6ABp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               + signChange * V3ABp * (cos(3.0_dp*theta)) &
+                                                               + V6ABp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorABp
+                                                     end if
+                                                else if (Species(i).eq.3 .and. Species(jj).eq.2) then ! BAp
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta21)) &
+                                                               + V6BAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
+                                                               + V6BAp*(cos(6.0_dp*theta) )) * renormalizeHoppingFactorBAp
+                                                     end if
+                                                end if
+                                            end if
+                                   else
+                                        epsKax = -(1.0_dp - abs((NeighD(3,j,i)))/(interlayerdistance))
+                                        if (addPressureDependence) then
+                                            lambda0 = c1_0 + c1_1 * epsKax + c1_2 * epsKax**2.0_dp
+                                            lambda3 = c4_0 + c4_1 * epsKax + c4_2 * epsKax**2.0_dp
+                                            lambda6 = c7_0 + c7_1 * epsKax + c7_2 * epsKax**2.0_dp
+                                            lambda6b = c11_0 + c11_1 * epsKax + c11_2 * epsKax**2.0_dp
+                                            lambda0 = lambda0/g0
+                                            if (switchV3Sign) then
+                                                lambda3 = -lambda3/g0
+                                            else
+                                                lambda3 = lambda3/g0
+                                            end if
+                                            lambda6 = lambda6/g0
+                                            lambda6b = lambda6b/g0
+                                            xi0 = c2_0 + c2_1 * epsKax + c2_2 * epsKax**2.0_dp
+                                            xi3 = c5_0 + c5_1 * epsKax + c5_2 * epsKax**2.0_dp
+                                            xi6 = c8_0 + c8_1 * epsKax + c8_2 * epsKax**2.0_dp
+                                            xi6b = c12_0 + c12_1 * epsKax + c12_2 * epsKax**2.0_dp
+                                            x3 = c6_0 + c6_1 * epsKax + c6_2 * epsKax**2.0_dp
+                                            x6 = c9_0 + c9_1 * epsKax + c9_2 * epsKax**2.0_dp
+                                            x6b = c13_0 + c13_1 * epsKax + c13_2 * epsKax**2.0_dp
+                                            kappa0 = c3_0 + c3_1 * epsKax + c3_2 * epsKax**2.0_dp
+                                            kappa6 = c10_0 + c10_1 * epsKax + c10_2 * epsKax**2.0_dp
+                                            kappa6b = c14_0 + c14_1 * epsKax + c14_2 * epsKax**2.0_dp
+                                            a0AA = p1a0AA * epsKax**2.0_dp + p2a0AA * epsKax + p3a0AA
+                                            b0AA = p1b0AA * epsKax**2.0_dp + p2b0AA * epsKax + p3b0AA
+                                            c0AA = p1c0AA * epsKax**2.0_dp + p2c0AA * epsKax + p3c0AA
+                                            d0AA = p1d0AA * epsKax**2.0_dp + p2d0AA * epsKax + p3d0AA
+                                            h0AA = p1h0AA * epsKax**2.0_dp + p2h0AA * epsKax + p3h0AA
+                                            j0AA = p1j0AA * epsKax**2.0_dp + p2j0AA * epsKax + p3j0AA
+                                            k0AA = p1k0AA * epsKax**2.0_dp + p2k0AA * epsKax + p3k0AA
+                                            a0AB = p1a0AB * epsKax**2.0_dp + p2a0AB * epsKax + p3a0AB
+                                            b0AB = p1b0AB * epsKax**2.0_dp + p2b0AB * epsKax + p3b0AB
+                                            c0AB = p1c0AB * epsKax**2.0_dp + p2c0AB * epsKax + p3c0AB
+                                            d0AB = p1d0AB * epsKax**2.0_dp + p2d0AB * epsKax + p3d0AB
+                                            h0AB = p1h0AB * epsKax**2.0_dp + p2h0AB * epsKax + p3h0AB
+                                            j0AB = p1j0AB * epsKax**2.0_dp + p2j0AB * epsKax + p3j0AB
+                                            k0AB = p1k0AB * epsKax**2.0_dp + p2k0AB * epsKax + p3k0AB
+                                            a0AA = a0AA/g0
+                                            j0AA = j0AA/g0
+                                            a0AB = a0AB/g0
+                                            j0AB = j0AB/g0
+
+                                            aval = 2.48_dp
+                                            bval = 3.19_dp
+                                            renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
+                                            renormalizeHoppingFactorBBp  = exp((abs(NeighD(3,j,i))-bval)/aval)
+                                            aval = 18.17_dp
+                                            bval = 2.73_dp
+                                            renormalizeHoppingFactorABp  = exp((abs(NeighD(3,j,i))-bval)/aval)
+                                            renormalizeHoppingFactorBAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
+
+                                        end if
+                                            V0 = lambda0 * exp(-xi0*rbar**2.0_dp) * cos(kappa0 * rbar)
+                                            V3 = lambda3 * rbar**2.0_dp * exp(-xi3*(rbar-x3)**2.0_dp)
+                                            if (newFittingFunctions) then
+                                               V0AAp = a0AA*exp(-((rbar-b0AA)/c0AA)**4) * cos(d0AA*rbar - h0AA)
+                                               V0ABp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
+                                               V0BAp = a0AB*exp(-((rbar-b0AB)/c0AB)**4) * cos(d0AB*rbar - h0AB)
+                                            else
+                                               V0AAp = lambda0AAp * exp(-xi0AAp*rbar**2.0_dp)*cos(kappa0AAp*rbar) &
+                                                     + lambda0bAAp*rbar**3.0_dp*exp(-xi0bAAp*rbar**2.0_dp)*cos(kappa0bAAp*rbar)
+                                               V0ABp = lambda0ABp * exp(-xi0ABp*rbar**2.0_dp)*cos(kappa0ABp*rbar) &
+                                                     + lambda0bABp*rbar**2.0_dp*exp(-xi0bABp*rbar**2.0_dp)*cos(kappa0bABp*rbar)
+                                               V0BAp = lambda0BAp * exp(-xi0BAp*rbar**2.0_dp)*cos(kappa0BAp*rbar) &
+                                                     + lambda0bBAp*rbar**2.0_dp*exp(-xi0bBAp*rbar**2.0_dp)*cos(kappa0bBAp*rbar)
+                                            end if
+                                            if (deactivateV3) then
+                                               V3 = 0.0_dp
+                                               V3AAp = 0.0_dp
+                                               V3ABp = 0.0_dp
+                                               V3BAp = 0.0_dp
+                                            else
+                                               V3AAp = 0.0_dp
+                                               V3ABp = lambda3ABp*rbar**2.0_dp * exp(-xi3ABp*(rbar-x3ABp)**2.0_dp) &
+                                                     + lambda3bABp *rbar**3.0_dp * exp(-xi3bABp*(rbar-x3bABp)**2.0_dp)
+                                               V3BAp = lambda3BAp*rbar**2.0_dp * exp(-xi3BAp*(rbar-x3BAp)**2.0_dp) &
+                                                     + lambda3bBAp *rbar**3.0_dp * exp(-xi3bBAp*(rbar-x3bBAp)**2.0_dp)
+                                            end if
+                                            V6AAp = 0.0_dp
+                                            V6ABp = 0.0_dp
+                                            V6BAp = 0.0_dp
+                                            !    call V6  =
+                                            if (oldParameterSet) then
+                                                V6 = lambda6 * exp(-xi6*(rbar-x6)**2.0_dp) * sin(kappa6 * rbar)
+                                            else if (deactivateV6) then
+                                                V6 = lambda6 * exp(-xi6*(rbar-x6)**2.0_dp) * sin(kappa6 * rbar)
+                                            else
+                                                V6 = lambda6 * rbar * exp(-xi6*(rbar-x6)**2.0_dp) * sin(kappa6 * rbar) + lambda6b * rbar**2.0_dp*exp(-xi6b*(rbar-x6b)**2.0_dp) * sin(kappa6b * rbar)
+                                            end if
+                                            if (deactivateV6) then
+                                               V6 = 0.0_dp
+                                            end if
+                                        if (sublatticeDependent) then
+                                          if (fourLayers) then
+                                            if (layerIndex(i).eq.2) then
+                                                      !+ V6BAp*(cos(6.0_dp*theta12) + cos(6.0_dp*theta21))) ! The minus sign is added at the end here
+                                                      hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                            + V3BAp * (cos(3.0_dp*theta12) + cos(3.0_dp*theta21)))
+                                            else if (layerIndex(i).eq.3) then
+                                                      !+ V6BAp*(cos(6.0_dp*theta12) + cos(6.0_dp*theta21))) ! The minus sign is added at the end here
+                                                      hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                            + V3BAp * (cos(3.0_dp*theta12) + cos(3.0_dp*theta21)))
+                                            end if
+                                          else if (twoLayers) then
+                                            !          !print*, "holaaaaaaa1"
+                                            !          !print*, "holaaaaaaa2"
+                                            !          !print*, "holaaaaaaa3"
+                                            !          !print*, "holaaaaaaa4"
+                                            !         !print*, "holaaaaaaa5"
+                                            !          !print*, "holaaaaaaa6"
+                                            signChange = 1.0_dp
+                                            if (layerIndex(i).eq.1) then
+                                                if (Species(i).eq.Species(jj)) then
+                                                     theta = atan2(NeighD(2,j,i),NeighD(1,j,i))
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta12)) &
+                                                               + V6AAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
+                                                               + V6AAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
+                                                     end if
+                                                else if (Species(i).eq.1 .and. Species(jj).eq.2) then
+                                                     theta = atan2(NeighD(2,j,i),NeighD(1,j,i))
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               - signChange * V3ABp * (cos(3.0_dp*theta12)) &
+                                                               + V6ABp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               - signChange * V3ABp * (cos(3.0_dp*theta)) &
+                                                               + V6ABp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
+                                                     end if
+                                                else if (Species(i).eq.2 .and. Species(jj).eq.1) then
+                                                     theta = atan2(NeighD(2,j,i),NeighD(1,j,i))
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta12)) &
+                                                               + V6BAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
+                                                               + V6BAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
+                                                     end if
+                                                end if
+                                            else if (layerIndex(i).eq.2) then
+                                                if (Species(i).eq.Species(jj)) then
+                                                     theta = atan2(-NeighD(2,j,i),-NeighD(1,j,i))
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta21)) &
+                                                               + V6AAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0AAp + V3AAp * (cos(3.0_dp*theta)) &
+                                                               + V6AAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorAAp
+                                                     end if
+                                                else if (Species(i).eq.2 .and. Species(jj).eq.1) then
+                                                     theta = atan2(-NeighD(2,j,i),-NeighD(1,j,i))
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               - signChange * V3ABp * (cos(3.0_dp*theta21)) &
+                                                               + V6ABp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0ABp &
+                                                               - signChange * V3ABp * (cos(3.0_dp*theta)) &
+                                                               + V6ABp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorABp
+                                                     end if
+                                                else if (Species(i).eq.1 .and. Species(jj).eq.2) then
+                                                     theta = atan2(-NeighD(2,j,i),-NeighD(1,j,i))
+                                                     if (useThetaIJ) then
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta21)) &
+                                                               + V6BAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
+                                                     else
+                                                         hopp(j,i) = hopp(j,i) -(V0BAp &
+                                                               + signChange * V3BAp * (cos(3.0_dp*theta)) &
+                                                               + V6BAp*(cos(6.0_dp*theta12) &
+                                                               + cos(6.0_dp*theta21))) * renormalizeHoppingFactorBAp
+                                                     end if
+                                                end if
+                                            end if
+                                          end if
+                                        else
+                                          !if (i.eq.1 .and. j.eq.1) print*, "doing sublattice independent"
+                                          if (layerIndex(i).eq.1) then
+                                              theta = atan2(-NeighD(1,j,i),-NeighD(2,j,i))
+                                          else if (layerIndex(i).eq.2) then
+                                              theta = atan2(NeighD(1,j,i),NeighD(2,j,i))
+                                          end if
+                                          if (useTheta) then
+                                              ! The minus sign is added at the end here
+                                              hopp(j,i) = hopp(j,i) -(V0 + V3 * (cos(3.0_dp*theta)) + V6*(cos(6.0_dp*theta)))
+                                          else ! Kaxiras model
+                                              !* renormalizeHoppingFactorAAp
+                                              hopp(j,i) = hopp(j,i) -(V0 &
+                                                    + V3 * (cos(3.0_dp*theta12) + cos(3.0_dp*theta21)) &
+                                                    + V6*(cos(6.0_dp*theta12) + cos(6.0_dp*theta21)))
+                                          end if
+                                        end if
+                                        if (addExponentialDecayForDihedral) then
+                                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                                            hopp(j,i) = hopp(j,i) * exp(-(dist-interlayerdistance)/(BLdelta))
+                                        end if
+                                   end if
+                              end if
+                          else
+                              hopp(j,i) = hopp(j,i) + 0.0_dp
+                          end if
+                      else
+                          hopp(j,i) = hopp(j,i)
+                      end if
+
+end function HamHopInterlayerKaxirasSrivani
+
+!> Interlayer hopping of the Mayou model (TypeOfBL Mayou)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping. The result is .true. where the bond is to be skipped (cycle).
+function HamHopInterlayerMayou(dist, j, i, Fc, vppsigma, renormalizeHoppingFactorAAp, vpppi) result(skipBond)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: Fc
+   real(dp), intent(inout) :: vppsigma
+   real(dp), intent(inout) :: renormalizeHoppingFactorAAp
+   real(dp), intent(inout) :: vpppi
+   logical :: skipBond
+
+   skipBond = .false.
+
+                      if (deactivateInterlayer) then
+                          skipBond = .true.
+                          return
+                      end if
+                      if (frac) call AtomsSetCart()
+                      if (strainedMoire) then
+                         dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
+                                     +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                      else
+                         dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                      end if
+                      Fc = 1.0_dp/(1.0_dp+exp((dist-rc)/lc))
+                      vppsigma = vppsigma0 * exp(qsigma*(1.0_dp-dist/interlayerdistance)) * Fc * renormalizeHoppingFactorAAp
+                      vpppi = vpppi0 * exp(qpi*(1.0_dp - dist/aCC)) * Fc * renormalizeHoppingFactorAAp
+                      hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
+                                        pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
+
+end function HamHopInterlayerMayou
+
+!> Interlayer hopping in the two-center form (TypeOfBL Koshino or HTC); with KoshinoSR and couplingFactor this is the model used for twisted graphene layers
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping. The result is .true. where the bond is to be skipped (cycle).
+function HamHopInterlayerTwoCenter(i, j, jj, dist, numberOfInterlayerHoppings, aval, bval, &
+      renormalizeHoppingFactorAAp, vppsigma, BLdelta, vpppi) result(skipBond)
+
+   integer, intent(in) :: i
+   integer, intent(in) :: j
+   integer, intent(inout) :: jj
+   real(dp), intent(inout) :: dist
+   integer, intent(inout) :: numberOfInterlayerHoppings
+   real(dp), intent(inout) :: aval
+   real(dp), intent(inout) :: bval
+   real(dp), intent(inout) :: renormalizeHoppingFactorAAp
+   real(dp), intent(inout) :: vppsigma
+   real(dp), intent(inout) :: BLdelta
+   real(dp), intent(inout) :: vpppi
+   logical :: skipBond
+
+   skipBond = .false.
+
+                      if (i.eq.1 &
+                            .and. j.eq.1) call MIO_Print('We add interlayer interactions for sandwiched systems, tBG, etc','ham')
+                      if (deactivateInterlayer) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayer12 .and. ((layerIndex(i).eq.1 .and. layerIndex(jj).eq.2) &
+                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayer23 .and. ((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
+                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayer34 .and. ((layerIndex(i).eq.3 .and. layerIndex(jj).eq.4) &
+                            .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.3))) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert2BG2to3 &
+                            .and. ((layerIndex(i).eq. 2 .and. layerIndex(jj).eq.3) &
+                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert3BG1to2 &
+                            .and. ((layerIndex(i).eq. 1 .and. layerIndex(jj).eq.2) &
+                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
+#ifdef DEBUG
+                          call MIO_Print("deactivated layer t3BG1to2",'ham')
+#endif /* DEBUG */
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert3BG2to3 &
+                            .and. ((layerIndex(i).eq. 2 .and. layerIndex(jj).eq.3) &
+                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
+#ifdef DEBUG
+                          call MIO_Print("deactivated layer t3BG2to3",'ham')
+#endif /* DEBUG */
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert3BG3to4 &
+                            .and. ((layerIndex(i).eq. 3 .and. layerIndex(jj).eq.4) &
+                            .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.3))) then
+#ifdef DEBUG
+                          call MIO_Print("deactivated layer t3BG3to4",'ham')
+#endif /* DEBUG */
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert3BG4to5 &
+                            .and. ((layerIndex(i).eq. 4 .and. layerIndex(jj).eq.5) &
+                            .or. (layerIndex(i).eq.5 .and. layerIndex(jj).eq.4))) then
+#ifdef DEBUG
+                          call MIO_Print("deactivated layer t3BG4to5",'ham')
+#endif /* DEBUG */
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert3BG5to6 &
+                            .and. ((layerIndex(i).eq. 5 .and. layerIndex(jj).eq.6) &
+                            .or. (layerIndex(i).eq.6 .and. layerIndex(jj).eq.5))) then
+#ifdef DEBUG
+                          call MIO_Print("deactivated layer t3BG5to6",'ham')
+#endif /* DEBUG */
+                          skipBond = .true.
+                          return
+                      end if
+                      if (frac) call AtomsSetCart()
+                        if ((.not.((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
+                              .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2) &
+                              .or. (layerIndex(i).eq.5 .and. layerIndex(jj).eq.4) &
+                              .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.5)) ) .and. (fourLayers .or. t3BG)) then
+                          ! INTERLAYER
+                          if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                                .and. BilayerThreeParameters) then
+                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                              if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
+                                 hopp(j,i) = hopp(j,i) -tAB1
+                                 numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                              else if (dist>aCC*0.95_dp .and. dist<aCC*1.05_dp .and. BilayerThreeParameters) then
+                                 if (Species(i).eq.Species(NList(j,i))) then
+                                    hopp(j,i) = hopp(j,i) -tAB4
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 else
+                                    hopp(j,i) = hopp(j,i) -tAB3
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 end if
+                              else if (dist>aCC*0.95_dp*2.0_dp .and. dist<aCC*1.05_dp*2.0_dp .and. BilayerThreeParameters) then
+                                 if (Species(i).eq.Species(NList(j,i))) then
+                                    hopp(j,i) = hopp(j,i) -tAB4
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 else
+                                    hopp(j,i) = hopp(j,i) -tAB3
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 end if
+                              else
+                                 hopp(j,i) = hopp(j,i) + 0.0_dp
+                              end if
+                          ! INTERLAYER
+                          else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                                .and. BilayerOneParameter) then
+                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                              if (abs(NeighD(1,j,i)) < 0.2_dp .and. abs(NeighD(2,j,i)) < 0.2_dp) then
+                                 hopp(j,i) = hopp(j,i) -tAB1
+                                 numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                              else
+                                 hopp(j,i) = hopp(j,i) + 0.0_dp
+                              end if
+                          ! INTERLAYER
+                          else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1) &
+                                .and. F2G2Model) then
+                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                              if (dist<0.2_dp) then
+                                 !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 0", delta
+                                 hopp(j,i) = hopp(j,i) + tBA0
+                                 numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                              ! First nearest neighbors surrounding the atom in the middle of the hexagon
+                              else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
+                                 if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AA", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AA", delta
+                                    hopp(j,i) = hopp(j,i) + tAA1
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 else ! Different sublattice
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms 1 AB", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms 1 AB", delta
+                                    hopp(j,i) = hopp(j,i) + tAB1
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 end if
+                              else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
+                                 if (Species(i).eq.Species(NList(j,i))) then
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2", delta
+                                    hopp(j,i) = hopp(j,i) + tBA2
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 else
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 2 bis", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 2 bis", delta
+                                    hopp(j,i) = hopp(j,i) + tBA2
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 end if
+                              ! Second neirest neighbor from central atom in middle of hexagon
+                              else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
+                                 if (Species(i).eq.Species(NList(j,i))) then
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AA 2 ", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AA 2", delta
+                                    hopp(j,i) = hopp(j,i) + tAA2
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 else
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms AB 2 ", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms AB 2", delta
+                                    hopp(j,i) = hopp(j,i) + tAB2
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 end if
+                              ! BA' (corresponds to g2, not g5)
+                              else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then
+                                 if (Species(i).ne.Species(NList(j,i))) then
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 ", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5", delta
+                                    hopp(j,i) = hopp(j,i) + tBA5
+                                    numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                                 else
+                                    !if (i.eq.1) print*, "assigning inerlayer F2G2 terms BA 5 bis ", delta
+                                    !if (i.eq.2) print*, "2: assigning inerlayer F2G2 terms BA 5 bis", delta
+                                    hopp(j,i) = hopp(j,i)
+                                 end if
+                              else
+                                 !if (i.eq.1) print*, "assigning interlayer F2G2 terms BA 5 bis ", delta
+                                 hopp(j,i) = hopp(j,i) + 0.0_dp
+                              end if
+                          end if
+                        else ! among others, this is used for the sandwiched systems
+                          if (strainedMoire) then
+                             dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
+                                         +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          else
+                             dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          end if
+                          if (KoshinoSR) then
+                              aval = 1.34_dp
+                              bval = 3.25_dp
+                              renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
+                          else
+                              renormalizeHoppingFactorAAp  = 1.0_dp
+                          end if
+                          if (Species(i).eq.Species(NList(j,i)) .and. deactivateIntrasublattice) then
+                              hopp(j,i) = 0.0d0
+                          else if (Species(i).ne.Species(NList(j,i)) .and. deactivateIntersublattice) then
+                              hopp(j,i) = 0.0d0
+                          else
+                              vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
+                              vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp
+                              ! onlyvppsigma: drop the pi term (Vpppi -> 0); the helper handles the rest.
+                              hopp(j,i) = hopp(j,i) + interlayerTwoCenter(merge(0.0_dp,vpppi,onlyvppsigma), vppsigma, &
+                                                 NeighD(:,j,i), dist, pzNormal(:,i), pzNormal(:,NList2(j,i)), &
+                                                 corrugatedInterlayerTwoCenter)
+                          end if
+                        end if
+
+end function HamHopInterlayerTwoCenter
+
+!> Interlayer hopping between two hBN layers
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopInterlayerBNBN(i, jj)
+
+   integer, intent(in) :: i
+   integer, intent(inout) :: jj
+
+
+                      if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1)) then ! INTERLAYER
+                          ! add the hopping terms depending if it is the C-B, C-N or C-C
+                          ! interaction
+                          if (i.eq.1 .and. .not. saidHTCBNBN) then
+                             call MIO_Print('Adding the interlayer terms for the HTC model for BN and BN interactions '// &
+                               'based on Fengpings parametrization','ham')
+                             saidHTCBNBN = .true.
+                          end if
+                      end if
+
+end subroutine HamHopInterlayerBNBN
+
+!> Interlayer hopping between graphene and hBN layers (distance laws of the graphene/hBN stacks)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping. The result is .true. where the bond is to be skipped (cycle).
+function HamHopInterlayerGBN(i, jj, dist, j, numberOfInterlayerHoppings, aval, bval, renormalizeHoppingFactorAAp, &
+      BLdelta, vppsigma, vpppi) result(skipBond)
+
+   integer, intent(in) :: i
+   integer, intent(inout) :: jj
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(inout) :: numberOfInterlayerHoppings
+   real(dp), intent(inout) :: aval
+   real(dp), intent(inout) :: bval
+   real(dp), intent(inout) :: renormalizeHoppingFactorAAp
+   real(dp), intent(inout) :: BLdelta
+   real(dp), intent(inout) :: vppsigma
+   real(dp), intent(inout) :: vpppi
+   logical :: skipBond
+
+   skipBond = .false.
+
+                      if (deactivateInterlayert2GBN1to2 .and. ((layerIndex(i).eq. 1 .and. layerIndex(jj).eq.2) &
+                            .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayert2GBN2to3 &
+                            .and. ((layerIndex(i).eq. 2 .and. layerIndex(jj).eq.3) &
+                            .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
+                          skipBond = .true.
+                          return
+                      else if (deactivateInterlayer) then
+                          skipBond = .true.
+                          return
+                      end if
+                      if (frac) call AtomsSetCart()
+                      if (threeLayerShort) then
+                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                          if (dist<0.2_dp) then ! on top of each other
+                             hopp(j,i) = hopp(j,i) + tB1A2
+                             numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                          ! First nearest neighbors surrounding the atom in the middle of the hexagon
+                          else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
+                             if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
+                                hopp(j,i) = hopp(j,i) + tA1A2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else ! Different sublattice
+                                hopp(j,i) = hopp(j,i) + tA1B2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             end if
+                          else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! g1 term
+                             if (Species(i).eq.Species(NList(j,i))) then
+                                hopp(j,i) = hopp(j,i) + tA1A1_1
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else
+                                hopp(j,i) = hopp(j,i) + tB1A2_1
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             end if
+                          else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then ! f2 term
+                             if (Species(i).eq.Species(NList(j,i))) then
+                                hopp(j,i) = hopp(j,i) + tA1A2_2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else
+                                hopp(j,i) = hopp(j,i) + tA1B2_2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             end if
+                          else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! g2 term
+                             if (Species(i).ne.Species(NList(j,i))) then
+                                hopp(j,i) = hopp(j,i) + tA1A1_2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else
+                                hopp(j,i) = hopp(j,i) + tB1A2_2
+                             end if
+                          else
+                             hopp(j,i) = hopp(j,i) + 0.0_dp
+                          end if
+                      else if (((layerIndex(i) .eq. 2 .and. layerIndex(jj) .eq. 3) &
+                            .or. (layerIndex(i) .eq. 3 .and. layerIndex(jj) .eq. 2)) .and. encapsulatedFourLayersF2G2) then
+                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                          if (dist<0.2_dp) then
+                             hopp(j,i) = hopp(j,i) + tBA0
+                             numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                          ! First nearest neighbors surrounding the atom in the middle of the hexagon
+                          else if (dist>aCC*0.9_dp .and. dist<aCC*1.1_dp) then
+                             if (Species(i).eq.Species(NList(j,i))) then ! same sublattice
+                                hopp(j,i) = hopp(j,i) + tAA1
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else ! Different sublattice
+                                hopp(j,i) = hopp(j,i) + tAB1
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             end if
+                          else if (dist>aG*0.9_dp .and. dist<aG*1.1_dp) then ! BA' (corresponds to g1, not g2)
+                             if (Species(i).eq.Species(NList(j,i))) then
+                                hopp(j,i) = hopp(j,i) + tBA2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else
+                                hopp(j,i) = hopp(j,i) + tBA2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             end if
+                          ! Second neirest neighbor from central atom in middle of hexagon
+                          else if (dist>aCC*2.0_dp*0.9_dp .and. dist<aCC*2.0_dp*1.1_dp) then
+                             if (Species(i).eq.Species(NList(j,i))) then
+                                hopp(j,i) = hopp(j,i) + tAA2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else
+                                hopp(j,i) = hopp(j,i) + tAB2
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             end if
+                          else if (dist>(aCC*3.0_dp)*0.9_dp .and. dist<(aCC*3.0_dp)*1.1_dp) then ! BA' (corresponds to g2, not g5)
+                             if (Species(i).ne.Species(NList(j,i))) then
+                                hopp(j,i) = hopp(j,i) + tBA5
+                                numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+                             else
+                                hopp(j,i) = hopp(j,i)
+                             end if
+                          else
+                             hopp(j,i) = hopp(j,i) + 0.0_dp
+                          end if
+                      else if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1)) then ! INTERLAYER
+                          if (deactivateInterlayerBG .and. ((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
+                                .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
+                              skipBond = .true.
+                              return
+                          else if (deactivateInterlayer) then
+                              skipBond = .true.
+                              return
+                          else if (deactivateInterlayer12 .and. ((layerIndex(i).eq.1 .and. layerIndex(jj).eq.2) &
+                                .or. (layerIndex(i).eq.2 .and. layerIndex(jj).eq.1))) then
+                              skipBond = .true.
+                              return
+                          else if (deactivateInterlayer23 .and. ((layerIndex(i).eq.2 .and. layerIndex(jj).eq.3) &
+                                .or. (layerIndex(i).eq.3 .and. layerIndex(jj).eq.2))) then
+                              skipBond = .true.
+                              return
+                          else if (deactivateInterlayer34 .and. ((layerIndex(i).eq.3 .and. layerIndex(jj).eq.4) &
+                                .or. (layerIndex(i).eq.4 .and. layerIndex(jj).eq.3))) then
+                              skipBond = .true.
+                              return
+                          end if
+                          if (deactivateIntraSublatticeForC .and. (Species(i).lt.3 .and. Species(jj).lt.3) &
+                                .and. (Species(i).eq.Species(jj))) then
+                              skipBond = .true.
+                              return
+                          end if
+                          ! add the hopping terms depending if it is the C-B, C-N or C-C
+                          ! interaction
+                          ! (atom 1 is handled by one thread, so the flag needs no protection)
+                          if (i.eq.1 .and. .not. saidHTCGBN) then
+                             call MIO_Print('Adding the interlayer terms for the HTC model for G and BN interactions','ham')
+                             saidHTCGBN = .true.
+                          end if
+                          if (Species(i).eq.1 .and. Species(NList(j,i)).eq.3) then ! C to B
+                            aval = 1.02796_dp
+                            bval = 3.047657_dp
+                          else if (Species(i).eq.3 .and. Species(NList(j,i)).eq.1) then ! C to B
+                            aval = 1.02796_dp
+                            bval = 3.047657_dp
+                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.4) then ! C to N
+                            aval = 1.19218_dp
+                            bval = 3.47553_dp
+                          else if (Species(i).eq.4 .and. Species(NList(j,i)).eq.1) then ! C to N
+                            aval = 1.19218_dp
+                            bval = 3.47553_dp
+                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.3) then ! C to B
+                            aval = 1.049223_dp
+                            bval = 3.0646389_dp
+                          else if (Species(i).eq.3 .and. Species(NList(j,i)).eq.2) then ! C to B
+                            aval = 1.049223_dp
+                            bval = 3.0646389_dp
+                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.4) then ! C to N
+                            aval = 1.16223_dp
+                            bval = 3.4799_dp
+                          else if (Species(i).eq.4 .and. Species(NList(j,i)).eq.2) then ! C to N
+                            aval = 1.16223_dp
+                            bval = 3.4799_dp
+                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.2) then ! C to C
+                            aval = 1.34_dp
+                            bval = 3.25_dp
+                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.1) then ! C to C
+                            aval = 1.34_dp
+                            bval = 3.25_dp
+                          else if (Species(i).eq.1 .and. Species(NList(j,i)).eq.1) then ! C to C
+                            aval = 1.34_dp
+                            bval = 3.25_dp
+                          else if (Species(i).eq.2 .and. Species(NList(j,i)).eq.2) then ! C to C
+                            aval = 1.34_dp
+                            bval = 3.25_dp
+                          end if
+                          renormalizeHoppingFactorAAp  = exp((abs(NeighD(3,j,i))-bval)/aval)
+                          dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                          if ((Species(i).eq.1 .and. Species(jj) .eq. 2) &
+                                .or. (Species(i).eq.2 .and. Species(jj) .eq. 1) &
+                                .or. (Species(i).eq.1 .and. Species(jj) .eq. 1) &
+                                .or. (Species(i).eq.2 .and. Species(jj) .eq. 2)) then
+                             BLdelta = 0.184_dp*aG
+                             vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
+                             vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp ! inplane
+                          else
+                             BLdelta = 0.184_dp*2.438977_dp
+                             vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
+                             vpppi = vpppi0 * exp(-(dist-2.438977_dp/sqrt(3.0))/(BLdelta)) * renormalizeHoppingFactorAAp
+                          end if
+                          hopp(j,i) = hopp(j,i) + interlayerTwoCenter(vpppi, vppsigma, NeighD(:,j,i), dist, &
+                                               pzNormal(:,i), pzNormal(:,NList2(j,i)), corrugatedInterlayerTwoCenter)
+                      end if
+                          !
+                          !
+                          !
+                          !
+
+end function HamHopInterlayerGBN
+
+!> Interlayer hopping of the Jeil model (TypeOfBL Jeil; refused at present)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+!! The variables declared after the arguments are used by this model only; they are marked as not set on
+!! entry, so that a value left from another bond cannot be used by mistake.
+subroutine HamHopInterlayerJeil(i, j, dist, numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHBA2, numberOfHBA1, &
+      numberOfHAB2)
+
+   integer, intent(in) :: i
+   integer, intent(in) :: j
+   real(dp), intent(inout) :: dist
+   integer, intent(inout) :: numberOfHAA1
+   integer, intent(inout) :: numberOfHAA2
+   integer, intent(inout) :: numberOfHAB1
+   integer, intent(inout) :: numberOfHBA2
+   integer, intent(inout) :: numberOfHBA1
+   integer, intent(inout) :: numberOfHAB2
+
+   real(dp) :: dxi
+   real(dp) :: dyi
+   real(dp) :: dxj
+   real(dp) :: dyj
+   real(dp) :: expFactor
+   real(dp) :: posOrNeg
+   complex(dp) :: HAA
+   complex(dp) :: HAB
+   complex(dp) :: HBA
+
+   dxi = hamUnset
+   dyi = hamUnset
+   dxj = hamUnset
+   dyj = hamUnset
+   expFactor = hamUnset
+   posOrNeg = hamUnset
+   HAA = hamUnset
+   HAB = hamUnset
+   HBA = hamUnset
+
+                         dxi = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(1,i) &
+                                     - ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(2,i)) + xShift
+                         dyi = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(2,i) &
+                                     + ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(1,i)) + yShift
+                         dxj = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(1,NList(j,i)) &
+                                     - ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(2,NList(j,i))) + xShift
+                         dyj = ((1.0_dp) * cos(twistedBilayerAngleGrad) - 1.0_dp) * Rat(2,NList(j,i)) &
+                                     + ((1.0_dp) * sin(twistedBilayerAngleGrad) * Rat(1,NList(j,i))) + yShift
+                         dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                         expFactor = exp(-dist/10.0_dp) * ((NeighD(3,j,i))/(dist))**2.0_dp
+                         if (Species(i)==Species(NList(j,i))) then
+                              !either AA' or BB' (Habjj,dx,dy,Cab,Phiab
+                              if (layerIndex(i)==1) then
+                                  posOrNeg = 1.0_dp
+                                  call interlayerBLAA(HAA,dxi,dyi,tbt,posOrNeg)
+                                  hopp(j,i) =  hopp(j,i) + HAA*expFactor
+                                  numberOfHAA1 = numberOfHAA1 + 1
+                              else if(layerIndex(i)==2) then
+                                  posOrNeg = -1.0_dp
+                                  call interlayerBLAA(HAA,dxj,dyj,tbt,posOrNeg)
+                                  hopp(j,i) = hopp(j,i) +  HAA*expFactor
+                                  numberOfHAA2 = numberOfHAA2 + 1
+                              end if
+                         else if (Species(i) < Species(NList(j,i))) then  ! i -> A, j -> B
+                              if (layerIndex(i)==1) then
+                                  ! AB'
+                                  posOrNeg = 1.0_dp
+                                  call interlayerBLAB(HAB,dxi,dyi,tbt,posOrNeg)
+                                  hopp(j,i) = hopp(j,i) + HAB*expFactor
+                                  numberOfHAB1 = numberOfHAB1 + 1
+                              else if(layerIndex(i)==2) then
+                                  ! BA'
+                                  posOrNeg = -1.0_dp
+                                  call interlayerBLBA(HBA,dxj,dyj,tbt,posOrNeg)
+                                  hopp(j,i) = hopp(j,i) +  HBA*expFactor
+                                  numberOfHBA2 = numberOfHBA2 + 1
+                              end if
+                         else if (Species(i) > Species(NList(j,i))) then  ! i -> B, j -> A
+                              if (layerIndex(i)==1) then
+                                  ! BA'
+                                  posOrNeg = 1.0_dp
+                                  call interlayerBLBA(HBA,dxi,dyi,tbt,posOrNeg)
+                                  hopp(j,i) = hopp(j,i) +  HBA*expFactor
+                                  numberOfHBA1 = numberOfHBA1 + 1
+                              else if (layerIndex(i)==2) then
+                                  ! AB'
+                                  posOrNeg = -1.0_dp
+                                  call interlayerBLAB(HAB,dxj,dyj,tbt,posOrNeg)
+                                  hopp(j,i) = hopp(j,i) + HAB*expFactor
+                                  numberOfHAB2 = numberOfHAB2 + 1
+                              end if
+                         end if
+                   ! Adds the interlayer TC model
+
+end subroutine HamHopInterlayerJeil
 
 end subroutine HamHopping
 
