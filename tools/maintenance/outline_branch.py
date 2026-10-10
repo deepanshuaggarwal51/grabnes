@@ -28,7 +28,21 @@ import sys
 
 import outline_block as ob
 
-DECL = re.compile(r"^\s*(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\))?\s*((?:,[^:]*)?)::\s*(.*)$", re.I)
+DECL = re.compile(r"^\s*(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\)|\*\s*\d+)?\s*((?:,[^:]*)?)::\s*(.*)$", re.I)
+
+
+OLD_DECL = re.compile(r"^\s*(integer|real|complex|logical|character|double\s+precision)\s*(\([^)]*\)|\*\s*\d+)?\s+([A-Za-z_]\w*.*)$", re.I)
+
+
+def decl_match(text):
+    """Match object of a type declaration; the old form without `::` (integer u) is accepted too."""
+    m = DECL.match(text)
+    if m:
+        return m
+    m = OLD_DECL.match(text)
+    if m and "::" not in text and not re.match(r"^\s*\w+(\s*\([^)]*\))?\s+function\b", text, re.I):
+        return DECL.match(f"{m.group(1)}{m.group(2) or ''} :: {m.group(3)}")
+    return None
 
 
 def split_top(text):
@@ -53,7 +67,7 @@ def declarations(lines, a, b):
     for i, j, text, is_omp in ob.statements(lines, a, b):
         if is_omp or not text or text.startswith("#"):
             continue
-        m = DECL.match(text)
+        m = decl_match(text)
         if not m:
             continue
         typ = m.group(1) + (m.group(2) or "")
@@ -225,7 +239,7 @@ def main():
             l = lines[n]
             if "! >>> unset markers" in l:
                 marker = True
-            if first <= n <= last or marker or l.lstrip().lower().startswith("!$omp") or DECL.match(ob.code(l)):
+            if first <= n <= last or marker or l.lstrip().lower().startswith("!$omp") or decl_match(ob.code(l)):
                 if "! <<< unset markers" in l:
                     marker = False
                 continue

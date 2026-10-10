@@ -5667,487 +5667,16 @@ subroutine HamHopping
             del(3) = 0.0_dp
 ! ---  Assign the hopping modifications for each lattice i ---
             if (l) then ! MoireOffDiag flag (used for effective moire systems), next one is tBGOffDiag and GBNOffDiag
-                if (MIO_StringComp(str,'MoireEncapsulatedBilayer') &
-                      .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell') &
-                      .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ))) then
-                   if (layerIndex(i).eq.1) then
-                      dx = ((1.0_dp+eps) * cos(MoireBilayerBottomAngleGrad) - 1) * (Rat(1,i)) &
-                                - ((1.0_dp+eps) * sin(MoireBilayerBottomAngleGrad) * (Rat(2,i)))
-                      dy = ((1.0_dp+eps) * cos(MoireBilayerBottomAngleGrad) - 1) * (Rat(2,i)) &
-                                + ((1.0_dp+eps) * sin(MoireBilayerBottomAngleGrad) * (Rat(1,i)))
-                      dx = dx + tauX1
-                      dy = dy + tauY1
-                   else
-                      if (rotateFirst) then
-                         dx = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(1,i)) &
-                                   - ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(2,i)))
-                         dy = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(2,i)) &
-                                   + ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(1,i)))
-                         dx = dx + tauX2
-                         !- aG/sqrt(3.0_dp)  ! removed this, as in reality it is already at the right position for two BN layer right on top of each other
-                         dy = dy + tauY2
-                      else
-                         dx = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(1,i)) &
-                                   - ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(2,i) - tauY2/eps))
-                         dy = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(2,i) - tauY2/eps) &
-                                   + ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(1,i)))
-                      end if
-                   end if
-                !        ! add interlayer hoppings
-                else ! Konda, modify hopping terms
-                   if (twisted) then
-                       if (MIO_StringComp(BilayerModel,'Jeil') ) then
-                          if (layerIndex(i).eq.1) then
-                             twistAngleGrad = twistedBilayerAngleGrad
-                             dx = Rat(1,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
-                                  - Rat(2,i) * (1.0_dp+eps) * sin(twistAngleGrad)
-                             dy = Rat(2,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
-                                  + Rat(1,i) * (1.0_dp+eps) * sin(twistAngleGrad)
-                          else
-                             twistAngleGrad = -twistedBilayerAngleGrad
-                             dx = Rat(1,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
-                                  - Rat(2,i) * (1.0_dp+eps) * sin(twistAngleGrad)
-                             dy = Rat(2,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
-                                  + Rat(1,i) * (1.0_dp+eps) * sin(twistAngleGrad)
-                          end if
-                       else
-                          dx = Rat(1,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
-                                  - Rat(2,i) * (1.0_dp+eps) * sin(twistAngleGrad)
-                          dy = Rat(2,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
-                                  + Rat(1,i) * (1.0_dp+eps) * sin(twistAngleGrad)
-                       end if
-                   else
-                       if (readRigidXYZ) then
-                          dx = RatInit(1,i)*eps
-                          dy = RatInit(2,i)*eps
-                       else
-                          dx = Rat(1,i)*eps
-                          dy = Rat(2,i)*eps
-                       end if
-                   end if
-                end if
-                dy = dy + shift1
-                if (layerIndex(i).eq.1) then
-                    if (sign1.lt.0.0) then ! Go from BN to NB orientation if necessary
-                        dx = -dx
-                        dy = -dy
-                    end if
-                else if (layerIndex(i).eq.2) then
-                    if (sign2.lt.0.0) then ! Go from BN to NB orientation for second layer of bilayer graphene
-                        dx = -dx
-                        dy = -dy
-                    end if
-                end if
-                if (addDisplacements) then
-                    dx = dx + displacements(1,i)
-                    dy = dy + displacements(2,i)
-                end if
-                if (distanceDependentEffectiveModel) then
-                   call distanceDependentC(Cabd, Cab, BfactorCab, interlayerDistances(i), z0)
-                else
-                   Cabd = Cab
-                end if
-                if (layerIndex(i).eq.2 .and. deactivateUpperLayer) then
-                   Habjj = 0.0_dp
-                else if (layerIndex(i).ne.1 .and. deactivateUpperLayers) then
-                    Habjj = 0.0_dp
-                else if (FanZhang) then
-                    if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                       Habjj = 0.0_dp
-                    else
-                       call offdiago(Habjj,dx,dy,Cabd,Phiab)
-                    end if
-                else
-                    if (MIO_StringComp(BilayerModel,'Jeil')) then
-                       call offdiago2(Habjj,dx,dy,Cabd,Phiab)
-                    else
-                       call offdiago(Habjj,dx,dy,Cabd,Phiab)
-                    end if
-                end if
-                realH = real(Habjj)
-                imagH = imag(Habjj)
-                HABreal(i) = realH
-                HABimag(i) = imagH
-
-                if (Species(i).eq.1) then   ! ---  B sublattice
-
-                  del(1) =  2.0_dp*realH/3.0_dp
-                  del(2) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                  del(3) =  ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-
-                end if
-
-                if (Species(i).eq.2) then   ! ---  A sublattice
-
-                   del(1) = 2.0_dp*realH/3.0_dp
-                   del(2) = ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                   del(3) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                 ! del(2) and del(3) are inverted to take into account difference
-                 ! between A and B
-                end if
+                call HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, del)
             end if
             if (tBGOffDiag) then
-              if (tBGOffDiag) then
-                  if (tBGOffDiagPRB) then
-                     CabG = CabG_global
-                  else
-                     call fitFunSrivani(0.0134_dp, -0.0977_dp,0.1790_dp, abs(interlayerDistances(i)), CabG)
-                  end if
-              else
-                  call MIO_InputParameter('Moire.PotCabG',CabG,0.001987_dp)
-              end if
-              CabG = CabG/g0
-              !if (i.eq. 1) print*, "adding the offdiagonal intralyer terms for tBG"
-              if (tBGuseDisplacementFile) then
-                 if (layerIndex(i).eq.1) then
-                     dx = displacements(1,i)*cos(GlobalPhi2)+displacements(2,i)*sin(GlobalPhi2)
-                     dy = displacements(2,i)*cos(GlobalPhi2)-displacements(1,i)*sin(GlobalPhi2)
-                 else if (layerIndex(i).eq.2) then
-                     dx = displacements(1,i)*cos(GlobalPhi)+displacements(2,i)*sin(GlobalPhi)
-                     dy = displacements(2,i)*cos(GlobalPhi)-displacements(1,i)*sin(GlobalPhi)
-                 end if
-                 if (layerIndex(i).eq.1) then
-                    dxTemp = -dx/aG
-                    dyTemp = -dy/aG
-                 else if (layerIndex(i).eq.2) then
-                    dxTemp = dx/aG
-                    dyTemp = dy/aG
-                 end if
-              else
-                 dx = ((1.0_dp+eps) * cos(tBGAngle) - 1.0_dp) * (Rat(1,i)) &
-                           - ((1.0_dp+eps) * sin(tBGAngle) * (Rat(2,i)))
-                 dy = ((1.0_dp+eps) * cos(tBGAngle) - 1.0_dp) * (Rat(2,i)) &
-                           + ((1.0_dp+eps) * sin(tBGAngle) * (Rat(1,i)))
-                 if (layerIndex(i).eq.1) then
-                    dxTemp = dx/aG
-                    dyTemp = dy/aG
-                 else if (layerIndex(i).eq.2) then
-                    dxTemp = -dx/aG
-                    dyTemp = -dy/aG
-                 end if
-              end if
-              if (tBGSwitchDxDy) then
-                 if (layerIndex(i).eq.1) then ! graxhene
-                    call offdiagotBG(Habjj,dyTemp,dxTemp,CabG,PhiabG)
-                 else if (layerIndex(i).eq.2) then
-                    call offdiagotBG(Habjj,dyTemp,dxTemp,CabG,PhiabG)
-                 end if
-              else
-                 if (layerIndex(i).eq.1) then ! graphene
-                    call offdiagotBG(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                 else if (layerIndex(i).eq.2) then
-                    call offdiagotBG(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                 end if
-              end if
-              realH = real(Habjj)
-              imagH = imag(Habjj)
-
-              if (Species(i).eq.2) then   ! ---  C2 or N
-
-                 del(1) = del(1) + 2.0_dp*realH/3.0_dp
-                 del(2) = del(2) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                 del(3) = del(3)  -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-              end if
-
-              ! ---  C1 or B (note the conventions from the book chapter putting A sublattice at (0,0) while we put the B-sublattice there when using in-house code as well as the xyz files shared by Jiaqi)
-              if (Species(i).eq.1) then
-
-                del(1) = del(1) + 2.0_dp*realH/3.0_dp
-                del(2) = del(2) -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                del(3) = del(3) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-
-              end if
+              call HamHopBondTermsTBG(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, imagH, del)
             end if
             if (GBNOffDiag) then
-                ! Amplitude of the graphene-layer term: MoirePotCabG (the tBGOffDiag block sets it otherwise)
-                if (.not. tBGOffDiag) CabG = CabG_global/g0
-                if (GBNuseDisplacementFile) then
-                   if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
-                      dx_b = displacements_b(1,i)*cos(GlobalPhiL2a)+displacements_b(2,i)*sin(GlobalPhiL2a)
-                      dy_b = displacements_b(2,i)*cos(GlobalPhiL2a)-displacements_b(1,i)*sin(GlobalPhiL2a)
-                      dx_t = displacements_t(1,i)*cos(GlobalPhiL2b)+displacements_t(2,i)*sin(GlobalPhiL2b)
-                      dy_t = displacements_t(2,i)*cos(GlobalPhiL2b)-displacements_t(1,i)*sin(GlobalPhiL2b)
-                   else if (encapsulatedThreeLayers .and. layerIndex(i).eq.1) then
-                      dx = displacements(1,i)*cos(GlobalPhiL1)+displacements(2,i)*sin(GlobalPhiL1)
-                      dy = displacements(2,i)*cos(GlobalPhiL1)-displacements(1,i)*sin(GlobalPhiL1)
-                   else if (encapsulatedThreeLayers .and. layerIndex(i).eq.3) then
-                      dx = displacements(1,i)*cos(GlobalPhiL3)+displacements(2,i)*sin(GlobalPhiL3)
-                      dy = displacements(2,i)*cos(GlobalPhiL3)-displacements(1,i)*sin(GlobalPhiL3)
-                   else
-                      dx = displacements(1,i)*cos(GlobalPhi)+displacements(2,i)*sin(GlobalPhi)
-                      dy = displacements(2,i)*cos(GlobalPhi)-displacements(1,i)*sin(GlobalPhi)
-                   end if
-                   if (GBNtwoLayers) then
-                      if (layerIndex(i).eq.1) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.2) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (encapsulatedThreeLayers) then
-                      if (layerIndex(i).eq.2) then
-                         dxTemp_b = dx_b/aG
-                         dyTemp_b = dy_b/aG
-                         dxTemp_t = dx_t/aG
-                         dyTemp_t = dy_t/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (encapsulatedFourLayers) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (encapsulatedFiveLayers) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.5) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (t3GwithBN) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.4) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (BNt2GBN) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (t2GBN) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then ! G layers
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1) then ! BN layers
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   end if
-                else
-                   dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
-                             - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
-                   dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
-                             + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
-                   if (GBNtwoLayers) then
-                      if (layerIndex(i).eq.1) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.2) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (encapsulatedThreeLayers) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (encapsulatedFourLayers) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (encapsulatedFiveLayers) then
-                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (t3GwithBN) then
-                      if (layerIndex(i).eq.4 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (BNt2GBN) then
-                      if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   else if (t2GBN) then
-                      if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
-                         dxTemp = dx/aG
-                         dyTemp = dy/aG
-                      else if (layerIndex(i).eq.1) then
-                         dxTemp = -dx/aBN
-                         dyTemp = -dy/aBN
-                      end if
-                   end if
-                end if
-                if (GBNtwoLayers) then
-                   if (layerIndex(i).eq.1) then ! graphene
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                   else if (layerIndex(i).eq.2) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                else if (encapsulatedThreeLayers) then
-                   if (layerIndex(i).eq.2) then ! graphene
-                      call offdiagoGBN(Habjj_b,dxTemp_b,dyTemp_b,CabG,PhiabG)
-                      call offdiagoGBN(Habjj_t,dxTemp_t,dyTemp_t,CabG,PhiabG)
-                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                else if (encapsulatedFourLayers) then
-                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then ! graphene
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                else if (encapsulatedFiveLayers) then
-                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then ! graphene
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.5) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                else if (t3GwithBN) then
-                   if (layerIndex(i).eq.4 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then ! graphene
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                   else if (layerIndex(i).eq.1) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                else if (BNt2GBN) then
-                   if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then ! graphene
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                else if (t2GBN) then
-                   if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then ! graphene
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
-                   else if (layerIndex(i).eq.1) then
-                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
-                   end if
-                end if
-                if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
-                   realH_b = real(Habjj_b)
-                   imagH_b = imag(Habjj_b)
-                   realH_t = real(Habjj_t)
-                   imagH_t = imag(Habjj_t)
-                else
-                   realH = real(Habjj)
-                   imagH = imag(Habjj)
-                end if
-
-                if (Species(i).eq.2 .or. Species(i).eq.4) then   ! ---  C2 or N
-                   if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
-                      del(1) = del(1) + 2.0_dp*realH_b/3.0_dp
-                      del(2) = del(2) + ( -realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
-                      del(3) = del(3)  -(  realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
-                      if (removeTopMoireInL2) then
-                         del(1) = del(1)
-                         del(2) = del(2)
-                         del(3) = del(3)
-                      else
-                         del(1) = del(1) + 2.0_dp*realH_t/3.0_dp
-                         del(2) = del(2) + ( -realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
-                         del(3) = del(3)  -(  realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
-                      end if
-                   else if (GBNtwoLayers) then
-                      del(1) = 2.0_dp*realH/3.0_dp
-                      del(2) = ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                      del(3) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                   else
-                      del(1) = del(1) + 2.0_dp*realH/3.0_dp
-                      del(2) = del(2) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                      del(3) = del(3)  -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                   end if
-                end if
-
-                ! ---  C1 or B (note the conventions from the book chapter putting A sublattice at (0,0) while we put the B-sublattice there when using in-house code as well as the xyz files shared by Jiaqi)
-                if (Species(i).eq.1 .or. Species(i).eq.3) then
-                  if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
-                     del(1) = del(1) + 2.0_dp*realH_b/3.0_dp
-                     del(2) = del(2)  -(  realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
-                     del(3) = del(3) + ( -realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
-                     if (removeTopMoireInL2) then
-                        del(1) = del(1)
-                        del(2) = del(2)
-                        del(3) = del(3)
-                     else
-                        del(1) = del(1) + 2.0_dp*realH_t/3.0_dp
-                        del(2) = del(2)  -(  realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
-                        del(3) = del(3) + ( -realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
-                     end if
-                  else if (GBNtwoLayers) then
-                     del(1) =  2.0_dp*realH/3.0_dp
-                     del(2) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                     del(3) =  ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                  else
-                     del(1) = del(1) + 2.0_dp*realH/3.0_dp
-                     del(2) = del(2)  -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                     del(3) = del(3) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
-                  end if
-                end if
+                call HamHopBondTermsGBN(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, imagH, del)
             end if
             if (MIO_StringComp(BilayerModel,'Jeil')) then
-                jj1 = 0
-                jj2 = 0
-                maxDist = 1000.0_dp
-                do j=1,Nneigh(i)
-                   if(layerIndex(i).ne.layerIndex(NList(j,i))) then
-                      d = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                      if ((d.lt.maxDist) .and. d.lt.(0.25_dp*aCC)) then
-                         jj1 = j
-                         maxDist = d
-                      end if
-                   end if
-                end do
-                if (jj1.eq.0) then
-                  do j=1,Nneigh(i)
-                     if(layerIndex(i).ne.layerIndex(NList(j,i))) then
-                        d = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                        if (jj1.eq.0) then
-                           if (d.lt.(0.75_dp*aCC)) then
-                              jj1 = j
-                           end if
-                        else
-                           if (d.lt.(0.75_dp*aCC)) then
-                              jj2 = j
-                           end if
-                        end if
-                     end if
-                  end do
-                  if (jj1.ne.0 .and. jj2.eq.0) then
-                     jj1 = 0
-                     jj2 = 0
-                  end if
-                end if
-                firstNN = 0
-                k = 0
-                if (jj1.ne.0 .and. jj2.eq.0) then
-                   do j=1,Nneigh(jj1)
-                      if(layerIndex(jj1).eq.layerIndex(NList(j,jj1))) then
-                         k = k+1
-                         firstNN(k) = NList(j,jj1)
-                      end if
-                   end do
-                end if
-                !if (k.ne.3) print*, "not enough first neighbors"
+                call HamHopAtomJeil(jj1, jj2, i, d, firstNN, k)
             end if
             do j=1,Nneigh(i)
                jj = NList(j,i)
@@ -12501,6 +12030,600 @@ subroutine HamHopIntralayerGBN(dist, j, i, d, countG1, countG2, countG3, countG4
                            !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
 
 end subroutine HamHopIntralayerGBN
+
+!> Per-atom preparation of the Jeil interlayer model (TypeOfBL Jeil; refused at present)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+!! The variables declared after the arguments are used by this model only; they are marked as not set on
+!! entry, so that a value left from another bond cannot be used by mistake.
+subroutine HamHopAtomJeil(jj1, jj2, i, d, firstNN, k)
+
+   integer, intent(inout) :: jj1
+   integer, intent(inout) :: jj2
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: d
+   integer, intent(inout) :: firstNN(3)
+   integer, intent(inout) :: k
+
+   real(dp) :: maxDist
+
+   maxDist = hamUnset
+
+                jj1 = 0
+                jj2 = 0
+                maxDist = 1000.0_dp
+                do j=1,Nneigh(i)
+                   if(layerIndex(i).ne.layerIndex(NList(j,i))) then
+                      d = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                      if ((d.lt.maxDist) .and. d.lt.(0.25_dp*aCC)) then
+                         jj1 = j
+                         maxDist = d
+                      end if
+                   end if
+                end do
+                if (jj1.eq.0) then
+                  do j=1,Nneigh(i)
+                     if(layerIndex(i).ne.layerIndex(NList(j,i))) then
+                        d = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                        if (jj1.eq.0) then
+                           if (d.lt.(0.75_dp*aCC)) then
+                              jj1 = j
+                           end if
+                        else
+                           if (d.lt.(0.75_dp*aCC)) then
+                              jj2 = j
+                           end if
+                        end if
+                     end if
+                  end do
+                  if (jj1.ne.0 .and. jj2.eq.0) then
+                     jj1 = 0
+                     jj2 = 0
+                  end if
+                end if
+                firstNN = 0
+                k = 0
+                if (jj1.ne.0 .and. jj2.eq.0) then
+                   do j=1,Nneigh(jj1)
+                      if(layerIndex(jj1).eq.layerIndex(NList(j,jj1))) then
+                         k = k+1
+                         firstNN(k) = NList(j,jj1)
+                      end if
+                   end do
+                end if
+                !if (k.ne.3) print*, "not enough first neighbors"
+
+end subroutine HamHopAtomJeil
+
+!> Bond terms of the graphene/hBN moire for one atom (GBNOffDiag)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+!! The variables declared after the arguments are used by this model only; they are marked as not set on
+!! entry, so that a value left from another bond cannot be used by mistake.
+subroutine HamHopBondTermsGBN(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, imagH, del)
+
+   real(dp), intent(inout) :: CabG
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dx
+   real(dp), intent(inout) :: dy
+   real(dp), intent(inout) :: dxTemp
+   real(dp), intent(inout) :: dyTemp
+   complex*16, intent(inout) :: Habjj
+   real(dp), intent(inout) :: realH
+   real(dp), intent(inout) :: imagH
+   real(dp), intent(inout) :: del(3)
+
+   real(dp) :: dx_b
+   real(dp) :: dy_b
+   real(dp) :: dx_t
+   real(dp) :: dy_t
+   real(dp) :: dxTemp_b
+   real(dp) :: dyTemp_b
+   real(dp) :: dxTemp_t
+   real(dp) :: dyTemp_t
+   complex*16 :: Habjj_b
+   complex*16 :: Habjj_t
+   real(dp) :: realH_b
+   real(dp) :: imagH_b
+   real(dp) :: realH_t
+   real(dp) :: imagH_t
+
+   dx_b = hamUnset
+   dy_b = hamUnset
+   dx_t = hamUnset
+   dy_t = hamUnset
+   dxTemp_b = hamUnset
+   dyTemp_b = hamUnset
+   dxTemp_t = hamUnset
+   dyTemp_t = hamUnset
+   Habjj_b = hamUnset
+   Habjj_t = hamUnset
+   realH_b = hamUnset
+   imagH_b = hamUnset
+   realH_t = hamUnset
+   imagH_t = hamUnset
+
+                ! Amplitude of the graphene-layer term: MoirePotCabG (the tBGOffDiag block sets it otherwise)
+                if (.not. tBGOffDiag) CabG = CabG_global/g0
+                if (GBNuseDisplacementFile) then
+                   if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
+                      dx_b = displacements_b(1,i)*cos(GlobalPhiL2a)+displacements_b(2,i)*sin(GlobalPhiL2a)
+                      dy_b = displacements_b(2,i)*cos(GlobalPhiL2a)-displacements_b(1,i)*sin(GlobalPhiL2a)
+                      dx_t = displacements_t(1,i)*cos(GlobalPhiL2b)+displacements_t(2,i)*sin(GlobalPhiL2b)
+                      dy_t = displacements_t(2,i)*cos(GlobalPhiL2b)-displacements_t(1,i)*sin(GlobalPhiL2b)
+                   else if (encapsulatedThreeLayers .and. layerIndex(i).eq.1) then
+                      dx = displacements(1,i)*cos(GlobalPhiL1)+displacements(2,i)*sin(GlobalPhiL1)
+                      dy = displacements(2,i)*cos(GlobalPhiL1)-displacements(1,i)*sin(GlobalPhiL1)
+                   else if (encapsulatedThreeLayers .and. layerIndex(i).eq.3) then
+                      dx = displacements(1,i)*cos(GlobalPhiL3)+displacements(2,i)*sin(GlobalPhiL3)
+                      dy = displacements(2,i)*cos(GlobalPhiL3)-displacements(1,i)*sin(GlobalPhiL3)
+                   else
+                      dx = displacements(1,i)*cos(GlobalPhi)+displacements(2,i)*sin(GlobalPhi)
+                      dy = displacements(2,i)*cos(GlobalPhi)-displacements(1,i)*sin(GlobalPhi)
+                   end if
+                   if (GBNtwoLayers) then
+                      if (layerIndex(i).eq.1) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.2) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (encapsulatedThreeLayers) then
+                      if (layerIndex(i).eq.2) then
+                         dxTemp_b = dx_b/aG
+                         dyTemp_b = dy_b/aG
+                         dxTemp_t = dx_t/aG
+                         dyTemp_t = dy_t/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (encapsulatedFourLayers) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (encapsulatedFiveLayers) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.5) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (t3GwithBN) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.4) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (BNt2GBN) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (t2GBN) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then ! G layers
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1) then ! BN layers
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   end if
+                else
+                   dx = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(1,i)) &
+                             - ((1.0_dp+eps) * sin(GBNAngle) * (Rat(2,i)))
+                   dy = ((1.0_dp+eps) * cos(GBNAngle) - 1.0_dp) * (Rat(2,i)) &
+                             + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
+                   if (GBNtwoLayers) then
+                      if (layerIndex(i).eq.1) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.2) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (encapsulatedThreeLayers) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (encapsulatedFourLayers) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (encapsulatedFiveLayers) then
+                      if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (t3GwithBN) then
+                      if (layerIndex(i).eq.4 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (BNt2GBN) then
+                      if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   else if (t2GBN) then
+                      if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
+                         dxTemp = dx/aG
+                         dyTemp = dy/aG
+                      else if (layerIndex(i).eq.1) then
+                         dxTemp = -dx/aBN
+                         dyTemp = -dy/aBN
+                      end if
+                   end if
+                end if
+                if (GBNtwoLayers) then
+                   if (layerIndex(i).eq.1) then ! graphene
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                   else if (layerIndex(i).eq.2) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                else if (encapsulatedThreeLayers) then
+                   if (layerIndex(i).eq.2) then ! graphene
+                      call offdiagoGBN(Habjj_b,dxTemp_b,dyTemp_b,CabG,PhiabG)
+                      call offdiagoGBN(Habjj_t,dxTemp_t,dyTemp_t,CabG,PhiabG)
+                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                else if (encapsulatedFourLayers) then
+                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then ! graphene
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                else if (encapsulatedFiveLayers) then
+                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then ! graphene
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.5) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                else if (t3GwithBN) then
+                   if (layerIndex(i).eq.4 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then ! graphene
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                   else if (layerIndex(i).eq.1) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                else if (BNt2GBN) then
+                   if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then ! graphene
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                else if (t2GBN) then
+                   if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then ! graphene
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                   else if (layerIndex(i).eq.1) then
+                      call offdiagoGBN(Habjj,dxTemp,dyTemp,CabBN,PhiabBN)
+                   end if
+                end if
+                if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
+                   realH_b = real(Habjj_b)
+                   imagH_b = imag(Habjj_b)
+                   realH_t = real(Habjj_t)
+                   imagH_t = imag(Habjj_t)
+                else
+                   realH = real(Habjj)
+                   imagH = imag(Habjj)
+                end if
+
+                if (Species(i).eq.2 .or. Species(i).eq.4) then   ! ---  C2 or N
+                   if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
+                      del(1) = del(1) + 2.0_dp*realH_b/3.0_dp
+                      del(2) = del(2) + ( -realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
+                      del(3) = del(3)  -(  realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
+                      if (removeTopMoireInL2) then
+                         del(1) = del(1)
+                         del(2) = del(2)
+                         del(3) = del(3)
+                      else
+                         del(1) = del(1) + 2.0_dp*realH_t/3.0_dp
+                         del(2) = del(2) + ( -realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
+                         del(3) = del(3)  -(  realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
+                      end if
+                   else if (GBNtwoLayers) then
+                      del(1) = 2.0_dp*realH/3.0_dp
+                      del(2) = ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                      del(3) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                   else
+                      del(1) = del(1) + 2.0_dp*realH/3.0_dp
+                      del(2) = del(2) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                      del(3) = del(3)  -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                   end if
+                end if
+
+                ! ---  C1 or B (note the conventions from the book chapter putting A sublattice at (0,0) while we put the B-sublattice there when using in-house code as well as the xyz files shared by Jiaqi)
+                if (Species(i).eq.1 .or. Species(i).eq.3) then
+                  if (encapsulatedThreeLayers .and. layerIndex(i).eq.2) then
+                     del(1) = del(1) + 2.0_dp*realH_b/3.0_dp
+                     del(2) = del(2)  -(  realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
+                     del(3) = del(3) + ( -realH_b + sqrt(3.0_dp)*imagH_b )/3.0_dp
+                     if (removeTopMoireInL2) then
+                        del(1) = del(1)
+                        del(2) = del(2)
+                        del(3) = del(3)
+                     else
+                        del(1) = del(1) + 2.0_dp*realH_t/3.0_dp
+                        del(2) = del(2)  -(  realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
+                        del(3) = del(3) + ( -realH_t + sqrt(3.0_dp)*imagH_t )/3.0_dp
+                     end if
+                  else if (GBNtwoLayers) then
+                     del(1) =  2.0_dp*realH/3.0_dp
+                     del(2) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                     del(3) =  ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                  else
+                     del(1) = del(1) + 2.0_dp*realH/3.0_dp
+                     del(2) = del(2)  -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                     del(3) = del(3) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                  end if
+                end if
+
+end subroutine HamHopBondTermsGBN
+
+!> Bond terms of the twisted-bilayer moire for one atom (tBGOffDiag)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopBondTermsTBG(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, imagH, del)
+
+   real(dp), intent(inout) :: CabG
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dx
+   real(dp), intent(inout) :: dy
+   real(dp), intent(inout) :: dxTemp
+   real(dp), intent(inout) :: dyTemp
+   complex*16, intent(inout) :: Habjj
+   real(dp), intent(inout) :: realH
+   real(dp), intent(inout) :: imagH
+   real(dp), intent(inout) :: del(3)
+
+
+              if (tBGOffDiag) then
+                  if (tBGOffDiagPRB) then
+                     CabG = CabG_global
+                  else
+                     call fitFunSrivani(0.0134_dp, -0.0977_dp,0.1790_dp, abs(interlayerDistances(i)), CabG)
+                  end if
+              else
+                  call MIO_InputParameter('Moire.PotCabG',CabG,0.001987_dp)
+              end if
+              CabG = CabG/g0
+              !if (i.eq. 1) print*, "adding the offdiagonal intralyer terms for tBG"
+              if (tBGuseDisplacementFile) then
+                 if (layerIndex(i).eq.1) then
+                     dx = displacements(1,i)*cos(GlobalPhi2)+displacements(2,i)*sin(GlobalPhi2)
+                     dy = displacements(2,i)*cos(GlobalPhi2)-displacements(1,i)*sin(GlobalPhi2)
+                 else if (layerIndex(i).eq.2) then
+                     dx = displacements(1,i)*cos(GlobalPhi)+displacements(2,i)*sin(GlobalPhi)
+                     dy = displacements(2,i)*cos(GlobalPhi)-displacements(1,i)*sin(GlobalPhi)
+                 end if
+                 if (layerIndex(i).eq.1) then
+                    dxTemp = -dx/aG
+                    dyTemp = -dy/aG
+                 else if (layerIndex(i).eq.2) then
+                    dxTemp = dx/aG
+                    dyTemp = dy/aG
+                 end if
+              else
+                 dx = ((1.0_dp+eps) * cos(tBGAngle) - 1.0_dp) * (Rat(1,i)) &
+                           - ((1.0_dp+eps) * sin(tBGAngle) * (Rat(2,i)))
+                 dy = ((1.0_dp+eps) * cos(tBGAngle) - 1.0_dp) * (Rat(2,i)) &
+                           + ((1.0_dp+eps) * sin(tBGAngle) * (Rat(1,i)))
+                 if (layerIndex(i).eq.1) then
+                    dxTemp = dx/aG
+                    dyTemp = dy/aG
+                 else if (layerIndex(i).eq.2) then
+                    dxTemp = -dx/aG
+                    dyTemp = -dy/aG
+                 end if
+              end if
+              if (tBGSwitchDxDy) then
+                 if (layerIndex(i).eq.1) then ! graxhene
+                    call offdiagotBG(Habjj,dyTemp,dxTemp,CabG,PhiabG)
+                 else if (layerIndex(i).eq.2) then
+                    call offdiagotBG(Habjj,dyTemp,dxTemp,CabG,PhiabG)
+                 end if
+              else
+                 if (layerIndex(i).eq.1) then ! graphene
+                    call offdiagotBG(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                 else if (layerIndex(i).eq.2) then
+                    call offdiagotBG(Habjj,dxTemp,dyTemp,CabG,PhiabG)
+                 end if
+              end if
+              realH = real(Habjj)
+              imagH = imag(Habjj)
+
+              if (Species(i).eq.2) then   ! ---  C2 or N
+
+                 del(1) = del(1) + 2.0_dp*realH/3.0_dp
+                 del(2) = del(2) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                 del(3) = del(3)  -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+              end if
+
+              ! ---  C1 or B (note the conventions from the book chapter putting A sublattice at (0,0) while we put the B-sublattice there when using in-house code as well as the xyz files shared by Jiaqi)
+              if (Species(i).eq.1) then
+
+                del(1) = del(1) + 2.0_dp*realH/3.0_dp
+                del(2) = del(2) -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                del(3) = del(3) + ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+
+              end if
+
+end subroutine HamHopBondTermsTBG
+
+!> Bond terms of the effective moire model for one atom (MoireOffDiag, MoireOffDiagMidpoint)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+!! The variables declared after the arguments are used by this model only; they are marked as not set on
+!! entry, so that a value left from another bond cannot be used by mistake.
+subroutine HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, del)
+
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dx
+   real(dp), intent(inout) :: dy
+   real(dp), intent(inout) :: twistAngleGrad
+   complex*16, intent(inout) :: Habjj
+   real(dp), intent(inout) :: realH
+   real(dp), intent(inout) :: imagH
+   real(dp), intent(inout) :: del(3)
+
+   real(dp) :: Cabd
+
+   Cabd = hamUnset
+
+                if (MIO_StringComp(str,'MoireEncapsulatedBilayer') &
+                      .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell') &
+                      .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ))) then
+                   if (layerIndex(i).eq.1) then
+                      dx = ((1.0_dp+eps) * cos(MoireBilayerBottomAngleGrad) - 1) * (Rat(1,i)) &
+                                - ((1.0_dp+eps) * sin(MoireBilayerBottomAngleGrad) * (Rat(2,i)))
+                      dy = ((1.0_dp+eps) * cos(MoireBilayerBottomAngleGrad) - 1) * (Rat(2,i)) &
+                                + ((1.0_dp+eps) * sin(MoireBilayerBottomAngleGrad) * (Rat(1,i)))
+                      dx = dx + tauX1
+                      dy = dy + tauY1
+                   else
+                      if (rotateFirst) then
+                         dx = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(1,i)) &
+                                   - ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(2,i)))
+                         dy = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(2,i)) &
+                                   + ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(1,i)))
+                         dx = dx + tauX2
+                         !- aG/sqrt(3.0_dp)  ! removed this, as in reality it is already at the right position for two BN layer right on top of each other
+                         dy = dy + tauY2
+                      else
+                         dx = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(1,i)) &
+                                   - ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(2,i) - tauY2/eps))
+                         dy = ((1.0_dp+eps) * cos(MoireBilayerTopAngleGrad) - 1) * (Rat(2,i) - tauY2/eps) &
+                                   + ((1.0_dp+eps) * sin(MoireBilayerTopAngleGrad) * (Rat(1,i)))
+                      end if
+                   end if
+                !        ! add interlayer hoppings
+                else ! Konda, modify hopping terms
+                   if (twisted) then
+                       if (MIO_StringComp(BilayerModel,'Jeil') ) then
+                          if (layerIndex(i).eq.1) then
+                             twistAngleGrad = twistedBilayerAngleGrad
+                             dx = Rat(1,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
+                                  - Rat(2,i) * (1.0_dp+eps) * sin(twistAngleGrad)
+                             dy = Rat(2,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
+                                  + Rat(1,i) * (1.0_dp+eps) * sin(twistAngleGrad)
+                          else
+                             twistAngleGrad = -twistedBilayerAngleGrad
+                             dx = Rat(1,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
+                                  - Rat(2,i) * (1.0_dp+eps) * sin(twistAngleGrad)
+                             dy = Rat(2,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
+                                  + Rat(1,i) * (1.0_dp+eps) * sin(twistAngleGrad)
+                          end if
+                       else
+                          dx = Rat(1,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
+                                  - Rat(2,i) * (1.0_dp+eps) * sin(twistAngleGrad)
+                          dy = Rat(2,i) * ((1.0_dp+eps) * cos(twistAngleGrad) - 1.0_dp) &
+                                  + Rat(1,i) * (1.0_dp+eps) * sin(twistAngleGrad)
+                       end if
+                   else
+                       if (readRigidXYZ) then
+                          dx = RatInit(1,i)*eps
+                          dy = RatInit(2,i)*eps
+                       else
+                          dx = Rat(1,i)*eps
+                          dy = Rat(2,i)*eps
+                       end if
+                   end if
+                end if
+                dy = dy + shift1
+                if (layerIndex(i).eq.1) then
+                    if (sign1.lt.0.0) then ! Go from BN to NB orientation if necessary
+                        dx = -dx
+                        dy = -dy
+                    end if
+                else if (layerIndex(i).eq.2) then
+                    if (sign2.lt.0.0) then ! Go from BN to NB orientation for second layer of bilayer graphene
+                        dx = -dx
+                        dy = -dy
+                    end if
+                end if
+                if (addDisplacements) then
+                    dx = dx + displacements(1,i)
+                    dy = dy + displacements(2,i)
+                end if
+                if (distanceDependentEffectiveModel) then
+                   call distanceDependentC(Cabd, Cab, BfactorCab, interlayerDistances(i), z0)
+                else
+                   Cabd = Cab
+                end if
+                if (layerIndex(i).eq.2 .and. deactivateUpperLayer) then
+                   Habjj = 0.0_dp
+                else if (layerIndex(i).ne.1 .and. deactivateUpperLayers) then
+                    Habjj = 0.0_dp
+                else if (FanZhang) then
+                    if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
+                       Habjj = 0.0_dp
+                    else
+                       call offdiago(Habjj,dx,dy,Cabd,Phiab)
+                    end if
+                else
+                    if (MIO_StringComp(BilayerModel,'Jeil')) then
+                       call offdiago2(Habjj,dx,dy,Cabd,Phiab)
+                    else
+                       call offdiago(Habjj,dx,dy,Cabd,Phiab)
+                    end if
+                end if
+                realH = real(Habjj)
+                imagH = imag(Habjj)
+                HABreal(i) = realH
+                HABimag(i) = imagH
+
+                if (Species(i).eq.1) then   ! ---  B sublattice
+
+                  del(1) =  2.0_dp*realH/3.0_dp
+                  del(2) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                  del(3) =  ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+
+                end if
+
+                if (Species(i).eq.2) then   ! ---  A sublattice
+
+                   del(1) = 2.0_dp*realH/3.0_dp
+                   del(2) = ( -realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                   del(3) = -(  realH + sqrt(3.0_dp)*imagH )/3.0_dp
+                 ! del(2) and del(3) are inverted to take into account difference
+                 ! between A and B
+                end if
+
+end subroutine HamHopBondTermsMoire
 
 end subroutine HamHopping
 

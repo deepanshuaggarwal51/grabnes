@@ -406,7 +406,7 @@ name (if both are given, the present name is used and the solver prints a warnin
 | `Moire.PotC0` | `MoirePotC0` | real | `-0.01013` | ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotCab` | `MoirePotCab` | real | `0.01134` | ham.F90: HamHopping; ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotCabBN` | `MoirePotCabBN` | real | `0.004418` | ham.F90: HamHopping |
-| `Moire.PotCabG` | `MoirePotCabG` | real | `0.001987` | ham.F90: HamHopping |
+| `Moire.PotCabG` | `MoirePotCabG` | real | `0.001987` | ham.F90: HamHopBondTermsTBG |
 | `Moire.PotCabG` | `MoirePotCabG` | real | `0.002235` | ham.F90: HamHopping |
 | `Moire.PotCz` | `MoirePotCz` | real | `-0.00901` | ham.F90: HamOnSiteMoirePotential |
 | `Moire.Potential` | `MoirePotential` | logical | `.false.` | ham.F90: HamOnSite |
