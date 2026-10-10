@@ -6175,2217 +6175,56 @@ subroutine HamHopping
                            end if
                         end if
                         if (GBNtwoLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (shellsFromRigid) dist = d
-                           if (GBNtwoLayersF2G2s) then
-                               if (layerIndex(i) .eq. 1) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 2) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           else if (F2G2Model) then ! use the single layer F2G2
-                               if (layerIndex(i) .eq. 1) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 2) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                              ! Add GBNtwoLayers F2G2 hopping terms
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerGBN(dist, j, i, d, countG1, countG2, countG3, countG4, countG5, &
+                                 countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, countBN5, &
+                                 countBN6, countBN7, countBN8, delta, ilvl)
                         else if (BNBNtwoLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           !        !if (i.eq.1) print*, "aBN=", aBN
-                               !Same model for both layers
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               !    !if (i.eq.1) print*, "aBN=", aBN
-                              ! Add GBNtwoLayers F2G2 hopping terms
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerBNBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, &
+                                 countG6, countG7, countG8, d, delta, ilvl)
                         else if (encapsulatedThreeLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           ! Add GBNtwoLayers F2G2 hopping terms
-                           if (GBNtwoLayersF2G2s) then
-                               if (layerIndex(i) .eq. 2) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 3) then ! For hBN layer
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   ! to account for the fact we are using aBN here
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           else if (F2G2Model) then ! use the single layer F2G2
-                               if (layerIndex(i) .eq. 2) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 3) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerEncapsulated3(dist, j, i, countG1, countG2, countG3, countG4, &
+                                 countG5, countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, &
+                                 countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (encapsulatedFourLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (GBNtwoLayersF2G2s) then
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i).eq.3) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 4) then ! For hBN layer
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   ! to account for the fact we are using aBN here
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           else if (F2G2Model) then ! use the single layer F2G2
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 4) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerEncapsulated4(dist, j, i, countG1, countG2, countG3, countG4, &
+                                 countG5, countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, &
+                                 countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (encapsulatedFiveLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (GBNtwoLayersF2G2s) then
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i).eq.4) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 5) then ! For hBN layer
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   ! to account for the fact we are using aBN here
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           else if (F2G2Model) then ! use the single layer F2G2
-                               ! For graphene layer
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i) .eq. 4) then
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 5) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerEncapsulated5(dist, j, i, countG1, countG2, countG3, countG4, &
+                                 countG5, countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, &
+                                 countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (encapsulatedSixLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (GBNtwoLayersF2G2s) then
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                               ! For graphene layer
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i).eq.4 &
-                                     .or. layerIndex(i).eq. 5) then
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 6) then ! For hBN layer
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   ! to account for the fact we are using aBN here
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           else if (F2G2Model) then ! use the single layer F2G2
-                               ! For graphene layer
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i) .eq. 4 &
-                                     .or. layerIndex(i) .eq. 5) then
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 6) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerEncapsulated6(dist, j, i, countG1, countG2, countG3, countG4, &
+                                 countG5, countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, &
+                                 countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (encapsulatedSevenLayers) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (GBNtwoLayersF2G2s) then
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                               ! For graphene layer
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i).eq.4 &
-                                     .or. layerIndex(i).eq.5 .or. layerIndex(i).eq.6 ) then
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 7) then ! For hBN layer
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   ! to account for the fact we are using aBN here
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           else if (F2G2Model) then ! use the single layer F2G2
-                               ! For graphene layer
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i) .eq. 4 &
-                                     .or. layerIndex(i).eq.5 .or. layerIndex(i).eq.6) then
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 7) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerEncapsulated7(dist, j, i, countG1, countG2, countG3, countG4, &
+                                 countG5, countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, &
+                                 countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (t3GwithBN) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                           if (layerIndex(i).eq.2) then ! For graphene layer (the one contacting with hBN)
-                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                  countG1 = countG1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                  countG2 = countG2+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                  countG3 = countG3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSL !GfromGBN
-                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countG4 = countG4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSL !GfromGBN
-                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                  countG5 = countG5+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                  countG6 = countG6+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNB
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                  countG7 = countG7+1
-                                  hopp(j,i) = hopp(j,i) + t7KSL !GfromGBN
-                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                  countG8 = countG8+1
-                                  hopp(j,i) = hopp(j,i) + t8KSL !GfromGBN
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           else if (layerIndex(i).eq.3) then ! For graphene layer using single layer F2G2
-                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                  countG1 = countG1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                  countG2 = countG2+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t2KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSL
-                                  end if
-                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                  countG3 = countG3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSL
-                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countG4 = countG4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSL
-                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                  countG5 = countG5+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t5KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSL
-                                  end if
-                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                  countG6 = countG6+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t6KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KSL
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                  countG7 = countG7+1
-                                  hopp(j,i) = hopp(j,i) + t7KSL
-                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                  countG8 = countG8+1
-                                  hopp(j,i) = hopp(j,i) + t8KSL
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           else if (layerIndex(i).eq.4) then ! For graphene layer using single layer F2G2
-                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                  countG1 = countG1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                  countG2 = countG2+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t2KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSL
-                                  end if
-                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                  countG3 = countG3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSL
-                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countG4 = countG4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSL
-                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                  countG5 = countG5+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t5KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSL
-                                  end if
-                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                  countG6 = countG6+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t6KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KSL
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                  countG7 = countG7+1
-                                  hopp(j,i) = hopp(j,i) + t7KSL
-                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                  countG8 = countG8+1
-                                  hopp(j,i) = hopp(j,i) + t8KSL
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           else if (layerIndex(i) .eq. 1) then ! For hBN layer
-                               if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                  countBN1 = countBN1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                  countBN2 = countBN2+1
-                                  if (Species(i).eq.3) then
-                                     hopp(j,i) = hopp(j,i) + t2KSLBN_B !fromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSLBN_N !fromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                  countBN3 = countBN3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSLBN !fromGBN
-                               ! to account for the fact we are using aBN here
-                               else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countBN4 = countBN4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSLBN !fromGBN
-                               else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                  countBN5 = countBN5+1
-                                  if (Species(i).eq.3) then
-                                     hopp(j,i) = hopp(j,i) + t5KSLBN_B !fromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSLBN_N !fromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                  countBN6 = countBN6+1
-                                  if (Species(i).eq.3) then
-                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNB
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                  countBN7 = countBN7+1
-                                  hopp(j,i) = hopp(j,i) + t7KBN !fromGBN
-                               else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                  countBN8 = countBN8+1
-                                  hopp(j,i) = hopp(j,i) + t8KBN !fromGBN
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
-                        !   ! Add BNBNtwoLayers F2G2 hopping terms
+                           call HamHopIntralayerT3GwithBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, &
+                                 countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, countBN5, &
+                                 countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (BNt2GBN) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                           if (layerIndex(i).eq.2) then ! For graphene layer (the one contacting with hBN)
-                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                  countG1 = countG1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                  countG2 = countG2+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                  countG3 = countG3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSL !GfromGBN
-                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countG4 = countG4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSL !GfromGBN
-                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                  countG5 = countG5+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                  countG6 = countG6+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNB
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                  countG7 = countG7+1
-                                  hopp(j,i) = hopp(j,i) + t7KSL !GfromGBN
-                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                  countG8 = countG8+1
-                                  hopp(j,i) = hopp(j,i) + t8KSL !GfromGBN
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           else if (layerIndex(i).eq.3) then ! For graphene layer using single layer F2G2
-                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                  countG1 = countG1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                  countG2 = countG2+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t2KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSL
-                                  end if
-                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                  countG3 = countG3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSL
-                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countG4 = countG4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSL
-                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                  countG5 = countG5+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t5KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSL
-                                  end if
-                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                  countG6 = countG6+1
-                                  if (Species(i).eq.1) then
-                                     hopp(j,i) = hopp(j,i) + t6KSL
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KSL
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                  countG7 = countG7+1
-                                  hopp(j,i) = hopp(j,i) + t7KSL
-                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                  countG8 = countG8+1
-                                  hopp(j,i) = hopp(j,i) + t8KSL
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 4) then ! For hBN layer
-                               if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                  countBN1 = countBN1+1
-                                  hopp(j,i) = hopp(j,i)
-                               else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                  countBN2 = countBN2+1
-                                  if (Species(i).eq.3) then
-                                     hopp(j,i) = hopp(j,i) + t2KSLBN_B !fromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t2KSLBN_N !fromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                  countBN3 = countBN3+1
-                                  hopp(j,i) = hopp(j,i) + t3KSLBN !fromGBN
-                               ! to account for the fact we are using aBN here
-                               else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                  countBN4 = countBN4+1
-                                  hopp(j,i) = hopp(j,i) + t4KSLBN !fromGBN
-                               else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                  countBN5 = countBN5+1
-                                  if (Species(i).eq.3) then
-                                     hopp(j,i) = hopp(j,i) + t5KSLBN_B !fromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t5KSLBN_N !fromGBNB
-                                  end if
-                               else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                  countBN6 = countBN6+1
-                                  if (Species(i).eq.3) then
-                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNA
-                                  else
-                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNB
-                                  end if
-                               else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                     .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                  countBN7 = countBN7+1
-                                  hopp(j,i) = hopp(j,i) + t7KBN !fromGBN
-                               else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                  countBN8 = countBN8+1
-                                  hopp(j,i) = hopp(j,i) + t8KBN !fromGBN
-                               else
-                                    hopp(j,i) = hopp(j,i) + 0.0_dp
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
-                        !   ! Add BNBNtwoLayers F2G2 hopping terms
+                           call HamHopIntralayerBNt2GBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, &
+                                 countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, countBN5, &
+                                 countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (t2GBN) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (F2G2Model) then ! use the single layer F2G2
-                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3) then ! For graphene layer
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6K
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1) then ! For hBN layer
-                                   !if (i.eq.1) print*, "aBN=", aBN
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBN
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KBN
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                              ! Add GBNtwoLayers F2G2 hopping terms
-                           else if (GBNtwoLayersF2G2s) then
-                            ! Add GBNtwoLayers F2G2 hopping terms
-                               if (layerIndex(i).eq.2) then ! For graphene layer (the one contacting with hBN)
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i).eq.3) then ! For graphene layer using single layer F2G2
-                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      countG1 = countG1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      countG2 = countG2+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      countG3 = countG3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSL
-                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countG4 = countG4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSL
-                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      countG5 = countG5+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSL
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      countG6 = countG6+1
-                                      if (Species(i).eq.1) then
-                                         hopp(j,i) = hopp(j,i) + t6KSL
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSL
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      countG7 = countG7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSL
-                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
-                                      countG8 = countG8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSL
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               else if (layerIndex(i) .eq. 1) then ! For hBN layer
-                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                                      countBN1 = countBN1+1
-                                      hopp(j,i) = hopp(j,i)
-                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                                      countBN2 = countBN2+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                                      countBN3 = countBN3+1
-                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
-                                   ! to account for the fact we are using aBN here
-                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      countBN4 = countBN4+1
-                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
-                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                                      countBN5 = countBN5+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
-                                      countBN6 = countBN6+1
-                                      if (Species(i).eq.3) then
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
-                                      else
-                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
-                                      end if
-                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
-                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
-                                      countBN7 = countBN7+1
-                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
-                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
-                                      countBN8 = countBN8+1
-                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
-                                   else
-                                        hopp(j,i) = hopp(j,i) + 0.0_dp
-                                   end if
-                               end if
-                           end if
-                           if (d > 1.7_dp) then
-                               delta = 0.0_dp
-                           end if
-                           ! Konda, use the chosen value of delta
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                           call HamHopIntralayerT2GBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, &
+                                 countG6, countG7, countG8, countBN1, countBN2, countBN3, countBN4, countBN5, &
+                                 countBN6, countBN7, countBN8, d, delta, ilvl)
                         else if (MIO_StringComp(BilayerModel,'Koshino') .or. MIO_StringComp(BilayerModel,'Mayou') &
                               .or. MIO_StringComp(BilayerModel,'HTC') .or. MIO_StringComp(SinglelayerModel,'HTC') ) then
-                           if (frac) call AtomsSetCart()
-                           if (KoshinoIntralayer .or. MayouIntralayer) then
-                              ! The interlayer renormalisation factor (KoshinoSR) is not
-                              ! meant for intralayer pairs and may not be set yet here.
-                              renormalizeHoppingFactorAAp = 1.0_dp
-                              if (MIO_StringComp(BilayerModel,'Koshino')) then
-                                 if (frac) call AtomsSetCart()
-                                 if (strainedMoire) then
-                                    dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
-                                                +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                                 else
-                                    dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                                 end if
-                                 vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
-                                 vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp
-                                 hopp(j,i) = hopp(j,i) + (vpppi * (1.0_dp - ((NeighD(3,j,i))/(dist))**2.0_dp) &
-                                                   + vppsigma * ((NeighD(3,j,i))/(dist))**2.0_dp)
-                              else if (MIO_StringComp(BilayerModel,'Mayou')) then
-                                 if (frac) call AtomsSetCart()
-                                 if (strainedMoire) then
-                                    dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
-                                                +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                                 else
-                                    dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
-                                 end if
-                                 Fc = 1.0_dp/(1.0_dp+exp((dist-rc)/lc))
-                                 vppsigma = vppsigma0 * exp(qsigma*(1.0_dp-dist/interlayerdistance)) * Fc  * renormalizeHoppingFactorAAp
-                                 vpppi = vpppi0 * exp(qpi*(1.0_dp - dist/aCC)) * Fc  * renormalizeHoppingFactorAAp
-                                 hopp(j,i) = hopp(j,i) + (vpppi * (1.0_dp - ((NeighD(3,j,i))/(dist))**2.0_dp) &
-                                                   + vppsigma * ((NeighD(3,j,i))/(dist))**2.0_dp)
-                              end if
-                           else
-                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                              if (useBNGKaxiras) then
-                                 if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
-                                      hopp(j,i) = hopp(j,i)
-                                 else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
-                                      if (Species(i).eq.3) then
-                                          hopp(j,i) = hopp(j,i) + t2KB
-                                      else if (Species(i).eq.4) then
-                                          hopp(j,i) = hopp(j,i) + t2KN
-                                      end if
-                                 else if (dist .gt. aG*1.1_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      hopp(j,i) = hopp(j,i) + t3K
-                                 else
-                                      hopp(j,i) = hopp(j,i) + 0.0_dp
-                                 end if
-                              else
-                                 if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 1"
-                                      hopp(j,i) = hopp(j,i)
-                                 else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 2"
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
-                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
-                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                           ! middleTwist MUST be included for all the above systems, otherwise, we are incorrectly doing bilayer F2G2
-                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                              hopp(j,i) = hopp(j,i) + t2KSL
-                                           else
-                                              if (layerIndex(i).eq.1) then
-                                                  if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t2KA
-                                                  else if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t2KB
-                                                  end if
-                                              else if (layerIndex(i).eq.2) then
-                                                  if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t2KA
-                                                  else if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t2KB
-                                                  end if
-                                              end if
-                                           end if
-                                      else if (t3BG) then
-                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.5) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4 .or. layerIndex(i).eq.6) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           end if
-                                      else if (twoLayers .or. oneLayer) then
-                                           if (forceBilayerF2G2Intralayer) then
-                                              if (layerIndex(i).eq.1) then
-                                                  if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t2KA
-                                                  else if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t2KB
-                                                  end if
-                                              else if (layerIndex(i).eq.2) then
-                                                  if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t2KA
-                                                  else if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t2KB
-                                                  end if
-                                              end if
-                                           else
-                                              hopp(j,i) = hopp(j,i) + t2KSL
-                                           end if
-                                      else ! fourLayers
-                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           end if
-                                      end if
-                                 else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 3"
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
-                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
-                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                              hopp(j,i) = hopp(j,i) + t3KSL
-                                           else
-                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                   hopp(j,i) = hopp(j,i) + t3K
-                                              else if (Species(i).eq.2) then
-                                                   hopp(j,i) = hopp(j,i) + t3K
-                                              end if
-                                           end if
-                                      else if (t3BG) then
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           end if
-                                      else if (twoLayers .or. oneLayer) then
-                                           if (forceBilayerF2G2Intralayer) then
-                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                   hopp(j,i) = hopp(j,i) + t3K
-                                              else if (Species(i).eq.2) then
-                                                   hopp(j,i) = hopp(j,i) + t3K
-                                              end if
-                                           else
-                                              hopp(j,i) = hopp(j,i) + t3KSL
-                                           end if
-                                      else ! fourLayers
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           end if
-                                      end if
-                                 else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 4"
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
-                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
-                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                              hopp(j,i) = hopp(j,i) + t4KSL
-                                           else
-                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                   hopp(j,i) = hopp(j,i) + t4K
-                                              else if (Species(i).eq.2) then
-                                                   hopp(j,i) = hopp(j,i) + t4K
-                                              end if
-                                           end if
-                                      else if (t3BG) then
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           end if
-                                      else if (twoLayers .or. oneLayer) then
-                                           if (forceBilayerF2G2Intralayer) then
-                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                   hopp(j,i) = hopp(j,i) + t4K
-                                              else if (Species(i).eq.2) then
-                                                   hopp(j,i) = hopp(j,i) + t4K
-                                              end if
-                                           else
-                                              hopp(j,i) = hopp(j,i) + t4KSL
-                                           end if
-                                      else ! fourLayers
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           end if
-                                      end if
-                                 else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 5", delta
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
-                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
-                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                              hopp(j,i) = hopp(j,i) + t5KSL
-                                           else
-                                              if (layerIndex(i).eq.1) then
-                                                  if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t5KA
-                                                  else if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t5KB
-                                                  end if
-                                              else if (layerIndex(i).eq.2) then
-                                                  if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t5KA
-                                                  else if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t5KB
-                                                  end if
-                                              end if
-                                           end if
-                                      else if (t3BG) then
-                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.5) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4 .or. layerIndex(i).eq.6) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           end if
-                                      else if (twoLayers .or. oneLayer) then
-                                           if (forceBilayerF2G2Intralayer) then
-                                              if (layerIndex(i).eq.1) then
-                                                  if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t5KA
-                                                  else if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t5KB
-                                                  end if
-                                              else if (layerIndex(i).eq.2) then
-                                                  if (Species(i).eq.2) then
-                                                       hopp(j,i) = hopp(j,i) + t5KA
-                                                  else if (Species(i).eq.1) then
-                                                       hopp(j,i) = hopp(j,i) + t5KB
-                                                  end if
-                                              end if
-                                           else
-                                              hopp(j,i) = hopp(j,i) + t5KSL
-                                           end if
-                                      else ! four layers
-                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           end if
-                                           if (Species(i).eq.1) then
-                                                hopp(j,i) = hopp(j,i) + t5KA
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t5KB
-                                           end if
-                                      end if
-                                 ! narrow: the seventh shell is only 4 % further out
-                                 else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 6", delta
-                                      hopp(j,i) = hopp(j,i) + t6K
-                                 else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                       .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 7", delta
-                                      hopp(j,i) = hopp(j,i) + t7K
-                                 else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 8", delta
-                                      hopp(j,i) = hopp(j,i) + t8K
-                                 else
-                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms beyond", dist
-                                      hopp(j,i) = hopp(j,i) + 0.0_dp
-                                 end if
-                              end if
-                              if (d > 1.5_dp) then
-                                  delta = 0.0_dp
-                              end if
-                              ! Konda, use the chosen value of delta
-                              hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
-                           end if
-                        ! this is where we assign the intralayer F2G2
+                           call HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vppsigma, BLdelta, &
+                                 vpppi, Fc, d, delta, ilvl)
                         else if (MIO_StringComp(BilayerModel,'BLKaxiras') .or. MIO_StringComp(BilayerModel,'BLSrivani')) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (useBNGKaxiras) then
-                              if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
-                                   hopp(j,i) = hopp(j,i)
-                              else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
-                                   if (Species(i).eq.3) then
-                                       hopp(j,i) = hopp(j,i) + t2KB
-                                   else if (Species(i).eq.4) then
-                                       hopp(j,i) = hopp(j,i) + t2KN
-                                   end if
-                              else if (dist .gt. aG*1.1_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                   hopp(j,i) = hopp(j,i) + t3K
-                              else
-                                   hopp(j,i) = hopp(j,i) + 0.0_dp
-                              end if
-                           else
-                              !if (i.eq.1) print*, counter1
-                              if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 1"
-                                   hopp(j,i) = hopp(j,i)
-                              else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 2"
-                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
-                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                           hopp(j,i) = hopp(j,i) + t2KSL
-                                        else
-                                           if (layerIndex(i).eq.1) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           else if (layerIndex(i).eq.2) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           end if
-                                        end if
-                                   else if (twoLayers .or. oneLayer) then
-                                        if (forceBilayerF2G2Intralayer) then
-                                           if (layerIndex(i).eq.1) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           else if (layerIndex(i).eq.2) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t2KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t2KB
-                                               end if
-                                           end if
-                                        else
-                                           hopp(j,i) = hopp(j,i) + t2KSL
-                                        end if
-                                   else ! fourLayers
-                                        if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                                            if (Species(i).eq.1) then
-                                                 hopp(j,i) = hopp(j,i) + t2KA
-                                            else if (Species(i).eq.2) then
-                                                 hopp(j,i) = hopp(j,i) + t2KB
-                                            end if
-                                        else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
-                                            if (Species(i).eq.2) then
-                                                 hopp(j,i) = hopp(j,i) + t2KA
-                                            else if (Species(i).eq.1) then
-                                                 hopp(j,i) = hopp(j,i) + t2KB
-                                            end if
-                                        end if
-                                   end if
-                              else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 3"
-                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
-                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                           hopp(j,i) = hopp(j,i) + t3KSL
-                                        else
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           end if
-                                        end if
-                                   else if (twoLayers .or. oneLayer) then
-                                        if (forceBilayerF2G2Intralayer) then
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t3K
-                                           end if
-                                        else
-                                           hopp(j,i) = hopp(j,i) + t3KSL
-                                        end if
-                                   else ! fourLayers
-                                        if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                             hopp(j,i) = hopp(j,i) + t3K
-                                        else if (Species(i).eq.2) then
-                                             hopp(j,i) = hopp(j,i) + t3K
-                                        end if
-                                   end if
-                              else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 4"
-                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
-                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                           hopp(j,i) = hopp(j,i) + t4KSL
-                                        else
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           end if
-                                        end if
-                                   else if (twoLayers .or. oneLayer) then
-                                        if (forceBilayerF2G2Intralayer) then
-                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t4K
-                                           end if
-                                        else
-                                           hopp(j,i) = hopp(j,i) + t4KSL
-                                        end if
-                                   else ! fourLayers
-                                        if (Species(i).eq.1) then ! my A sublattice seems to have index 2
-                                             hopp(j,i) = hopp(j,i) + t4K
-                                        else if (Species(i).eq.2) then
-                                             hopp(j,i) = hopp(j,i) + t4K
-                                        end if
-                                   end if
-                              else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 5", delta
-                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
-                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
-                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
-                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
-                                           hopp(j,i) = hopp(j,i) + t5KSL
-                                        else
-                                           if (layerIndex(i).eq.1) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           else if (layerIndex(i).eq.2) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           end if
-                                        end if
-                                   else if (twoLayers .or. oneLayer) then
-                                        if (forceBilayerF2G2Intralayer) then
-                                           if (layerIndex(i).eq.1) then
-                                               if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           else if (layerIndex(i).eq.2) then
-                                               if (Species(i).eq.2) then
-                                                    hopp(j,i) = hopp(j,i) + t5KA
-                                               else if (Species(i).eq.1) then
-                                                    hopp(j,i) = hopp(j,i) + t5KB
-                                               end if
-                                           end if
-                                        else
-                                           hopp(j,i) = hopp(j,i) + t5KSL
-                                        end if
-                                   else ! four layers
-                                        if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                                            if (Species(i).eq.1) then
-                                                 hopp(j,i) = hopp(j,i) + t5KA
-                                            else if (Species(i).eq.2) then
-                                                 hopp(j,i) = hopp(j,i) + t5KB
-                                            end if
-                                        else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
-                                            if (Species(i).eq.2) then
-                                                 hopp(j,i) = hopp(j,i) + t5KA
-                                            else if (Species(i).eq.1) then
-                                                 hopp(j,i) = hopp(j,i) + t5KB
-                                            end if
-                                        end if
-                                        if (Species(i).eq.1) then
-                                             hopp(j,i) = hopp(j,i) + t5KA
-                                        else if (Species(i).eq.2) then
-                                             hopp(j,i) = hopp(j,i) + t5KB
-                                        end if
-                                   end if
-                              ! narrow: the seventh shell is only 4 % further out
-                              else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 6", delta
-                                   hopp(j,i) = hopp(j,i) + t6K
-                              else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
-                                    .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 7", delta
-                                   hopp(j,i) = hopp(j,i) + t7K
-                              else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 8", delta
-                                   hopp(j,i) = hopp(j,i) + t8K
-                              else
-                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms beyond", dist
-                                   hopp(j,i) = hopp(j,i) + 0.0_dp
-                              end if
-                           end if
-                           if (d > 1.5_dp) then
-                               delta = 0.0_dp
-                           end if
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           call HamHopIntralayerKaxirasSrivani(dist, j, i, d, delta, ilvl)
                         else if (MIO_StringComp(BilayerModel,'Srivani')) then
-                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
-                           if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
-                                hopp(j,i) = hopp(j,i) + t1K
-                           else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
-                                hopp(j,i) = hopp(j,i) + t2K
-                           else if (dist .gt. aG*1.1_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
-                                hopp(j,i) = hopp(j,i) + t3K
-                           else
-                                hopp(j,i) = hopp(j,i) + 0.0_dp
-                           end if
+                           call HamHopIntralayerSrivani(dist, j, i)
                         else if (MIO_StringComp(BilayerModel,'Jeil')) then
-                           if (d > 1.5_dp) then
-                               delta = 0.0_dp
-                           end if
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) + 1.0_dp*delta ,kind=dp)
+                           call HamHopIntralayerJeil(d, delta, j, i, ilvl)
                         else
-                           if (d > 1.5_dp) then
-                               delta = 0.0_dp
-                           end if
-                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           call HamHopIntralayerDefault(d, delta, j, i, ilvl)
                         end if
                         exit
                      end if
@@ -12048,6 +9887,2620 @@ subroutine HamHopInterlayerJeil(i, j, dist, numberOfHAA1, numberOfHAA2, numberOf
                    ! Adds the interlayer TC model
 
 end subroutine HamHopInterlayerJeil
+
+!> Intralayer hopping when no model applies: nearest neighbors only
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerDefault(d, delta, j, i, ilvl)
+
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(in) :: ilvl
+
+
+                           if (d > 1.5_dp) then
+                               delta = 0.0_dp
+                           end if
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+
+end subroutine HamHopIntralayerDefault
+
+!> Intralayer hopping of the Jeil model (TypeOfBL Jeil; refused at present)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerJeil(d, delta, j, i, ilvl)
+
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(in) :: ilvl
+
+
+                           if (d > 1.5_dp) then
+                               delta = 0.0_dp
+                           end if
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) + 1.0_dp*delta ,kind=dp)
+
+end subroutine HamHopIntralayerJeil
+
+!> Intralayer hopping for TypeOfBL Srivani
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerSrivani(dist, j, i)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
+                                hopp(j,i) = hopp(j,i) + t1K
+                           else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
+                                hopp(j,i) = hopp(j,i) + t2K
+                           else if (dist .gt. aG*1.1_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                hopp(j,i) = hopp(j,i) + t3K
+                           else
+                                hopp(j,i) = hopp(j,i) + 0.0_dp
+                           end if
+
+end subroutine HamHopIntralayerSrivani
+
+!> Intralayer hopping for TypeOfBL BLKaxiras and BLSrivani
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerKaxirasSrivani(dist, j, i, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (useBNGKaxiras) then
+                              if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
+                                   hopp(j,i) = hopp(j,i)
+                              else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
+                                   if (Species(i).eq.3) then
+                                       hopp(j,i) = hopp(j,i) + t2KB
+                                   else if (Species(i).eq.4) then
+                                       hopp(j,i) = hopp(j,i) + t2KN
+                                   end if
+                              else if (dist .gt. aG*1.1_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                   hopp(j,i) = hopp(j,i) + t3K
+                              else
+                                   hopp(j,i) = hopp(j,i) + 0.0_dp
+                              end if
+                           else
+                              !if (i.eq.1) print*, counter1
+                              if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 1"
+                                   hopp(j,i) = hopp(j,i)
+                              else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 2"
+                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
+                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                           hopp(j,i) = hopp(j,i) + t2KSL
+                                        else
+                                           if (layerIndex(i).eq.1) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           else if (layerIndex(i).eq.2) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           end if
+                                        end if
+                                   else if (twoLayers .or. oneLayer) then
+                                        if (forceBilayerF2G2Intralayer) then
+                                           if (layerIndex(i).eq.1) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           else if (layerIndex(i).eq.2) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           end if
+                                        else
+                                           hopp(j,i) = hopp(j,i) + t2KSL
+                                        end if
+                                   else ! fourLayers
+                                        if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
+                                            if (Species(i).eq.1) then
+                                                 hopp(j,i) = hopp(j,i) + t2KA
+                                            else if (Species(i).eq.2) then
+                                                 hopp(j,i) = hopp(j,i) + t2KB
+                                            end if
+                                        else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
+                                            if (Species(i).eq.2) then
+                                                 hopp(j,i) = hopp(j,i) + t2KA
+                                            else if (Species(i).eq.1) then
+                                                 hopp(j,i) = hopp(j,i) + t2KB
+                                            end if
+                                        end if
+                                   end if
+                              else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 3"
+                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
+                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                           hopp(j,i) = hopp(j,i) + t3KSL
+                                        else
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           end if
+                                        end if
+                                   else if (twoLayers .or. oneLayer) then
+                                        if (forceBilayerF2G2Intralayer) then
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           end if
+                                        else
+                                           hopp(j,i) = hopp(j,i) + t3KSL
+                                        end if
+                                   else ! fourLayers
+                                        if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                             hopp(j,i) = hopp(j,i) + t3K
+                                        else if (Species(i).eq.2) then
+                                             hopp(j,i) = hopp(j,i) + t3K
+                                        end if
+                                   end if
+                              else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 4"
+                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
+                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                           hopp(j,i) = hopp(j,i) + t4KSL
+                                        else
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           end if
+                                        end if
+                                   else if (twoLayers .or. oneLayer) then
+                                        if (forceBilayerF2G2Intralayer) then
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           end if
+                                        else
+                                           hopp(j,i) = hopp(j,i) + t4KSL
+                                        end if
+                                   else ! fourLayers
+                                        if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                             hopp(j,i) = hopp(j,i) + t4K
+                                        else if (Species(i).eq.2) then
+                                             hopp(j,i) = hopp(j,i) + t4K
+                                        end if
+                                   end if
+                              else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 5", delta
+                                   if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                         .or. fiveLayersSandwiched .or. sixLayersSandwiched .or. sevenLayersSandwiched &
+                                         .or. eightLayersSandwiched .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                        if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                           hopp(j,i) = hopp(j,i) + t5KSL
+                                        else
+                                           if (layerIndex(i).eq.1) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           else if (layerIndex(i).eq.2) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           end if
+                                        end if
+                                   else if (twoLayers .or. oneLayer) then
+                                        if (forceBilayerF2G2Intralayer) then
+                                           if (layerIndex(i).eq.1) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           else if (layerIndex(i).eq.2) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           end if
+                                        else
+                                           hopp(j,i) = hopp(j,i) + t5KSL
+                                        end if
+                                   else ! four layers
+                                        if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
+                                            if (Species(i).eq.1) then
+                                                 hopp(j,i) = hopp(j,i) + t5KA
+                                            else if (Species(i).eq.2) then
+                                                 hopp(j,i) = hopp(j,i) + t5KB
+                                            end if
+                                        else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
+                                            if (Species(i).eq.2) then
+                                                 hopp(j,i) = hopp(j,i) + t5KA
+                                            else if (Species(i).eq.1) then
+                                                 hopp(j,i) = hopp(j,i) + t5KB
+                                            end if
+                                        end if
+                                        if (Species(i).eq.1) then
+                                             hopp(j,i) = hopp(j,i) + t5KA
+                                        else if (Species(i).eq.2) then
+                                             hopp(j,i) = hopp(j,i) + t5KB
+                                        end if
+                                   end if
+                              ! narrow: the seventh shell is only 4 % further out
+                              else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 6", delta
+                                   hopp(j,i) = hopp(j,i) + t6K
+                              else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                    .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 7", delta
+                                   hopp(j,i) = hopp(j,i) + t7K
+                              else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms 8", delta
+                                   hopp(j,i) = hopp(j,i) + t8K
+                              else
+                                   !if (i.eq.1) print*, "assigning intralayer F2G2 terms beyond", dist
+                                   hopp(j,i) = hopp(j,i) + 0.0_dp
+                              end if
+                           end if
+                           if (d > 1.5_dp) then
+                               delta = 0.0_dp
+                           end if
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+
+end subroutine HamHopIntralayerKaxirasSrivani
+
+!> Intralayer hopping of graphene stacks (TypeOfBL Koshino, Mayou or HTC): F2G2, Koshino or Mayou intralayer models
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vppsigma, BLdelta, vpppi, Fc, d, delta, &
+      ilvl)
+
+   real(dp), intent(inout) :: renormalizeHoppingFactorAAp
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: vppsigma
+   real(dp), intent(inout) :: BLdelta
+   real(dp), intent(inout) :: vpppi
+   real(dp), intent(inout) :: Fc
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           if (frac) call AtomsSetCart()
+                           if (KoshinoIntralayer .or. MayouIntralayer) then
+                              ! The interlayer renormalisation factor (KoshinoSR) is not
+                              ! meant for intralayer pairs and may not be set yet here.
+                              renormalizeHoppingFactorAAp = 1.0_dp
+                              if (MIO_StringComp(BilayerModel,'Koshino')) then
+                                 if (frac) call AtomsSetCart()
+                                 if (strainedMoire) then
+                                    dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
+                                                +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                                 else
+                                    dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                                 end if
+                                 vppsigma = vppsigma0 * exp(-(dist-interlayerdistance)/(BLdelta)) * renormalizeHoppingFactorAAp
+                                 vpppi = vpppi0 * exp(-(dist-aCC)/(BLdelta)) * renormalizeHoppingFactorAAp
+                                 hopp(j,i) = hopp(j,i) + (vpppi * (1.0_dp - ((NeighD(3,j,i))/(dist))**2.0_dp) &
+                                                   + vppsigma * ((NeighD(3,j,i))/(dist))**2.0_dp)
+                              else if (MIO_StringComp(BilayerModel,'Mayou')) then
+                                 if (frac) call AtomsSetCart()
+                                 if (strainedMoire) then
+                                    dist = sqrt((NeighD(1,j,i)+ umax* sin(2.0_dp*pi*nPeriod*Rat(1,i)/LMoire))**2.0_dp  &
+                                                +NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                                 else
+                                    dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp +NeighD(3,j,i)**2.0_dp)
+                                 end if
+                                 Fc = 1.0_dp/(1.0_dp+exp((dist-rc)/lc))
+                                 vppsigma = vppsigma0 * exp(qsigma*(1.0_dp-dist/interlayerdistance)) * Fc  * renormalizeHoppingFactorAAp
+                                 vpppi = vpppi0 * exp(qpi*(1.0_dp - dist/aCC)) * Fc  * renormalizeHoppingFactorAAp
+                                 hopp(j,i) = hopp(j,i) + (vpppi * (1.0_dp - ((NeighD(3,j,i))/(dist))**2.0_dp) &
+                                                   + vppsigma * ((NeighD(3,j,i))/(dist))**2.0_dp)
+                              end if
+                           else
+                              dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                              if (useBNGKaxiras) then
+                                 if (dist .gt. 0.1_dp .and. dist .lt. aCC*1.1_dp) then
+                                      hopp(j,i) = hopp(j,i)
+                                 else if (dist .gt. aCC*1.1_dp .and. dist .lt. aG*1.1_dp) then
+                                      if (Species(i).eq.3) then
+                                          hopp(j,i) = hopp(j,i) + t2KB
+                                      else if (Species(i).eq.4) then
+                                          hopp(j,i) = hopp(j,i) + t2KN
+                                      end if
+                                 else if (dist .gt. aG*1.1_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      hopp(j,i) = hopp(j,i) + t3K
+                                 else
+                                      hopp(j,i) = hopp(j,i) + 0.0_dp
+                                 end if
+                              else
+                                 if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 1"
+                                      hopp(j,i) = hopp(j,i)
+                                 else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 2"
+                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
+                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
+                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                           ! middleTwist MUST be included for all the above systems, otherwise, we are incorrectly doing bilayer F2G2
+                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                              hopp(j,i) = hopp(j,i) + t2KSL
+                                           else
+                                              if (layerIndex(i).eq.1) then
+                                                  if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t2KA
+                                                  else if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t2KB
+                                                  end if
+                                              else if (layerIndex(i).eq.2) then
+                                                  if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t2KA
+                                                  else if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t2KB
+                                                  end if
+                                              end if
+                                           end if
+                                      else if (t3BG) then
+                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.5) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4 .or. layerIndex(i).eq.6) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           end if
+                                      else if (twoLayers .or. oneLayer) then
+                                           if (forceBilayerF2G2Intralayer) then
+                                              if (layerIndex(i).eq.1) then
+                                                  if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t2KA
+                                                  else if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t2KB
+                                                  end if
+                                              else if (layerIndex(i).eq.2) then
+                                                  if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t2KA
+                                                  else if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t2KB
+                                                  end if
+                                              end if
+                                           else
+                                              hopp(j,i) = hopp(j,i) + t2KSL
+                                           end if
+                                      else ! fourLayers
+                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t2KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t2KB
+                                               end if
+                                           end if
+                                      end if
+                                 else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 3"
+                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
+                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
+                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                              hopp(j,i) = hopp(j,i) + t3KSL
+                                           else
+                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                   hopp(j,i) = hopp(j,i) + t3K
+                                              else if (Species(i).eq.2) then
+                                                   hopp(j,i) = hopp(j,i) + t3K
+                                              end if
+                                           end if
+                                      else if (t3BG) then
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           end if
+                                      else if (twoLayers .or. oneLayer) then
+                                           if (forceBilayerF2G2Intralayer) then
+                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                   hopp(j,i) = hopp(j,i) + t3K
+                                              else if (Species(i).eq.2) then
+                                                   hopp(j,i) = hopp(j,i) + t3K
+                                              end if
+                                           else
+                                              hopp(j,i) = hopp(j,i) + t3KSL
+                                           end if
+                                      else ! fourLayers
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t3K
+                                           end if
+                                      end if
+                                 else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 4"
+                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
+                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
+                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                              hopp(j,i) = hopp(j,i) + t4KSL
+                                           else
+                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                   hopp(j,i) = hopp(j,i) + t4K
+                                              else if (Species(i).eq.2) then
+                                                   hopp(j,i) = hopp(j,i) + t4K
+                                              end if
+                                           end if
+                                      else if (t3BG) then
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           end if
+                                      else if (twoLayers .or. oneLayer) then
+                                           if (forceBilayerF2G2Intralayer) then
+                                              if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                   hopp(j,i) = hopp(j,i) + t4K
+                                              else if (Species(i).eq.2) then
+                                                   hopp(j,i) = hopp(j,i) + t4K
+                                              end if
+                                           else
+                                              hopp(j,i) = hopp(j,i) + t4KSL
+                                           end if
+                                      else ! fourLayers
+                                           if (Species(i).eq.1) then ! my A sublattice seems to have index 2
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t4K
+                                           end if
+                                      end if
+                                 else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 5", delta
+                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                            .or. fiveLayersSandwiched .or. sixLayersSandwiched &
+                                            .or. sevenLayersSandwiched .or. eightLayersSandwiched &
+                                            .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
+                                           if ((layerIndex(i).eq.3) .or. (middleTwist)) then
+                                              hopp(j,i) = hopp(j,i) + t5KSL
+                                           else
+                                              if (layerIndex(i).eq.1) then
+                                                  if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t5KA
+                                                  else if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t5KB
+                                                  end if
+                                              else if (layerIndex(i).eq.2) then
+                                                  if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t5KA
+                                                  else if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t5KB
+                                                  end if
+                                              end if
+                                           end if
+                                      else if (t3BG) then
+                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.5) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4 .or. layerIndex(i).eq.6) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           end if
+                                      else if (twoLayers .or. oneLayer) then
+                                           if (forceBilayerF2G2Intralayer) then
+                                              if (layerIndex(i).eq.1) then
+                                                  if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t5KA
+                                                  else if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t5KB
+                                                  end if
+                                              else if (layerIndex(i).eq.2) then
+                                                  if (Species(i).eq.2) then
+                                                       hopp(j,i) = hopp(j,i) + t5KA
+                                                  else if (Species(i).eq.1) then
+                                                       hopp(j,i) = hopp(j,i) + t5KB
+                                                  end if
+                                              end if
+                                           else
+                                              hopp(j,i) = hopp(j,i) + t5KSL
+                                           end if
+                                      else ! four layers
+                                           if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
+                                               if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           else if (layerIndex(i).eq.2 .or. layerIndex(i).eq.4) then
+                                               if (Species(i).eq.2) then
+                                                    hopp(j,i) = hopp(j,i) + t5KA
+                                               else if (Species(i).eq.1) then
+                                                    hopp(j,i) = hopp(j,i) + t5KB
+                                               end if
+                                           end if
+                                           if (Species(i).eq.1) then
+                                                hopp(j,i) = hopp(j,i) + t5KA
+                                           else if (Species(i).eq.2) then
+                                                hopp(j,i) = hopp(j,i) + t5KB
+                                           end if
+                                      end if
+                                 ! narrow: the seventh shell is only 4 % further out
+                                 else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 6", delta
+                                      hopp(j,i) = hopp(j,i) + t6K
+                                 else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                       .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 7", delta
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                 else if (dist .gt. 4.0_dp*aCC*0.9_dp .and. dist .lt. 4.0_dp*aCC*1.1_dp) then
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms 8", delta
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                 else
+                                      !if (i.eq.1) print*, "assigning intralayer F2G2 terms beyond", dist
+                                      hopp(j,i) = hopp(j,i) + 0.0_dp
+                                 end if
+                              end if
+                              if (d > 1.5_dp) then
+                                  delta = 0.0_dp
+                              end if
+                              ! Konda, use the chosen value of delta
+                              hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           end if
+                        ! this is where we assign the intralayer F2G2
+
+end subroutine HamHopIntralayerGraphene
+
+!> Intralayer hopping of the stack twisted bilayer graphene on hBN (t2GBN)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerT2GBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8, &
+      countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (F2G2Model) then ! use the single layer F2G2
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                              ! Add GBNtwoLayers F2G2 hopping terms
+                           else if (GBNtwoLayersF2G2s) then
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                               if (layerIndex(i).eq.2) then ! For graphene layer (the one contacting with hBN)
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i).eq.3) then ! For graphene layer using single layer F2G2
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSL
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSL
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSL
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1) then ! For hBN layer
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   ! to account for the fact we are using aBN here
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerT2GBN
+
+!> Intralayer hopping of the stack hBN / twisted bilayer graphene / hBN (BNt2GBN)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerBNt2GBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                           if (layerIndex(i).eq.2) then ! For graphene layer (the one contacting with hBN)
+                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                  countG1 = countG1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                  countG2 = countG2+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                  countG3 = countG3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSL !GfromGBN
+                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countG4 = countG4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSL !GfromGBN
+                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                  countG5 = countG5+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                  countG6 = countG6+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNB
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                  countG7 = countG7+1
+                                  hopp(j,i) = hopp(j,i) + t7KSL !GfromGBN
+                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                  countG8 = countG8+1
+                                  hopp(j,i) = hopp(j,i) + t8KSL !GfromGBN
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           else if (layerIndex(i).eq.3) then ! For graphene layer using single layer F2G2
+                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                  countG1 = countG1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                  countG2 = countG2+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t2KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSL
+                                  end if
+                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                  countG3 = countG3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSL
+                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countG4 = countG4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSL
+                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                  countG5 = countG5+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t5KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSL
+                                  end if
+                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                  countG6 = countG6+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t6KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KSL
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                  countG7 = countG7+1
+                                  hopp(j,i) = hopp(j,i) + t7KSL
+                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                  countG8 = countG8+1
+                                  hopp(j,i) = hopp(j,i) + t8KSL
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 4) then ! For hBN layer
+                               if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                  countBN1 = countBN1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                  countBN2 = countBN2+1
+                                  if (Species(i).eq.3) then
+                                     hopp(j,i) = hopp(j,i) + t2KSLBN_B !fromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSLBN_N !fromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                  countBN3 = countBN3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSLBN !fromGBN
+                               ! to account for the fact we are using aBN here
+                               else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countBN4 = countBN4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSLBN !fromGBN
+                               else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                  countBN5 = countBN5+1
+                                  if (Species(i).eq.3) then
+                                     hopp(j,i) = hopp(j,i) + t5KSLBN_B !fromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSLBN_N !fromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                  countBN6 = countBN6+1
+                                  if (Species(i).eq.3) then
+                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNB
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                  countBN7 = countBN7+1
+                                  hopp(j,i) = hopp(j,i) + t7KBN !fromGBN
+                               else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                  countBN8 = countBN8+1
+                                  hopp(j,i) = hopp(j,i) + t8KBN !fromGBN
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                        !   ! Add BNBNtwoLayers F2G2 hopping terms
+
+end subroutine HamHopIntralayerBNt2GBN
+
+!> Intralayer hopping of the stack twisted trilayer graphene with hBN (t3GwithBN)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerT3GwithBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                           if (layerIndex(i).eq.2) then ! For graphene layer (the one contacting with hBN)
+                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                  countG1 = countG1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                  countG2 = countG2+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSL !GfromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                  countG3 = countG3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSL !GfromGBN
+                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countG4 = countG4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSL !GfromGBN
+                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                  countG5 = countG5+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSL !GfromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                  countG6 = countG6+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KSL !GfromGBNB
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                  countG7 = countG7+1
+                                  hopp(j,i) = hopp(j,i) + t7KSL !GfromGBN
+                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                  countG8 = countG8+1
+                                  hopp(j,i) = hopp(j,i) + t8KSL !GfromGBN
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           else if (layerIndex(i).eq.3) then ! For graphene layer using single layer F2G2
+                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                  countG1 = countG1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                  countG2 = countG2+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t2KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSL
+                                  end if
+                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                  countG3 = countG3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSL
+                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countG4 = countG4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSL
+                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                  countG5 = countG5+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t5KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSL
+                                  end if
+                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                  countG6 = countG6+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t6KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KSL
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                  countG7 = countG7+1
+                                  hopp(j,i) = hopp(j,i) + t7KSL
+                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                  countG8 = countG8+1
+                                  hopp(j,i) = hopp(j,i) + t8KSL
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           else if (layerIndex(i).eq.4) then ! For graphene layer using single layer F2G2
+                               if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                  countG1 = countG1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                  countG2 = countG2+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t2KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSL
+                                  end if
+                               else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                  countG3 = countG3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSL
+                               else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countG4 = countG4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSL
+                               else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                  countG5 = countG5+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t5KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSL
+                                  end if
+                               else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                  countG6 = countG6+1
+                                  if (Species(i).eq.1) then
+                                     hopp(j,i) = hopp(j,i) + t6KSL
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KSL
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                  countG7 = countG7+1
+                                  hopp(j,i) = hopp(j,i) + t7KSL
+                               else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                  countG8 = countG8+1
+                                  hopp(j,i) = hopp(j,i) + t8KSL
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           else if (layerIndex(i) .eq. 1) then ! For hBN layer
+                               if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                  countBN1 = countBN1+1
+                                  hopp(j,i) = hopp(j,i)
+                               else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                  countBN2 = countBN2+1
+                                  if (Species(i).eq.3) then
+                                     hopp(j,i) = hopp(j,i) + t2KSLBN_B !fromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t2KSLBN_N !fromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                  countBN3 = countBN3+1
+                                  hopp(j,i) = hopp(j,i) + t3KSLBN !fromGBN
+                               ! to account for the fact we are using aBN here
+                               else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                  countBN4 = countBN4+1
+                                  hopp(j,i) = hopp(j,i) + t4KSLBN !fromGBN
+                               else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                  countBN5 = countBN5+1
+                                  if (Species(i).eq.3) then
+                                     hopp(j,i) = hopp(j,i) + t5KSLBN_B !fromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t5KSLBN_N !fromGBNB
+                                  end if
+                               else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                  countBN6 = countBN6+1
+                                  if (Species(i).eq.3) then
+                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNA
+                                  else
+                                     hopp(j,i) = hopp(j,i) + t6KBN !fromGBNB
+                                  end if
+                               else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                     .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                  countBN7 = countBN7+1
+                                  hopp(j,i) = hopp(j,i) + t7KBN !fromGBN
+                               else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                  countBN8 = countBN8+1
+                                  hopp(j,i) = hopp(j,i) + t8KBN !fromGBN
+                               else
+                                    hopp(j,i) = hopp(j,i) + 0.0_dp
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+                        !   ! Add BNBNtwoLayers F2G2 hopping terms
+
+end subroutine HamHopIntralayerT3GwithBN
+
+!> Intralayer hopping of the encapsulated seven-layer stack
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerEncapsulated7(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (GBNtwoLayersF2G2s) then
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                               ! For graphene layer
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i).eq.4 &
+                                     .or. layerIndex(i).eq.5 .or. layerIndex(i).eq.6 ) then
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 7) then ! For hBN layer
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   ! to account for the fact we are using aBN here
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           else if (F2G2Model) then ! use the single layer F2G2
+                               ! For graphene layer
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i) .eq. 4 &
+                                     .or. layerIndex(i).eq.5 .or. layerIndex(i).eq.6) then
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 7) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerEncapsulated7
+
+!> Intralayer hopping of the encapsulated six-layer stack
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerEncapsulated6(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (GBNtwoLayersF2G2s) then
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                               ! For graphene layer
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i).eq.4 &
+                                     .or. layerIndex(i).eq. 5) then
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 6) then ! For hBN layer
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   ! to account for the fact we are using aBN here
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           else if (F2G2Model) then ! use the single layer F2G2
+                               ! For graphene layer
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i) .eq. 4 &
+                                     .or. layerIndex(i) .eq. 5) then
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 6) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerEncapsulated6
+
+!> Intralayer hopping of the encapsulated five-layer stack
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerEncapsulated5(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (GBNtwoLayersF2G2s) then
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i).eq.4) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 5) then ! For hBN layer
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   ! to account for the fact we are using aBN here
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           else if (F2G2Model) then ! use the single layer F2G2
+                               ! For graphene layer
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3 .or. layerIndex(i) .eq. 4) then
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 5) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerEncapsulated5
+
+!> Intralayer hopping of the encapsulated four-layer stack
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerEncapsulated4(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (GBNtwoLayersF2G2s) then
+                            ! Add GBNtwoLayers F2G2 hopping terms
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i).eq.3) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 4) then ! For hBN layer
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   ! to account for the fact we are using aBN here
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           else if (F2G2Model) then ! use the single layer F2G2
+                               if (layerIndex(i) .eq. 2 .or. layerIndex(i) .eq. 3) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 4) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerEncapsulated4
+
+!> Intralayer hopping of the encapsulated three-layer stack (hBN / graphene / hBN)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerEncapsulated3(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
+      countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           ! Add GBNtwoLayers F2G2 hopping terms
+                           if (GBNtwoLayersF2G2s) then
+                               if (layerIndex(i) .eq. 2) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i) .eq. 3) then ! For hBN layer
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   ! to account for the fact we are using aBN here
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           else if (F2G2Model) then ! use the single layer F2G2
+                               if (layerIndex(i) .eq. 2) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 1 .or. layerIndex(i).eq. 3) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerEncapsulated3
+
+!> Intralayer hopping of the hBN bilayer
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerBNBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8, &
+      d, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   real(dp), intent(inout) :: d
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           !        !if (i.eq.1) print*, "aBN=", aBN
+                               !Same model for both layers
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               !    !if (i.eq.1) print*, "aBN=", aBN
+                              ! Add GBNtwoLayers F2G2 hopping terms
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta,kind=dp)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerBNBN
+
+!> Intralayer hopping of the graphene / hBN bilayer (GBNtwoLayers)
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamHopping.
+subroutine HamHopIntralayerGBN(dist, j, i, d, countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8, &
+      countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, delta, ilvl)
+
+   real(dp), intent(inout) :: dist
+   integer, intent(in) :: j
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: d
+   integer, intent(inout) :: countG1
+   integer, intent(inout) :: countG2
+   integer, intent(inout) :: countG3
+   integer, intent(inout) :: countG4
+   integer, intent(inout) :: countG5
+   integer, intent(inout) :: countG6
+   integer, intent(inout) :: countG7
+   integer, intent(inout) :: countG8
+   integer, intent(inout) :: countBN1
+   integer, intent(inout) :: countBN2
+   integer, intent(inout) :: countBN3
+   integer, intent(inout) :: countBN4
+   integer, intent(inout) :: countBN5
+   integer, intent(inout) :: countBN6
+   integer, intent(inout) :: countBN7
+   integer, intent(inout) :: countBN8
+   real(dp), intent(inout) :: delta
+   integer, intent(in) :: ilvl
+
+
+                           dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+                           if (shellsFromRigid) dist = d
+                           if (GBNtwoLayersF2G2s) then
+                               if (layerIndex(i) .eq. 1) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLGfromGBN
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLGfromGBN
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLGfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLGfromGBN
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLGfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 2) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBNfromGBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBNfromGBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNA
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KSLBNfromGBNB
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KSLBNfromGBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KSLBNfromGBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                           else if (F2G2Model) then ! use the single layer F2G2
+                               if (layerIndex(i) .eq. 1) then ! For graphene layer
+                                   if (dist .gt. aCC*0.9_dp .and. dist .lt. aCC*1.1_dp) then
+                                      countG1 = countG1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
+                                      countG2 = countG2+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
+                                      countG3 = countG3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSL
+                                   else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countG4 = countG4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSL
+                                   else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
+                                      countG5 = countG5+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSL
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
+                                      countG6 = countG6+1
+                                      if (Species(i).eq.1) then
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6K
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aG)**2.0_dp + (aCC**2.0_dp)) *1.1_dp) then
+                                      countG7 = countG7+1
+                                      hopp(j,i) = hopp(j,i) + t7K
+                                   else if (dist .gt. 4.0_dp*aCC*0.97_dp .and. dist .lt. 4.0_dp*aCC*1.03_dp) then
+                                      countG8 = countG8+1
+                                      hopp(j,i) = hopp(j,i) + t8K
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               else if (layerIndex(i) .eq. 2) then ! For hBN layer
+                                   !if (i.eq.1) print*, "aBN=", aBN
+                                   if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
+                                      countBN1 = countBN1+1
+                                      hopp(j,i) = hopp(j,i)
+                                   else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
+                                      countBN2 = countBN2+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t2KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
+                                      countBN3 = countBN3+1
+                                      hopp(j,i) = hopp(j,i) + t3KSLBN
+                                   else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
+                                      countBN4 = countBN4+1
+                                      hopp(j,i) = hopp(j,i) + t4KSLBN
+                                   else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
+                                      countBN5 = countBN5+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_B
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t5KSLBN_N
+                                      end if
+                                   else if (dist .gt. 2.0_dp*aBN*0.97_dp .and. dist .lt. 2.0_dp*aBN*1.03_dp) then
+                                      countBN6 = countBN6+1
+                                      if (Species(i).eq.3) then
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      else
+                                         hopp(j,i) = hopp(j,i) + t6KBN
+                                      end if
+                                   else if (dist .gt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *0.9_dp &
+                                         .and. dist .lt. dsqrt((2.0_dp*aBN)**2.0_dp + (aBN1**2.0_dp)) *1.1_dp) then
+                                      countBN7 = countBN7+1
+                                      hopp(j,i) = hopp(j,i) + t7KBN
+                                   else if (dist .gt. 4.0_dp*aBN1*0.97_dp .and. dist .lt. 4.0_dp*aBN1*1.03_dp) then
+                                      countBN8 = countBN8+1
+                                      hopp(j,i) = hopp(j,i) + t8KBN
+                                   else
+                                        hopp(j,i) = hopp(j,i) + 0.0_dp
+                                   end if
+                               end if
+                              ! Add GBNtwoLayers F2G2 hopping terms
+                           end if
+                           if (d > 1.7_dp) then
+                               delta = 0.0_dp
+                           end if
+                           ! Konda, use the chosen value of delta
+                           hopp(j,i) = hopp(j,i) + cmplx(gn(Species(i),Species(NList(j,i)),ilvl) - 1.0_dp*delta)
+                           !if (i.eq.1) print*, "GBNF2G2", hopp(j,i)
+
+end subroutine HamHopIntralayerGBN
 
 end subroutine HamHopping
 
