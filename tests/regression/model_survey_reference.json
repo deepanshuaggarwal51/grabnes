@@ -1544,7 +1544,7 @@
   "status": "REFUSED"
  },
  "xyz4": {
-  "fingerprint": "07b5c795d3bdbb52",
+  "fingerprint": "82e7eb38c9d50e53",
   "status": "ok"
  },
  "xyz4+forceBilayerF2G2Intralayer=F": {
@@ -1652,15 +1652,15 @@
   "status": "ok"
  },
  "xyz4_tdbg": {
-  "fingerprint": "a0bf63cb9a61e6d5",
+  "fingerprint": "6b40c8ddbf48304d",
   "status": "ok"
  },
  "xyz4_tdbg_from_structure": {
-  "fingerprint": "949a7fc751cf163a",
+  "fingerprint": "6b40c8ddbf48304d",
   "status": "ok"
  },
  "xyz4_tdbg_from_structure+ModelFromTwist=F": {
-  "fingerprint": "29c9e2832c6e6606",
+  "fingerprint": "020ee8cb2a451d7b",
   "status": "ok"
  },
  "xyz4_tdbg_from_structure_t5zero": {

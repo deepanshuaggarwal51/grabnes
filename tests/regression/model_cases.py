@@ -241,16 +241,11 @@ xyz_case("xyz4", "x4", fourLayers=T, forceBilayerF2G2Intralayer=T)
 case("xyz4+forceBilayerF2G2Intralayer=F", "xyz4", "x4", forceBilayerF2G2Intralayer=F)
 # Twisted double bilayer: the explicit switches (fourLayers: layers 1-2 and 3-4 are Bernal pairs with the bilayer
 # F2G2 model) and the choice of the model from the structure (Stack.ModelFromTwist) must build the same
-# Hamiltonian: xyz4_tdbg_t5zero and xyz4_tdbg_from_structure_t5zero must have the same fingerprint. They are run
-# with the fifth-shell parameters of the bilayer model set to zero, because the fourLayers branch adds that term
-# twice (a defect of the explicit route, kept as it is until it is decided; see xyz4_tdbg for its present result).
-TDBG = {"TB.OnSiteC1": "0.010", "TB.OnSiteC2": "0.025"}
-T5ZERO = dict(TDBG, Bilayert5KA="0.0", Bilayert5KB="0.0")
+# Hamiltonian: xyz4_tdbg and xyz4_tdbg_from_structure must have the same fingerprint. All four layers belong to
+# an AB pair here, so the site energy of the single-layer model (TB.OnSiteC) plays no role.
+TDBG = {"TB.OnSiteC1": "0.4295", "TB.OnSiteC2": "0.4506"}
 xyz_case("xyz4_tdbg", "x4dbl", fourLayers=T, forceBilayerF2G2Intralayer=T, **TDBG)
-xyz_case("xyz4_tdbg_t5zero", "x4dbl", fourLayers=T, forceBilayerF2G2Intralayer=T, **T5ZERO)
 xyz_case("xyz4_tdbg_from_structure", "x4dbl", fourLayersSandwiched=T, middleTwist=T, **dict(TDBG, **{"Stack.ModelFromTwist": T}))
-xyz_case("xyz4_tdbg_from_structure_t5zero", "x4dbl", fourLayersSandwiched=T, middleTwist=T,
-         **dict(T5ZERO, **{"Stack.ModelFromTwist": T}))
 case("xyz4_tdbg_from_structure+ModelFromTwist=F", "xyz4_tdbg_from_structure", "x4dbl", **{"Stack.ModelFromTwist": F})
 xyz_case("xyz4_sandwiched", "x4", fourLayersSandwiched=T, middleTwist=T)
 case("xyz4_sandwiched+middleTwist=F", "xyz4_sandwiched", "x4", middleTwist=F)

@@ -3017,14 +3017,16 @@ subroutine HamOnSiteSpeciesEnergies()
       else if (Species(i)==4) then
          H0(i) = e0_N
       else if (hamModelFromTwist .and. (e0_C1 .ne. 0.0_dp .or. e0_C2 .ne. 0.0)) then
-         ! pair model chosen from the structure: the two site energies of the bilayer F2G2 model in the AB
-         ! pairs (e0_C2 on the dimer sites), their average elsewhere
+         ! pair model chosen from the structure: in the AB pairs the two site energies of the bilayer F2G2
+         ! model (Jung and MacDonald, PRB 89, 035405: TB.OnSiteC1 = 0.4295 eV on the sites without an atom of
+         ! the other layer on top, TB.OnSiteC2 = 0.4506 eV on the dimer sites); in every other graphene layer
+         ! the site energy of the single-layer model, TB.OnSiteC
          if (hamF2G2Site(i) == 1) then
             H0(i) = e0_C1
          else if (hamF2G2Site(i) == 2) then
             H0(i) = e0_C2
          else
-            H0(i) = (e0_C1+e0_C2)/2.0_dp
+            H0(i) = e0_C
          end if
       ! we dont enter this clause for most single layer F2G2 systems not sure why i am specifying it
       else if (e0_C1 .ne. 0.0_dp .or. e0_C2 .ne. 0.0) then
@@ -4971,6 +4973,7 @@ subroutine HamHopping
              t7K = t7K/g0
              t8K = t8K/g0
          end if
+         if (hamModelFromTwist) call HamHopReportModelEnergies()
          call MIO_InputParameter('Stack.T3BG',t3BG,.false.)
          if (t3BG) then
              t1K = g0/g0
@@ -9616,11 +9619,9 @@ subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vpp
                                                     hopp(j,i) = hopp(j,i) + t5KB
                                                end if
                                            end if
-                                           if (Species(i).eq.1) then
-                                                hopp(j,i) = hopp(j,i) + t5KA
-                                           else if (Species(i).eq.2) then
-                                                hopp(j,i) = hopp(j,i) + t5KB
-                                           end if
+                                           ! (a second block added t5KA / t5KB once more here, so that the fifth-shell
+                                           ! term of the fourLayers stacks was twice the value of the model; removed
+                                           ! in October 2026: Table II of Jung and MacDonald, PRB 89, 035405)
                                       end if
                                  ! narrow: the seventh shell is only 4 % further out
                                  else if (dist .gt. 2.0_dp*aG*0.97_dp .and. dist .lt. 2.0_dp*aG*1.03_dp) then
@@ -11400,6 +11401,42 @@ subroutine HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, 
                 end if
 
 end subroutine HamHopBondTermsMoire
+
+!> Dirac energy of the single-layer and of the bilayer F2G2 parameters, printed when the model of each pair of
+!! layers is chosen from the structure (internal procedure of HamHopping).
+!!
+!! At the K point the nearest-neighbor terms vanish and the same-sublattice shells contribute -3 (second
+!! shell), +6 (fifth) and -3 (sixth) times their hopping, so the energy of a sublattice at K is
+!!    E = site energy - 3 t2 + 6 t5 - 3 t6        (hoppings as in the papers; the code stores minus the hopping).
+!! With the values of Jung and MacDonald (PRB 89, 035405) the bilayer sites without an atom on top lie at
+!! 0.0000 eV and the dimer sites at 0.0150 eV. If the single-layer part of a stack lies elsewhere, the two parts
+!! are shifted against each other like by a potential difference between the layers.
+subroutine HamHopReportModelEnergies()
+
+   use tbpar,                only : e0_C, e0_C1, e0_C2
+
+   ! Other local variables
+   real(dp) :: eSL, eA, eB
+
+   if (ieee_is_nan(t2KSL) .or. ieee_is_nan(t5KSL) .or. ieee_is_nan(t2KA) .or. ieee_is_nan(t5KA)) then
+      call MIO_Print('Stack.ModelFromTwist: the single-layer or the bilayer F2G2 parameters are not set for '// &
+        'this system; the energies of the two models are not compared','ham')
+   else
+      eSL = (e0_C + 3.0_dp*t2KSL - 6.0_dp*t5KSL + 3.0_dp*t6K)*g0
+      eA = (e0_C1 + 3.0_dp*t2KA - 6.0_dp*t5KA + 3.0_dp*t6K)*g0
+      eB = (e0_C2 + 3.0_dp*t2KB - 6.0_dp*t5KB + 3.0_dp*t6K)*g0
+      call MIO_Print('Stack.ModelFromTwist: energy at the K point of each set of parameters','ham')
+      call MIO_Print('  single-layer F2G2 (TB.OnSiteC):                '//trim(num2str(eSL,4))//' eV','ham')
+      call MIO_Print('  bilayer F2G2, no atom on top (TB.OnSiteC1):    '//trim(num2str(eA,4))//' eV','ham')
+      call MIO_Print('  bilayer F2G2, dimer sites (TB.OnSiteC2):       '//trim(num2str(eB,4))//' eV','ham')
+      if (abs(eSL - eA) > 0.005_dp) then
+         call MIO_Print('WARNING: the single-layer and the bilayer part of the stack are offset by '// &
+           trim(num2str(eSL - eA,4))//' eV. Unless a potential difference between them is intended, choose '// &
+           'TB.OnSiteC, TB.OnSiteC1 and TB.OnSiteC2 so that the first two energies above agree.','ham')
+      end if
+   end if
+
+end subroutine HamHopReportModelEnergies
 
 !> True if the layers L1 and L2 are an untwisted AB pair for which the model is chosen from the structure.
 logical function HamBondInABPair(L1, L2)
