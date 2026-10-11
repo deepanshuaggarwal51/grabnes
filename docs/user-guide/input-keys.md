@@ -385,8 +385,8 @@ name (if both are given, the present name is used and the solver prints a warnin
 | `Moire.HeightAmp` | `MoireHeightAmp` | real | `0.1` | ham.F90: HamInit |
 | `Moire.Jeil` | `MoireJeil` | logical | `.false.` | ham.F90: HamOnSiteMoirePotential |
 | `Moire.Kekule` | `MoireKekule` | logical | `.false.` | ham.F90: HamOnSiteMoirePotential |
-| `Moire.KekuleAngle` | `MoireKekuleAngle` | real | `30.0` | ham.F90: HamOnSiteMoirePotential |
-| `Moire.KekuleEpsFactor` | `MoireKekuleEpsFactor` |  | `sqrt(3.0)` | ham.F90: HamOnSiteMoirePotential |
+| `Moire.KekuleAngle` | `MoireKekuleAngle` | real | `30.0` | ham.F90: HamOnSiteMoireKekule |
+| `Moire.KekuleEpsFactor` | `MoireKekuleEpsFactor` |  | `sqrt(3.0)` | ham.F90: HamOnSiteMoireKekule |
 | `Moire.LatticePercent` | `Latticepercent` | real | `-0.018181818181818` | ham.F90: HamHopping; ham.F90: HamOnSite |
 | `Moire.LatticePercentFactor` | `LatticepercentFactor` | real | `1.0` | ham.F90: HamHopSecondMoire; ham.F90: HamOnSiteMoirePotential |
 | `Moire.LayerShift1` | `MoireLayerShift1` | real | `0.0` | ham.F90: HamHopping; ham.F90: HamOnSiteMoirePotential |
@@ -402,7 +402,7 @@ name (if both are given, the present name is used and the solver prints a warnin
 | `Moire.PotB` | `MoirePotB` | real | `0.042` | ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotB1` | `MoirePotB1` |  | `B` | ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotB2` | `MoirePotB2` |  | `B` | ham.F90: HamOnSiteMoirePotential |
-| `Moire.PotC` | `MoirePotC` | real | `0.0` | ham.F90: HamOnSiteMoirePotential |
+| `Moire.PotC` | `MoirePotC` | real | `0.0` | ham.F90: HamOnSiteMoireKekule; ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotC0` | `MoirePotC0` | real | `-0.01013` | ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotCab` | `MoirePotCab` | real | `0.01134` | ham.F90: HamHopping; ham.F90: HamOnSiteMoirePotential |
 | `Moire.PotCabBN` | `MoirePotCabBN` | real | `0.004418` | ham.F90: HamHopping |

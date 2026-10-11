@@ -103,19 +103,34 @@ def main():
     p.add_argument("--unset", default="hamUnset", help="variable of the routine that holds the 'not set' value")
     p.add_argument("--shared-ok", nargs="*", default=[],
                    help="shared variables the branch may assign (written by one thread only, e.g. a print-once flag)")
+    p.add_argument("--host", default="",
+                   help="ROUTINE is itself an internal procedure of HOST: the declarations are those of HOST and the "
+                        "new procedure becomes another internal procedure of HOST, placed after ROUTINE")
     a = p.parse_args()
 
     lines = open(a.file).read().split("\n")
     r0 = next(i for i, l in enumerate(lines) if re.match(r"^\s*subroutine\s+" + a.routine + r"\b", l, re.I))
     r1 = next(i for i, l in enumerate(lines) if i > r0 and re.match(r"^\s*end\s+subroutine\s+" + a.routine + r"\b", l, re.I))
-    contains = next((i for i in range(r0, r1) if re.match(r"^\s*contains\s*$", ob.code(lines[i]), re.I)), None)
-    if contains is None:
-        sys.exit("the routine has no internal procedures yet (use outline_block.py first)")
+    if a.host:
+        x0, x1 = r0, r1                  # the internal procedure that holds the loop
+        r0 = next(i for i, l in enumerate(lines) if re.match(r"^\s*subroutine\s+" + a.host + r"\b", l, re.I))
+        r1 = next(i for i, l in enumerate(lines) if i > r0 and re.match(r"^\s*end\s+subroutine\s+" + a.host + r"\b", l, re.I))
+        contains = next((i for i in range(r0, r1) if re.match(r"^\s*contains\s*$", ob.code(lines[i]), re.I)), None)
+        if contains is None or not contains < x0 < x1 < r1:
+            sys.exit(f"{a.routine} is not an internal procedure of {a.host}")
+        if any(decl_match(ob.code(l)) for l in lines[x0 + 1:x1]):
+            sys.exit(f"{a.routine} has declarations of its own: not supported with --host")
+        body_lo, body_hi, insert_at, else_hi = x0 + 1, x1, x1 + 1, r1
+    else:
+        contains = next((i for i in range(r0, r1) if re.match(r"^\s*contains\s*$", ob.code(lines[i]), re.I)), None)
+        if contains is None:
+            sys.exit("the routine has no internal procedures yet (use outline_block.py first)")
+        body_lo, body_hi, insert_at, else_hi = r0 + 1, contains, r1, contains
     if any(re.match(r"^\s*(subroutine|function)\s+" + a.name + r"\b", l, re.I) for l in lines):
         sys.exit(f"a procedure named {a.name} exists already")
     decl = declarations(lines, r0 + 1, contains)
 
-    st = ob.statements(lines, r0 + 1, contains)
+    st = ob.statements(lines, body_lo, body_hi)
     stack = []                       # open blocks: [kind, index of the header statement]
     private, pending_private = set(), None
     target = None
@@ -235,7 +250,7 @@ def main():
     if a.locals:
         marker = False
         elsewhere = []
-        for n in range(r0 + 1, contains):
+        for n in range(r0 + 1, else_hi):
             l = lines[n]
             if "! >>> unset markers" in l:
                 marker = True
@@ -296,9 +311,9 @@ def main():
         header = wrapped(f"subroutine {a.name}(", arglist + ")", "      ")
     kind = "function" if function else "subroutine"
     proc = ["!> " + a.doc,
-            "!! Internal procedure of " + a.routine + ", called for one bond inside the parallel loop. The variables that are",
+            "!! Internal procedure of " + (a.host or a.routine) + ", called inside the parallel loop" + (" of " + a.routine if a.host else " for one bond") + ". The variables that are",
             "!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those",
-            "!! of " + a.routine + "." + (" The result is .true. where the bond is to be skipped (cycle)." if function else "")]
+            "!! of " + (a.host or a.routine) + "." + (" The result is .true. where the bond is to be skipped (cycle)." if function else "")]
     ldecls, linit = [], []
     for n in local:
         typ, attrs, dims, name = decl[n]
@@ -313,7 +328,7 @@ def main():
 
     new = lines[:first] + call + lines[last + 1:]
     shift = len(call) - (last - first + 1)
-    new[r1 + shift:r1 + shift] = proc
+    new[insert_at + shift:insert_at + shift] = ([""] if a.host else []) + proc
     print(f"{a.routine}: lines {first + 1}-{last + 1} ({last - first + 1} lines) -> internal {kind} {a.name} with "
           f"{len(args)} arguments" + (f", {len(local)} local variables" if local else "")
           + (f", {len(cycles)} cycle statement(s)" if cycles else "")

@@ -48,9 +48,7 @@ OpenMP region that is opened outside them.
   `HamHopRealisticBubbles`, `HamHopMagneticField`, `HamHopHaldane`,
   `HamHopWriteTables`).
 
-`HamOnSiteMoirePotential` (1300 lines) and `HamHopRealStrain` (316 lines) are
-still long; they can be split further in the same way, by the model they
-serve.
+`HamOnSiteMoirePotential` and `HamHopRealStrain` were split later (step 3).
 
 ## Step 2 (done): the main loop of `HamHopping`
 
@@ -84,7 +82,22 @@ every bond. It is now a loop of about 400 lines that dispatches to one procedure
    `HamHopping` were no longer used and are removed; the others are grouped under headings (switches,
    model parameters, counters, per-thread variables, other).
 
-## Step 3 (next)
+## Step 3, first part (done)
+
+- **`HamOnSiteMoirePotential`**: from 1310 to about 530 lines. The loop over atoms of the structure-based stacks
+  calls one procedure per system (`HamOnSiteAtomHarmonicTBG`, `HamOnSiteAtomHarmonicBNBN`,
+  `HamOnSiteAtomHarmonicGBN`); the effective models are `HamOnSiteMoireEffective` (graphene/hBN, one moire),
+  `HamOnSiteMoireEffectiveBilayer`, `HamOnSiteSecondMoireTerms` and `HamOnSiteMoireKekule`. Both tools take
+  `--host HOST` for a block that lies in an internal procedure: the new procedure becomes another internal
+  procedure of the host (an internal procedure cannot contain procedures).
+- **`HamHopRealStrain`**: from 316 to 118 lines. The rule that gives the unstrained length of a bond from its
+  neighbor shell stood 19 times in the loop (once per stack and kind of layer); the 19 copies were compared
+  with one template by a script, found identical, and replaced by calls of one module function,
+  `HamStrainReferenceDistance(d, a1, a, a1Ref, aRef)`.
+- The remaining long procedure is `HamOnSiteAtomHarmonicGBN` (366 lines: graphene/hBN, the encapsulated and
+  the mixed stacks in one chain).
+
+## Step 3, remaining
 
 - **Which model for which layers.** F2G2 is the more accurate intralayer model for untwisted layers; the
   two-center interlayer model with `KoshinoSR` and `couplingFactor` is the one to use whenever two graphene
@@ -97,8 +110,6 @@ every bond. It is now a loop of about 400 lines that dispatches to one procedure
   short argument lists that can be tested alone.
 - **Duplicates.** `HamHopIntralayerEncapsulated3` to `7` are near copies of about 180 lines each; the
   `...GBN`, `...T3GwithBN`, `...BNt2GBN`, `...T2GBN` procedures share most of their text with them.
-- `HamOnSiteMoirePotential` (1300 lines) and `HamHopRealStrain` (316 lines) can be split by model in the
-  same way.
 
 ## Model of each pair of layers chosen from the structure (opt-in)
 

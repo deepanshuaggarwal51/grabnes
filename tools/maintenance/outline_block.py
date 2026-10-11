@@ -90,6 +90,9 @@ def main():
     p.add_argument("name")
     p.add_argument("doc")
     p.add_argument("--apply", action="store_true")
+    p.add_argument("--host", default="",
+                   help="ROUTINE is itself an internal procedure of HOST: the new procedure becomes another internal "
+                        "procedure of HOST, placed after ROUTINE (an internal procedure cannot contain procedures)")
     a = p.parse_args()
 
     lines = open(a.file).read().split("\n")
@@ -212,7 +215,7 @@ def main():
         replaced_first, replaced_last = move_first, move_last
         body = moved
 
-    doc = ["!> " + a.doc + " (internal procedure of " + a.routine + ": it uses the variables of that routine)"]
+    doc = ["!> " + a.doc + " (internal procedure of " + (a.host or a.routine) + ": it uses the variables of that routine)"]
     proc = doc + [f"subroutine {a.name}()", ""] + \
         ["#ifdef DEBUG", f"   call MIO_Debug('{a.name}',0)", "#endif /* DEBUG */", ""] + body + \
         ["", "#ifdef DEBUG", f"   call MIO_Debug('{a.name}',1)", "#endif /* DEBUG */", "", f"end subroutine {a.name}", ""]
@@ -220,7 +223,9 @@ def main():
     new = lines[:replaced_first] + call + lines[replaced_last + 1:]
     shift = len(call) - (replaced_last - replaced_first + 1)
     end_line = r1 + shift
-    if contains is None:
+    if a.host:
+        new[end_line + 1:end_line + 1] = [""] + proc[:-1]
+    elif contains is None:
         new[end_line:end_line] = ["contains", ""] + proc
     else:
         new[end_line:end_line] = proc

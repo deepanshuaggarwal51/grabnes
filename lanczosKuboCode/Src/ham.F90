@@ -139,6 +139,42 @@ function HamRigidBondXY(i, jj, bond) result(d)
 
 end function HamRigidBondXY
 
+!> Unstrained length of an intralayer bond, for the strain law t = t0 exp(-beta (d/d0 - 1)) (Structure.RealStrain).
+!!
+!! The neighbor shell of the bond is found from the length `d` (the length of the bond, or its in-plane length
+!! in a rigid reference structure with Neigh.ShellsFromRigidPositions) with windows of +-10 % around the ideal
+!! shell distances of a honeycomb lattice with first-shell distance `a1` and lattice constant `a`. The result
+!! is the distance of that shell in the reference lattice (`a1Ref`, `aRef`: the lattice the hoppings were
+!! fitted for). Shells: 1 (a/sqrt(3)), 2 (a), 3 (2 a1), 4 (a fixed 3.75696 A, between 2.2 a1 and 4 A), 5 (3 a1).
+!! A length outside every window gives NaN: the bond has no reference distance and the caller reports it.
+function HamStrainReferenceDistance(d, a1, a, a1Ref, aRef) result(refDist)
+
+   use, intrinsic :: ieee_arithmetic, only : ieee_value, ieee_quiet_nan
+
+   ! Arguments
+   real(dp), intent(in) :: d
+   real(dp), intent(in) :: a1
+   real(dp), intent(in) :: a
+   real(dp), intent(in) :: a1Ref
+   real(dp), intent(in) :: aRef
+   real(dp) :: refDist
+
+   if (d .gt. a1*0.9_dp .and. d .lt. a1*1.1_dp) then
+      refDist = aRef/sqrt(3.0_dp)
+   else if (d .gt. a*0.9_dp .and. d .lt. a*1.1_dp) then
+      refDist = aRef
+   else if (d .gt. 2.0_dp*a1*0.9_dp .and. d .lt. a1*2.0_dp*1.1_dp) then
+      refDist = 2.0_dp*a1Ref
+   else if (d .gt. 2.0_dp*a1*1.1_dp .and. d .lt. 4.0_dp) then
+      refDist = 3.75696_dp
+   else if (d .gt. (a1*3.0_dp)*0.9_dp .and. d .lt. (a1*3.0_dp)*1.1_dp) then
+      refDist = a1Ref*3.0_dp
+   else
+      refDist = ieee_value(refDist, ieee_quiet_nan)
+   end if
+
+end function HamStrainReferenceDistance
+
 !> @brief Initialize Hamiltonian parameters and neighbor lists.
 !! @details Reads input parameters (strain, Zeeman terms, models), prepares neighbor
 !! lists and internal arrays, and sets module state. On-site terms are computed in
@@ -2061,6 +2097,196 @@ subroutine HamOnSiteMoirePotential()
                            + ((1.0_dp+eps) * sin(GBNAngle) * (Rat(1,i)))
               end if
               if (tBGDiag) then
+                 call HamOnSiteAtomHarmonicTBG(i, dxTemp, dx, dyTemp, dy, Hjj, CApAp, PhiApAp, CApAp0, CBpBp, &
+                       PhiBpBp, CBpBp0, CAA, PhiAA, CAA0, CBB, PhiBB, CBB0)
+              else if (BNBNDiag) then
+                 call HamOnSiteAtomHarmonicBNBN(i, dxTemp, dx, dyTemp, dy, Hjj, CApAp, PhiApAp, CApAp0, CBpBp, &
+                       PhiBpBp, CBpBp0, CAA, PhiAA, CAA0, CBB, PhiBB, CBB0)
+              else if (GBNuseHarmonicApprox) then
+                  call HamOnSiteAtomHarmonicGBN(A, B, C, i, dxTemp, dx, dyTemp, dy, Hjj, dxTemp_b, dx_b, dyTemp_b, &
+                        dy_b, dxTemp_t, dx_t, dyTemp_t, dy_t, Hjj_b, Hjj_t, CApAp, PhiApAp, CApAp0, CBpBp, PhiBpBp, &
+                        CBpBp0, CAA, PhiAA, CAA0, CBB, PhiBB, CBB0)
+              end if
+              H0(i) = H0(i) + Hjj
+            end do
+            !$OMP END PARALLEL DO
+
+      else if (l) then
+         call MIO_Print('Moire Trilayer','ham')
+         call MIO_InputParameter('Moire.PotA1',A1,A)
+         call MIO_InputParameter('Moire.PotB1',B1,B)
+         call MIO_InputParameter('Moire.PotA2',A2,A)
+         call MIO_InputParameter('Moire.PotB2',B2,B)
+         call MIO_InputParameter('Moire.Trin1',n1,0)
+         call MIO_InputParameter('Moire.Trim1',m1,0)
+         call MIO_InputParameter('Moire.Trin2',n2,0)
+         call MIO_InputParameter('Moire.Trim2',m2,0)
+         call MIO_Print('  A1: '//trim(num2str(A1,4)),'ham')
+         call MIO_Print('  B1: '//trim(num2str(B1,4)),'ham')
+         call MIO_Print('  A2: '//trim(num2str(A2,4)),'ham')
+         call MIO_Print('  B2: '//trim(num2str(B2,4)),'ham')
+         call MIO_Print('  C : '//trim(num2str(C,4)),'ham')
+         A1 = A1/g0
+         B1 = B1/g0
+         A2 = A2/g0
+         B2 = B2/g0
+         C = C/g0
+         lambda1 = n1*aG/real(m1,dp)
+         lambda2 = n2*n1*aG/real(m2,dp)
+         call MIO_Print('lambda 1: '//trim(num2str(lambda1,5))//' Ang','ham')
+         call MIO_Print('lambda 2: '//trim(num2str(lambda2,5))//' Ang','ham')
+         !$OMP PARALLEL DO PRIVATE(i)
+         do i=1,nAt
+            H0(i) = H0(i) - (-1.0_dp)**Species(i)*(A1*sin(twopi*Rat(1,i)*n2*m1) + &
+              B1*sin(twopi*Rat(2,i)*n2*m1) +  A2*sin(twopi*Rat(1,i)*m2) + &
+              B2*sin(twopi*Rat(2,i)*m2) + C)/2.0_dp
+         end do
+         !$OMP END PARALLEL DO
+      else
+         call MIO_InputParameter('Moire.Sachs',l,.false.)
+         if (l) then
+           call MIO_Print('Actually adding the Sachs potential...','ham')
+           call MIO_Print('  A: '//trim(num2str(A,4)),'ham')
+           call MIO_Print('  B: '//trim(num2str(B,4)),'ham')
+           call MIO_Print('  C: '//trim(num2str(C,4)),'ham')
+           A = A/g0
+           B = B/g0
+           C = C/g0
+           !$OMP PARALLEL DO PRIVATE(i)
+           do i=1,nAt
+              H0(i) = H0(i) - (-1.0_dp)**Species(i)*(A*sin(twopi*Rat(1,i)*sCell+phi1) + &
+                B*sin(twopi*Rat(2,i)*sCell+phi2) + C)/2.0_dp
+           end do
+           !$OMP END PARALLEL DO
+         end if
+         call MIO_InputParameter('Moire.Jeil',l,.false.)
+         call MIO_InputParameter('Structure.SingleLayerXYZ',singleLayerXYZ,.false.)
+         if (l) then
+           call MIO_Print('Actually adding the Jeil potential...','ham')
+           call MIO_InputParameter('Run.TypeOfSystem',str,'Graphene')
+           call MIO_InputParameter('Trilayer.FanZhang',FanZhang,.false.)
+           if (MIO_StringComp(str,'MoireEncapsulatedBilayer') &
+                 .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell') &
+                 .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ))) then
+             call MIO_Print('Working on MoireEncapsulatedBilayer or MoireEncapsulatedBilayerBasedOnMoireCell or ReadXYZ but not a single layer','ham')
+             call MIO_InputParameter('Moire.OnlyH0',l,.false.)
+             call MIO_InputParameter('Moire.OnlyHZ',w,.false.)
+             call MIO_InputParameter('Moire.NoH0AndHZ',v,.false.)
+             call MIO_InputParameter('Moire.H0AndHZ',u,.false.)
+             if (.not. (l .or. w .or. v .or. u)) then
+                call MIO_Kill('The moire potential needs one of MoireH0AndHZ, MoireOnlyH0, MoireOnlyHZ or '// &
+                  'MoireNoH0AndHZ set to .true. to say which on-site terms are applied; without any of them the '// &
+                  'terms were never set. MoireH0AndHZ .true. applies both.','ham','HamOnSite')
+             end if
+             call MIO_InputParameter('Moire.BilayerTopAngle',MoireBilayerTopAngle,0.0_dp)
+             MoireBilayerTopAngleGrad = MoireBilayerTopAngle*pi/180.0_dp
+             call MIO_InputParameter('Moire.BilayerBottomAngle',MoireBilayerBottomAngle,0.0_dp)
+             MoireBilayerBottomAngleGrad = MoireBilayerBottomAngle*pi/180.0_dp
+             call MIO_InputParameter('Moire.BLDeactivateUpperLayer',deactivateUpperLayer,.false.)
+             call MIO_InputParameter('Moire.TDBLDeactivateUpperLayers',deactivateUpperLayers,.false.)
+             if (frac) call AtomsSetCart()
+             call HamOnSiteMoireEffectiveBilayer()
+           !        ! add onsite energies
+           else
+             call MIO_Print('Working on ANY moire system not satisfying MoireEncapsulatedBilayer or MoireEncapsulatedBilayerBasedOnMoireCell or ReadXYZ but not a single layer','ham')
+             call MIO_InputParameter('Moire.OnlyH0',l,.false.)
+             call MIO_InputParameter('Moire.OnlyHZ',w,.false.)
+             call MIO_InputParameter('Moire.NoH0AndHZ',v,.false.)
+             call MIO_InputParameter('Moire.H0AndHZ',u,.false.)
+             if (.not. (l .or. w .or. v .or. u)) then
+                call MIO_Kill('The moire potential needs one of MoireH0AndHZ, MoireOnlyH0, MoireOnlyHZ or '// &
+                  'MoireNoH0AndHZ set to .true. to say which on-site terms are applied; without any of them the '// &
+                  'terms were never set. MoireH0AndHZ .true. applies both.','ham','HamOnSite')
+             end if
+             call MIO_InputParameter('Moire.Kekule',z,.false.)
+             call MIO_InputParameter('Moire.AddSecondMoire',zz,.false.)
+             call MIO_InputParameter('Moire.LatticePercentFactor',epsFactor,1.0_dp)
+             call MIO_InputParameter('Structure.BasedOnMoireCellParameters',ll,.false.)
+             call MIO_InputParameter('Moire.SwitchHzjj',switchHzjj,.false.)
+
+             if (ll) then
+                 twistAngleGrad = -phiForEffectiveModel*pi/180.0_dp
+                 twistAngleGrad2 = phiForEffectiveModel*pi/180.0_dp
+                 call MIO_InputParameter('Structure.MoireCellParameters',nnn,[0,0,0,0])
+             else
+                 call MIO_InputParameter('Moire.TwistAngle',twistAngle,0.0_dp)
+                 call MIO_InputParameter('Moire.TwistAngle2',twistAngle2,0.0_dp)
+                 twistAngleGrad = twistAngle*pi/180.0_dp
+                 twistAngleGrad2 = twistAngle2*pi/180.0_dp
+             end if
+             call MIO_InputParameter('Moire.Twisted',twisted,.false.)
+             call MIO_InputParameter('Moire.Twisted2',twisted2,.false.)
+             call MIO_InputParameter('Intralayer.DeactivateASubLattice',deactivateASubLattice,.false.)
+             call MIO_InputParameter('Intralayer.DeactivateBSubLattice',deactivateBSubLattice,.false.)
+             call MIO_InputParameter('Moire.LayerShift1',shift1,0.0_dp)
+             call MIO_InputParameter('Moire.LayerShift2',shift2,0.0_dp)
+             phi2M= atan((1.0_dp+eps)*sin(twistAngleGrad2)/((1.0_dp+eps)*cos(twistAngleGrad2)-1.0_dp))
+             shift2_x = shift2*cos(phi2M)
+             shift2_y = shift2*sin(phi2M)
+             call MIO_InputParameter('Moire.SecondMoireRotateFirst',rotateFirst,.true.)
+             call MIO_InputParameter('Moire.SecondMoireMassFactor',sign2,1.0_dp)
+             call MIO_InputParameter('Moire.FirstMoireMassFactor',sign1,1.0_dp)
+             call MIO_InputParameter('Potential.MinZ',minZ,1.0_dp)
+             if (frac) call AtomsSetCart()
+             call HamOnSiteMoireEffective()
+             H0Bottom = H0
+             if (zz) call HamOnSiteSecondMoireTerms()
+             if (z) call HamOnSiteMoireKekule()
+           end if
+           if (.not. frac) call AtomsSetFrac()
+         end if
+         call MIO_Print('')
+      end if
+      call MIO_InputParameter('Moire.SymmetricPot',l,.false.)
+      if (l) then
+         call MIO_InputParameter('Moire.SymmA',A,0.01_dp)
+         call MIO_InputParameter('Moire.SymmB',B,0.01_dp)
+         call MIO_print('Symmetric part:')
+         call MIO_Print('  A: '//trim(num2str(A,4)),'ham')
+         call MIO_Print('  B: '//trim(num2str(B,4)),'ham')
+         A = A/g0
+         B = B/g0
+         !$OMP PARALLEL DO PRIVATE(i)
+         do i=1,nAt
+            H0(i) = H0(i) + (A*sin(twopi*Rat(1,i)*sCell) + &
+              B*sin(twopi*Rat(2,i)*sCell))/2.0_dp
+         end do
+         !$OMP END PARALLEL DO
+      end if
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteMoirePotential',1)
+#endif /* DEBUG */
+
+end subroutine HamOnSiteMoirePotential
+
+!> Moire on-site term of one atom from its stacking displacement: twisted bilayer graphene (TBG.Diag).
+!! Internal procedure of HamOnSite, called inside the parallel loop of HamOnSiteMoirePotential. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamOnSite.
+subroutine HamOnSiteAtomHarmonicTBG(i, dxTemp, dx, dyTemp, dy, Hjj, CApAp, PhiApAp, CApAp0, CBpBp, PhiBpBp, CBpBp0, &
+      CAA, PhiAA, CAA0, CBB, PhiBB, CBB0)
+
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dxTemp
+   real(dp), intent(inout) :: dx
+   real(dp), intent(inout) :: dyTemp
+   real(dp), intent(inout) :: dy
+   real(dp), intent(inout) :: Hjj
+   real(dp), intent(inout) :: CApAp
+   real(dp), intent(inout) :: PhiApAp
+   real(dp), intent(inout) :: CApAp0
+   real(dp), intent(inout) :: CBpBp
+   real(dp), intent(inout) :: PhiBpBp
+   real(dp), intent(inout) :: CBpBp0
+   real(dp), intent(inout) :: CAA
+   real(dp), intent(inout) :: PhiAA
+   real(dp), intent(inout) :: CAA0
+   real(dp), intent(inout) :: CBB
+   real(dp), intent(inout) :: PhiBB
+   real(dp), intent(inout) :: CBB0
+
+
                  if (tBGuseDisplacementFile) then
                     if (layerIndex(i).eq.1) then
                        dxTemp = -dx/aG
@@ -2108,7 +2334,37 @@ subroutine HamOnSiteMoirePotential()
                           write(589,*) Rat(1,i), Rat(2,i), Hjj
                       end if
                  end if
-              else if (BNBNDiag) then
+
+end subroutine HamOnSiteAtomHarmonicTBG
+
+
+!> Moire on-site term of one atom from its stacking displacement: hBN on hBN (BNBN.Diag).
+!! Internal procedure of HamOnSite, called inside the parallel loop of HamOnSiteMoirePotential. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamOnSite.
+subroutine HamOnSiteAtomHarmonicBNBN(i, dxTemp, dx, dyTemp, dy, Hjj, CApAp, PhiApAp, CApAp0, CBpBp, PhiBpBp, CBpBp0, &
+      CAA, PhiAA, CAA0, CBB, PhiBB, CBB0)
+
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dxTemp
+   real(dp), intent(inout) :: dx
+   real(dp), intent(inout) :: dyTemp
+   real(dp), intent(inout) :: dy
+   real(dp), intent(inout) :: Hjj
+   real(dp), intent(inout) :: CApAp
+   real(dp), intent(inout) :: PhiApAp
+   real(dp), intent(inout) :: CApAp0
+   real(dp), intent(inout) :: CBpBp
+   real(dp), intent(inout) :: PhiBpBp
+   real(dp), intent(inout) :: CBpBp0
+   real(dp), intent(inout) :: CAA
+   real(dp), intent(inout) :: PhiAA
+   real(dp), intent(inout) :: CAA0
+   real(dp), intent(inout) :: CBB
+   real(dp), intent(inout) :: PhiBB
+   real(dp), intent(inout) :: CBB0
+
+
                  if (BNBNuseDisplacementFile) then
                     if (layerIndex(i).eq.1) then
                        dxTemp = -dx/aBN
@@ -2144,7 +2400,51 @@ subroutine HamOnSiteMoirePotential()
                           write(589,*) Rat(1,i), Rat(2,i), Hjj
                       end if
                  end if
-              else if (GBNuseHarmonicApprox) then
+
+end subroutine HamOnSiteAtomHarmonicBNBN
+
+
+!> Moire on-site term of one atom from its stacking displacement, first-harmonic approximation: graphene/hBN, encapsulated and mixed stacks (GBN.UseHarmonicApprox).
+!! Internal procedure of HamOnSite, called inside the parallel loop of HamOnSiteMoirePotential. The variables that are
+!! private to the loop are its arguments; the model parameters and the arrays of the Hamiltonian are those
+!! of HamOnSite.
+subroutine HamOnSiteAtomHarmonicGBN(A, B, C, i, dxTemp, dx, dyTemp, dy, Hjj, dxTemp_b, dx_b, dyTemp_b, dy_b, &
+      dxTemp_t, dx_t, dyTemp_t, dy_t, Hjj_b, Hjj_t, CApAp, PhiApAp, CApAp0, CBpBp, PhiBpBp, CBpBp0, CAA, PhiAA, CAA0, &
+      CBB, PhiBB, CBB0)
+
+   real(dp), intent(inout) :: A
+   real(dp), intent(inout) :: B
+   real(dp), intent(inout) :: C
+   integer, intent(in) :: i
+   real(dp), intent(inout) :: dxTemp
+   real(dp), intent(inout) :: dx
+   real(dp), intent(inout) :: dyTemp
+   real(dp), intent(inout) :: dy
+   real(dp), intent(inout) :: Hjj
+   real(dp), intent(inout) :: dxTemp_b
+   real(dp), intent(inout) :: dx_b
+   real(dp), intent(inout) :: dyTemp_b
+   real(dp), intent(inout) :: dy_b
+   real(dp), intent(inout) :: dxTemp_t
+   real(dp), intent(inout) :: dx_t
+   real(dp), intent(inout) :: dyTemp_t
+   real(dp), intent(inout) :: dy_t
+   real(dp), intent(inout) :: Hjj_b
+   real(dp), intent(inout) :: Hjj_t
+   real(dp), intent(inout) :: CApAp
+   real(dp), intent(inout) :: PhiApAp
+   real(dp), intent(inout) :: CApAp0
+   real(dp), intent(inout) :: CBpBp
+   real(dp), intent(inout) :: PhiBpBp
+   real(dp), intent(inout) :: CBpBp0
+   real(dp), intent(inout) :: CAA
+   real(dp), intent(inout) :: PhiAA
+   real(dp), intent(inout) :: CAA0
+   real(dp), intent(inout) :: CBB
+   real(dp), intent(inout) :: PhiBB
+   real(dp), intent(inout) :: CBB0
+
+
                   if (GBNtwoLayers) then
                       ! Initialize A, B, C to zero to avoid using uninitialized values
                       A = 0.0_dp
@@ -2511,85 +2811,17 @@ subroutine HamOnSiteMoirePotential()
                           end if
                       end if
                   end if
-              end if
-              H0(i) = H0(i) + Hjj
-            end do
-            !$OMP END PARALLEL DO
 
-      else if (l) then
-         call MIO_Print('Moire Trilayer','ham')
-         call MIO_InputParameter('Moire.PotA1',A1,A)
-         call MIO_InputParameter('Moire.PotB1',B1,B)
-         call MIO_InputParameter('Moire.PotA2',A2,A)
-         call MIO_InputParameter('Moire.PotB2',B2,B)
-         call MIO_InputParameter('Moire.Trin1',n1,0)
-         call MIO_InputParameter('Moire.Trim1',m1,0)
-         call MIO_InputParameter('Moire.Trin2',n2,0)
-         call MIO_InputParameter('Moire.Trim2',m2,0)
-         call MIO_Print('  A1: '//trim(num2str(A1,4)),'ham')
-         call MIO_Print('  B1: '//trim(num2str(B1,4)),'ham')
-         call MIO_Print('  A2: '//trim(num2str(A2,4)),'ham')
-         call MIO_Print('  B2: '//trim(num2str(B2,4)),'ham')
-         call MIO_Print('  C : '//trim(num2str(C,4)),'ham')
-         A1 = A1/g0
-         B1 = B1/g0
-         A2 = A2/g0
-         B2 = B2/g0
-         C = C/g0
-         lambda1 = n1*aG/real(m1,dp)
-         lambda2 = n2*n1*aG/real(m2,dp)
-         call MIO_Print('lambda 1: '//trim(num2str(lambda1,5))//' Ang','ham')
-         call MIO_Print('lambda 2: '//trim(num2str(lambda2,5))//' Ang','ham')
-         !$OMP PARALLEL DO PRIVATE(i)
-         do i=1,nAt
-            H0(i) = H0(i) - (-1.0_dp)**Species(i)*(A1*sin(twopi*Rat(1,i)*n2*m1) + &
-              B1*sin(twopi*Rat(2,i)*n2*m1) +  A2*sin(twopi*Rat(1,i)*m2) + &
-              B2*sin(twopi*Rat(2,i)*m2) + C)/2.0_dp
-         end do
-         !$OMP END PARALLEL DO
-      else
-         call MIO_InputParameter('Moire.Sachs',l,.false.)
-         if (l) then
-           call MIO_Print('Actually adding the Sachs potential...','ham')
-           call MIO_Print('  A: '//trim(num2str(A,4)),'ham')
-           call MIO_Print('  B: '//trim(num2str(B,4)),'ham')
-           call MIO_Print('  C: '//trim(num2str(C,4)),'ham')
-           A = A/g0
-           B = B/g0
-           C = C/g0
-           !$OMP PARALLEL DO PRIVATE(i)
-           do i=1,nAt
-              H0(i) = H0(i) - (-1.0_dp)**Species(i)*(A*sin(twopi*Rat(1,i)*sCell+phi1) + &
-                B*sin(twopi*Rat(2,i)*sCell+phi2) + C)/2.0_dp
-           end do
-           !$OMP END PARALLEL DO
-         end if
-         call MIO_InputParameter('Moire.Jeil',l,.false.)
-         call MIO_InputParameter('Structure.SingleLayerXYZ',singleLayerXYZ,.false.)
-         if (l) then
-           call MIO_Print('Actually adding the Jeil potential...','ham')
-           call MIO_InputParameter('Run.TypeOfSystem',str,'Graphene')
-           call MIO_InputParameter('Trilayer.FanZhang',FanZhang,.false.)
-           if (MIO_StringComp(str,'MoireEncapsulatedBilayer') &
-                 .or. MIO_StringComp(str,'MoireEncapsulatedBilayerBasedOnMoireCell') &
-                 .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ))) then
-             call MIO_Print('Working on MoireEncapsulatedBilayer or MoireEncapsulatedBilayerBasedOnMoireCell or ReadXYZ but not a single layer','ham')
-             call MIO_InputParameter('Moire.OnlyH0',l,.false.)
-             call MIO_InputParameter('Moire.OnlyHZ',w,.false.)
-             call MIO_InputParameter('Moire.NoH0AndHZ',v,.false.)
-             call MIO_InputParameter('Moire.H0AndHZ',u,.false.)
-             if (.not. (l .or. w .or. v .or. u)) then
-                call MIO_Kill('The moire potential needs one of MoireH0AndHZ, MoireOnlyH0, MoireOnlyHZ or '// &
-                  'MoireNoH0AndHZ set to .true. to say which on-site terms are applied; without any of them the '// &
-                  'terms were never set. MoireH0AndHZ .true. applies both.','ham','HamOnSite')
-             end if
-             call MIO_InputParameter('Moire.BilayerTopAngle',MoireBilayerTopAngle,0.0_dp)
-             MoireBilayerTopAngleGrad = MoireBilayerTopAngle*pi/180.0_dp
-             call MIO_InputParameter('Moire.BilayerBottomAngle',MoireBilayerBottomAngle,0.0_dp)
-             MoireBilayerBottomAngleGrad = MoireBilayerBottomAngle*pi/180.0_dp
-             call MIO_InputParameter('Moire.BLDeactivateUpperLayer',deactivateUpperLayer,.false.)
-             call MIO_InputParameter('Moire.TDBLDeactivateUpperLayers',deactivateUpperLayers,.false.)
-             if (frac) call AtomsSetCart()
+end subroutine HamOnSiteAtomHarmonicGBN
+
+
+!> On-site terms of the effective moire model for the encapsulated bilayer and the multilayer structure files (internal procedure of HamOnSite: it uses the variables of that routine)
+subroutine HamOnSiteMoireEffectiveBilayer()
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteMoireEffectiveBilayer',0)
+#endif /* DEBUG */
+
              !$OMP PARALLEL DO PRIVATE(i,dx,dy,Hzjj,H0jj,C0d,Czd)
              do i=1,nAt
                ! >>> unset markers
@@ -2710,48 +2942,20 @@ subroutine HamOnSiteMoirePotential()
                end if
              end do
              !$OMP END PARALLEL DO
-           !        ! add onsite energies
-           else
-             call MIO_Print('Working on ANY moire system not satisfying MoireEncapsulatedBilayer or MoireEncapsulatedBilayerBasedOnMoireCell or ReadXYZ but not a single layer','ham')
-             call MIO_InputParameter('Moire.OnlyH0',l,.false.)
-             call MIO_InputParameter('Moire.OnlyHZ',w,.false.)
-             call MIO_InputParameter('Moire.NoH0AndHZ',v,.false.)
-             call MIO_InputParameter('Moire.H0AndHZ',u,.false.)
-             if (.not. (l .or. w .or. v .or. u)) then
-                call MIO_Kill('The moire potential needs one of MoireH0AndHZ, MoireOnlyH0, MoireOnlyHZ or '// &
-                  'MoireNoH0AndHZ set to .true. to say which on-site terms are applied; without any of them the '// &
-                  'terms were never set. MoireH0AndHZ .true. applies both.','ham','HamOnSite')
-             end if
-             call MIO_InputParameter('Moire.Kekule',z,.false.)
-             call MIO_InputParameter('Moire.AddSecondMoire',zz,.false.)
-             call MIO_InputParameter('Moire.LatticePercentFactor',epsFactor,1.0_dp)
-             call MIO_InputParameter('Structure.BasedOnMoireCellParameters',ll,.false.)
-             call MIO_InputParameter('Moire.SwitchHzjj',switchHzjj,.false.)
 
-             if (ll) then
-                 twistAngleGrad = -phiForEffectiveModel*pi/180.0_dp
-                 twistAngleGrad2 = phiForEffectiveModel*pi/180.0_dp
-                 call MIO_InputParameter('Structure.MoireCellParameters',nnn,[0,0,0,0])
-             else
-                 call MIO_InputParameter('Moire.TwistAngle',twistAngle,0.0_dp)
-                 call MIO_InputParameter('Moire.TwistAngle2',twistAngle2,0.0_dp)
-                 twistAngleGrad = twistAngle*pi/180.0_dp
-                 twistAngleGrad2 = twistAngle2*pi/180.0_dp
-             end if
-             call MIO_InputParameter('Moire.Twisted',twisted,.false.)
-             call MIO_InputParameter('Moire.Twisted2',twisted2,.false.)
-             call MIO_InputParameter('Intralayer.DeactivateASubLattice',deactivateASubLattice,.false.)
-             call MIO_InputParameter('Intralayer.DeactivateBSubLattice',deactivateBSubLattice,.false.)
-             call MIO_InputParameter('Moire.LayerShift1',shift1,0.0_dp)
-             call MIO_InputParameter('Moire.LayerShift2',shift2,0.0_dp)
-             phi2M= atan((1.0_dp+eps)*sin(twistAngleGrad2)/((1.0_dp+eps)*cos(twistAngleGrad2)-1.0_dp))
-             shift2_x = shift2*cos(phi2M)
-             shift2_y = shift2*sin(phi2M)
-             call MIO_InputParameter('Moire.SecondMoireRotateFirst',rotateFirst,.true.)
-             call MIO_InputParameter('Moire.SecondMoireMassFactor',sign2,1.0_dp)
-             call MIO_InputParameter('Moire.FirstMoireMassFactor',sign1,1.0_dp)
-             call MIO_InputParameter('Potential.MinZ',minZ,1.0_dp)
-             if (frac) call AtomsSetCart()
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteMoireEffectiveBilayer',1)
+#endif /* DEBUG */
+
+end subroutine HamOnSiteMoireEffectiveBilayer
+
+!> On-site terms H0 and Hz of the effective graphene/hBN moire model (Jung et al., PRB 89, 205414), one moire pattern (internal procedure of HamOnSite: it uses the variables of that routine)
+subroutine HamOnSiteMoireEffective()
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteMoireEffective',0)
+#endif /* DEBUG */
+
              !$OMP PARALLEL DO PRIVATE(i,dx,dy,Hzjj,H0jj,C0d,Czd)
              do i=1,nAt ! Konda, modify onsite energies
                 ! >>> unset markers
@@ -2848,8 +3052,20 @@ subroutine HamOnSiteMoirePotential()
                     end if
              end do
              !$OMP END PARALLEL DO
-             H0Bottom = H0
-             if (zz) then ! only used when adding second moire to the same carbon atoms
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteMoireEffective',1)
+#endif /* DEBUG */
+
+end subroutine HamOnSiteMoireEffective
+
+!> On-site terms of a second moire pattern on the same graphene layer (Moire.AddSecondMoire) (internal procedure of HamOnSite: it uses the variables of that routine)
+subroutine HamOnSiteSecondMoireTerms()
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteSecondMoireTerms',0)
+#endif /* DEBUG */
+
                 !$OMP PARALLEL DO PRIVATE(i,dx,dy,Hzjj,H0jj,C0d,Czd)
                 do i=1,nAt
                    ! >>> unset markers
@@ -2937,8 +3153,20 @@ subroutine HamOnSiteMoirePotential()
                 end do
                 !$OMP END PARALLEL DO
                 H0Top = H0-H0Bottom
-             end if
-             if (z) then
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteSecondMoireTerms',1)
+#endif /* DEBUG */
+
+end subroutine HamOnSiteSecondMoireTerms
+
+!> Kekule-type term of the effective moire model (Moire.PotC, Moire.KekuleAngle) (internal procedure of HamOnSite: it uses the variables of that routine)
+subroutine HamOnSiteMoireKekule()
+
+#ifdef DEBUG
+   call MIO_Debug('HamOnSiteMoireKekule',0)
+#endif /* DEBUG */
+
                 if (frac) call AtomsSetCart()
                 call MIO_InputParameter('Moire.PotC',C,0.0_dp)
                 call MIO_InputParameter('Moire.KekuleAngle',KekuleAngle,30.0_dp)
@@ -2978,34 +3206,12 @@ subroutine HamOnSiteMoirePotential()
                   H0(i) = H0(i) + Hkjj
                 end do
                 !$OMP END PARALLEL DO
-             end if
-           end if
-           if (.not. frac) call AtomsSetFrac()
-         end if
-         call MIO_Print('')
-      end if
-      call MIO_InputParameter('Moire.SymmetricPot',l,.false.)
-      if (l) then
-         call MIO_InputParameter('Moire.SymmA',A,0.01_dp)
-         call MIO_InputParameter('Moire.SymmB',B,0.01_dp)
-         call MIO_print('Symmetric part:')
-         call MIO_Print('  A: '//trim(num2str(A,4)),'ham')
-         call MIO_Print('  B: '//trim(num2str(B,4)),'ham')
-         A = A/g0
-         B = B/g0
-         !$OMP PARALLEL DO PRIVATE(i)
-         do i=1,nAt
-            H0(i) = H0(i) + (A*sin(twopi*Rat(1,i)*sCell) + &
-              B*sin(twopi*Rat(2,i)*sCell))/2.0_dp
-         end do
-         !$OMP END PARALLEL DO
-      end if
 
 #ifdef DEBUG
-   call MIO_Debug('HamOnSiteMoirePotential',1)
+   call MIO_Debug('HamOnSiteMoireKekule',1)
 #endif /* DEBUG */
 
-end subroutine HamOnSiteMoirePotential
+end subroutine HamOnSiteMoireKekule
 
 !> On-site energy of every atom from its species and layer (internal procedure of HamOnSite: it uses the variables of that routine)
 subroutine HamOnSiteSpeciesEnergies()
@@ -6252,270 +6458,61 @@ subroutine HamHopRealStrain()
                if (shellsFromRigid) dsel = HamRigidBondXY(i, NList(j,i), NeighD(:,j,i))
                if (GBNtwoLayers) then
                   if (layerIndex(i).eq.1) then
-                     if (dsel .gt. acc*0.9_dp .and. dsel .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dsel .gt. aG*0.9_dp .and. dsel .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dsel .gt. 2.0_dp*acc*0.9_dp .and. dsel .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dsel .gt. 2.0_dp*acc*1.1_dp .and. dsel .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dsel .gt. (acc*3.0_dp)*0.9_dp .and. dsel .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dsel, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.2) then
-                     if (dsel .gt. aBN1*0.9_dp .and. dsel .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dsel .gt. aBN*0.9_dp .and. dsel .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dsel .gt. 2.0_dp*aBN1*0.9_dp .and. dsel .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dsel .gt. 2.0_dp*aBN1*1.1_dp .and. dsel .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dsel .gt. (aBN1*3.0_dp)*0.9_dp .and. dsel .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dsel, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (encapsulatedThreeLayers) then
                   if (layerIndex(i).eq.2) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.3) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (encapsulatedFourLayers) then
                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (encapsulatedFiveLayers) then
                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.4) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.5) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (encapsulatedSixLayers) then
                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.4 .or. layerIndex(i).eq.5) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.6) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (encapsulatedSevenLayers) then
                   if (layerIndex(i).eq.2 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.4 .or. layerIndex(i).eq.5 &
                         .or. layerIndex(i).eq.6) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.7) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (t3GwithBN) then
                   if (layerIndex(i).eq.4 .or. layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (BNt2GBN) then
                   if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1 .or. layerIndex(i).eq.4) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else if (t2GBN) then
                   if (layerIndex(i).eq.3 .or. layerIndex(i).eq.2) then
-                     if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                         refDist = aGR/sqrt(3.0_dp)
-                     else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                         refDist = aGR
-                     else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*accR
-                     else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                         refDist = accR*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                   else if (layerIndex(i).eq.1) then
-                     if (dist .gt. aBN1*0.9_dp .and. dist .lt. aBN1*1.1_dp) then
-                         refDist = aBNR/sqrt(3.0_dp)
-                     else if (dist .gt. aBN*0.9_dp .and. dist .lt. aBN*1.1_dp) then
-                         refDist = aBNR
-                     else if (dist .gt. 2.0_dp*aBN1*0.9_dp .and. dist .lt. aBN1*2.0_dp*1.1_dp) then
-                         refDist = 2.0_dp*aBN1R
-                     else if (dist .gt. 2.0_dp*aBN1*1.1_dp .and. dist .lt. 4.0_dp) then
-                         ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                         refDist = 3.75696_dp
-                     else if (dist .gt. (aBN1*3.0_dp)*0.9_dp .and. dist .lt. (aBN1*3.0_dp)*1.1_dp) then
-                         refDist = aBN1R*3.0_dp
-                     end if
+                     refDist = HamStrainReferenceDistance(dist, aBN1, aBN, aBN1R, aBNR)   ! hBN layer
                   end if
                else
-                  if (dist .gt. acc*0.9_dp .and. dist .lt. acc*1.1_dp) then
-                      refDist = aGR/sqrt(3.0_dp)
-                  else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
-                      refDist = aGR
-                  else if (dist .gt. 2.0_dp*acc*0.9_dp .and. dist .lt. acc*2.0_dp*1.1_dp) then
-                      refDist = 2.0_dp*accR
-                  else if (dist .gt. 2.0_dp*acc*1.1_dp .and. dist .lt. 4.0_dp) then
-                      ! define this value based on aG and aCC, does it matter of 4th nearest neighbor equal 0 in F2G2 model?
-                      refDist = 3.75696_dp
-                  else if (dist .gt. (acc*3.0_dp)*0.9_dp .and. dist .lt. (acc*3.0_dp)*1.1_dp) then
-                      refDist = accR*3.0_dp
-                  end if
+                  refDist = HamStrainReferenceDistance(dist, acc, aG, accR, aGR)   ! graphene layer
                end if
                if (ieee_is_nan(refDist)) then
                   ! The length of this bond lies in no shell window, so it has no reference distance.
