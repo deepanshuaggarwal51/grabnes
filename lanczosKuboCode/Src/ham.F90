@@ -85,6 +85,10 @@ module ham
    integer, save, allocatable :: hamF2G2Site(:)
    ! hamPairAB(L): the layers L and L+1 are an untwisted AB (Bernal) graphene pair
    logical, save, allocatable :: hamPairAB(:)
+   ! Stack.AlignModelEnergies: the site energies of the AB pairs are shifted so that their bilayer F2G2 model
+   ! and the single-layer F2G2 model have the same energy at the K point (applied once by HamHopping)
+   logical, save :: hamAlignModelEnergies = .false.
+   logical, save :: hamAlignDone = .false.
    real(dp), save :: gPZeeman      ! Pseudo-Zeeman coupling strength
    real(dp), save :: hStr          ! Strain height amplitude
 
@@ -3010,13 +3014,14 @@ subroutine HamOnSiteSpeciesEnergies()
    call MIO_Debug('HamOnSiteSpeciesEnergies',0)
 #endif /* DEBUG */
 
+   hamAlignDone = .false.     ! the site energies are set again: HamHopping aligns them again
    !$OMP PARALLEL DO
    do i=1,nAt
       if (Species(i)==3) then
          H0(i) = e0_B
       else if (Species(i)==4) then
          H0(i) = e0_N
-      else if (hamModelFromTwist .and. (e0_C1 .ne. 0.0_dp .or. e0_C2 .ne. 0.0)) then
+      else if (hamModelFromTwist .and. (hamAlignModelEnergies .or. e0_C1 .ne. 0.0_dp .or. e0_C2 .ne. 0.0)) then
          ! pair model chosen from the structure: in the AB pairs the two site energies of the bilayer F2G2
          ! model (Jung and MacDonald, PRB 89, 035405: TB.OnSiteC1 = 0.4295 eV on the sites without an atom of
          ! the other layer on top, TB.OnSiteC2 = 0.4506 eV on the dimer sites); in every other graphene layer
@@ -3430,6 +3435,11 @@ subroutine HamMeasureLayerTwist()
 
    call MIO_InputParameter('Stack.MeasureTwist',measure,.false.)
    call MIO_InputParameter('Stack.ModelFromTwist',hamModelFromTwist,.false.)
+   call MIO_InputParameter('Stack.AlignModelEnergies',hamAlignModelEnergies,.false.)
+   if (hamAlignModelEnergies .and. .not. hamModelFromTwist) then
+      call MIO_Kill('Stack.AlignModelEnergies acts on the AB pairs found by Stack.ModelFromTwist: set that '// &
+        'switch too, or remove Stack.AlignModelEnergies','ham','HamMeasureLayerTwist')
+   end if
    if (measure .or. hamModelFromTwist) then
       call MIO_InputParameter('Stack.TwistTolerance',tol,0.05_dp)
       nL = maxval(layerIndex(inode1:inode2))
@@ -11403,7 +11413,7 @@ subroutine HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, 
 end subroutine HamHopBondTermsMoire
 
 !> Dirac energy of the single-layer and of the bilayer F2G2 parameters, printed when the model of each pair of
-!! layers is chosen from the structure (internal procedure of HamHopping).
+!! layers is chosen from the structure, and their alignment (internal procedure of HamHopping).
 !!
 !! At the K point the nearest-neighbor terms vanish and the same-sublattice shells contribute -3 (second
 !! shell), +6 (fifth) and -3 (sixth) times their hopping, so the energy of a sublattice at K is
@@ -11411,28 +11421,69 @@ end subroutine HamHopBondTermsMoire
 !! With the values of Jung and MacDonald (PRB 89, 035405) the bilayer sites without an atom on top lie at
 !! 0.0000 eV and the dimer sites at 0.0150 eV. If the single-layer part of a stack lies elsewhere, the two parts
 !! are shifted against each other like by a potential difference between the layers.
+!!
+!! `Stack.AlignModelEnergies .true.` (opt-in) removes that shift: the site energy of the AB-pair sites without
+!! an atom on top becomes
+!!    TB.OnSiteC - 3 (t2 - t2A) + 6 (t5 - t5A)      (single-layer t2, t5; bilayer t2A, t5A)
+!! so that the charge neutrality point of an isolated AB bilayer and the Dirac point of an isolated single
+!! layer are the same energy, set by TB.OnSiteC alone. The dimer sites keep their distance to the other sites,
+!! TB.OnSiteC2 - TB.OnSiteC1 (0.4506 - 0.4295 eV of the paper when neither key is given). The result does not
+!! depend on TB.Hopping: the nearest-neighbor term does not enter the energy at K.
 subroutine HamHopReportModelEnergies()
 
    use tbpar,                only : e0_C, e0_C1, e0_C2
 
    ! Other local variables
-   real(dp) :: eSL, eA, eB
+   integer :: iAt
+   real(dp) :: eSL, eA, eB, dimer, new1, new2, d1, d2
 
    if (ieee_is_nan(t2KSL) .or. ieee_is_nan(t5KSL) .or. ieee_is_nan(t2KA) .or. ieee_is_nan(t5KA)) then
+      if (hamAlignModelEnergies) then
+         call MIO_Kill('Stack.AlignModelEnergies: the single-layer or the bilayer F2G2 parameters are not set '// &
+           'for this system, so the two models cannot be aligned','ham','HamHopReportModelEnergies')
+      end if
       call MIO_Print('Stack.ModelFromTwist: the single-layer or the bilayer F2G2 parameters are not set for '// &
         'this system; the energies of the two models are not compared','ham')
    else
       eSL = (e0_C + 3.0_dp*t2KSL - 6.0_dp*t5KSL + 3.0_dp*t6K)*g0
       eA = (e0_C1 + 3.0_dp*t2KA - 6.0_dp*t5KA + 3.0_dp*t6K)*g0
       eB = (e0_C2 + 3.0_dp*t2KB - 6.0_dp*t5KB + 3.0_dp*t6K)*g0
+      if (hamAlignModelEnergies) then
+         dimer = e0_C2 - e0_C1
+         if (e0_C1 == 0.0_dp .and. e0_C2 == 0.0_dp) dimer = (0.4506_dp - 0.4295_dp)/g0
+         new1 = e0_C + 3.0_dp*(t2KSL - t2KA) - 6.0_dp*(t5KSL - t5KA)
+         new2 = new1 + dimer
+         d1 = new1 - e0_C1
+         d2 = new2 - e0_C2
+         if (.not. hamAlignDone) then
+            do iAt=inode1,inode2
+               if (hamF2G2Site(iAt) == 1) then
+                  H0(iAt) = H0(iAt) + d1
+                  if (associated(Ho)) Ho(iAt) = Ho(iAt) + d1
+               else if (hamF2G2Site(iAt) == 2) then
+                  H0(iAt) = H0(iAt) + d2
+                  if (associated(Ho)) Ho(iAt) = Ho(iAt) + d2
+               end if
+            end do
+            hamAlignDone = .true.
+         end if
+         eA = (new1 + 3.0_dp*t2KA - 6.0_dp*t5KA + 3.0_dp*t6K)*g0
+         eB = (new2 + 3.0_dp*t2KB - 6.0_dp*t5KB + 3.0_dp*t6K)*g0
+         call MIO_Print('Stack.AlignModelEnergies: site energies of the AB pairs set from TB.OnSiteC','ham')
+         call MIO_Print('  sites without an atom on top: '//trim(num2str(new1*g0,4))//' eV (shift '// &
+           trim(num2str(d1*g0,4))//' eV)','ham')
+         call MIO_Print('  dimer sites:                  '//trim(num2str(new2*g0,4))//' eV (shift '// &
+           trim(num2str(d2*g0,4))//' eV)','ham')
+      end if
       call MIO_Print('Stack.ModelFromTwist: energy at the K point of each set of parameters','ham')
       call MIO_Print('  single-layer F2G2 (TB.OnSiteC):                '//trim(num2str(eSL,4))//' eV','ham')
       call MIO_Print('  bilayer F2G2, no atom on top (TB.OnSiteC1):    '//trim(num2str(eA,4))//' eV','ham')
       call MIO_Print('  bilayer F2G2, dimer sites (TB.OnSiteC2):       '//trim(num2str(eB,4))//' eV','ham')
       if (abs(eSL - eA) > 0.005_dp) then
          call MIO_Print('WARNING: the single-layer and the bilayer part of the stack are offset by '// &
-           trim(num2str(eSL - eA,4))//' eV. Unless a potential difference between them is intended, choose '// &
-           'TB.OnSiteC, TB.OnSiteC1 and TB.OnSiteC2 so that the first two energies above agree.','ham')
+           trim(num2str(eSL - eA,4))//' eV. Unless a potential difference between them is intended, set '// &
+           'Stack.AlignModelEnergies .true., or choose TB.OnSiteC, TB.OnSiteC1 and TB.OnSiteC2 so that the '// &
+           'first two energies above agree.','ham')
       end if
    end if
 

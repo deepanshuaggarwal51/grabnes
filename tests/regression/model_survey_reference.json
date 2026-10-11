@@ -1535,6 +1535,14 @@
   "fingerprint": "e7d21f5952c926d3",
   "status": "NONHERM"
  },
+ "xyz3_mixed_from_structure": {
+  "fingerprint": "b4be3bdb6237fde5",
+  "status": "ok"
+ },
+ "xyz3_mixed_from_structure+AlignModelEnergies": {
+  "fingerprint": "d9bfaeb85c5776e3",
+  "status": "ok"
+ },
  "xyz3_t2BG": {
   "fingerprint": "",
   "status": "REFUSED"
@@ -1657,6 +1665,10 @@
  },
  "xyz4_tdbg_from_structure": {
   "fingerprint": "6b40c8ddbf48304d",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure+AlignModelEnergies": {
+  "fingerprint": "75fc7bbdcd1a0f0b",
   "status": "ok"
  },
  "xyz4_tdbg_from_structure+ModelFromTwist=F": {

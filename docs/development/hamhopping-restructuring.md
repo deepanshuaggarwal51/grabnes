@@ -100,6 +100,28 @@ every bond. It is now a loop of about 400 lines that dispatches to one procedure
 - `HamOnSiteMoirePotential` (1300 lines) and `HamHopRealStrain` (316 lines) can be split by model in the
   same way.
 
+## Model of each pair of layers chosen from the structure (opt-in)
+
+- `Stack.MeasureTwist .true.`: the orientation of every layer and the twist of every interface are measured
+  from the bond directions and printed. Nothing else changes.
+- `Stack.ModelFromTwist .true.`: every untwisted AB (Bernal) pair of graphene layers takes the bilayer F2G2
+  model of Jung and MacDonald (PRB 89, 035405): site energies, intralayer and interlayer terms, with the dimer
+  sites found from the structure. Every other graphene layer keeps the single-layer F2G2 parameters and every
+  other interface the model of `TypeOfBL` (the two-center model for twisted layers). AA pairs keep the
+  two-center model. One nearest-neighbor hopping (`TB.Hopping`) is used in all layers.
+- `Stack.AlignModelEnergies .true.` (needs the switch above): the two parameter sets put the Dirac point at
+  different energies, because their second- and fifth-shell hoppings differ (energy of a sublattice at K:
+  site energy - 3 t2 + 6 t5 - 3 t6). Without this switch the run prints the energies and a warning when they
+  differ by more than 5 meV. With it the site energy of the pair sites without an atom on top is
+  `TB.OnSiteC - 3 (t2 - t2A) + 6 (t5 - t5A)`, so the neutrality point of an isolated AB bilayer and the Dirac
+  point of an isolated single layer coincide; the dimer sites keep their distance `TB.OnSiteC2 - TB.OnSiteC1`
+  (the paper's 0.0211 eV when neither key is given). `TB.OnSiteC` alone then sets the reference energy.
+  What it does not do: it is the alignment of isolated layers (no charge transfer, no difference of work
+  function between a single layer and a bilayer), and it does not make the velocities of the two fits
+  consistent (the bilayer fit was made with a nearest-neighbor hopping of 3.01 eV).
+- Tests: survey cases `xyz4_tdbg*` and `xyz3_mixed_from_structure*`; physics checks `twist_measure` and
+  `model_alignment` (levels at the folded K points of a decoupled single layer + AB pair, to 2e-6 eV).
+
 ## Not planned here
 
 - `diag.F90`: tests first (TAPW with spin-orbit terms, spectral functions,

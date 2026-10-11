@@ -93,6 +93,8 @@ against results that are known independently:
 | `sparse_dense` | The levels of the sparse solver are the levels of the dense diagonalization nearest to zero, in both directions |
 | `tapw_two_way` | Plane-wave reduction on a twisted bilayer: the levels of the two valleys together are the exact levels within 1 eV of neutrality, one to one; a run with a wrong moire angle must fail the same comparison |
 | `input_messages` | A repeated key is reported and its first value used; a misspelt key is listed as not read |
+| `twist_measure` | `Stack.MeasureTwist` on a generated twisted bilayer: the measured twist is the angle of the cell generator |
+| `model_alignment` | `Stack.ModelFromTwist` with and without `Stack.AlignModelEnergies` on a decoupled single layer + AB pair: the levels at the folded K points are site energy - 3 t2 + 6 t5 of each parameter set; with the alignment the single layer and the pair coincide |
 
 ```sh
 python3 tests/regression/check_physics.py --bin /path/to/grabnes

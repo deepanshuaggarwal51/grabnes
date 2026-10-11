@@ -179,6 +179,7 @@ STRUCTURES.update({
     "x4": stack([C, CT, CT, C]),
     "x4b": stack([C, CB, CT, CT]),
     "x4dbl": stack([C, CB, CT, CTB]),       # AB pair / twist / AB pair (twisted double bilayer)
+    "x3aab": stack([C, C, CB]),             # single layer (AA on the next one) / AB pair
     "x4enc": stack([BNT, C, CB, BNT]),
     "x5": stack([C, CT, C, CT, C]),
     "x6": stack([C, CT] * 3),
@@ -247,6 +248,11 @@ TDBG = {"TB.OnSiteC1": "0.4295", "TB.OnSiteC2": "0.4506"}
 xyz_case("xyz4_tdbg", "x4dbl", fourLayers=T, forceBilayerF2G2Intralayer=T, **TDBG)
 xyz_case("xyz4_tdbg_from_structure", "x4dbl", fourLayersSandwiched=T, middleTwist=T, **dict(TDBG, **{"Stack.ModelFromTwist": T}))
 case("xyz4_tdbg_from_structure+ModelFromTwist=F", "xyz4_tdbg_from_structure", "x4dbl", **{"Stack.ModelFromTwist": F})
+# Stack.AlignModelEnergies (opt-in): the site energies of the AB pairs follow TB.OnSiteC. With TB.OnSiteC =
+# 0.32636 eV the aligned energies are the ones of the paper (0.4295, 0.4506): check_physics.py tests the levels.
+case("xyz4_tdbg_from_structure+AlignModelEnergies", "xyz4_tdbg_from_structure", "x4dbl", **{"Stack.AlignModelEnergies": T})
+xyz_case("xyz3_mixed_from_structure", "x3aab", threeLayers=T, middleTwist=T, **dict(TDBG, **{"Stack.ModelFromTwist": T}))
+case("xyz3_mixed_from_structure+AlignModelEnergies", "xyz3_mixed_from_structure", "x3aab", **{"Stack.AlignModelEnergies": T})
 xyz_case("xyz4_sandwiched", "x4", fourLayersSandwiched=T, middleTwist=T)
 case("xyz4_sandwiched+middleTwist=F", "xyz4_sandwiched", "x4", middleTwist=F)
 case("xyz4_sandwiched+bilayerF2G2", "xyz4_sandwiched", "x4", middleTwist=F, forceBilayerF2G2Intralayer=T)

@@ -23,6 +23,12 @@ input_messages  Messages of the input library: a key given twice is reported (th
 
 twist_measure   Stack.MeasureTwist on the generated twisted bilayer: the twist angle measured from the bond
                 directions must be the angle the cell generator prints (6.0089 degrees), and the interface reported as twisted.
+model_alignment Stack.ModelFromTwist + Stack.AlignModelEnergies on an untwisted three-layer cell (single layer /
+                AB pair) with the layers decoupled: at the two folded K points the levels must be the energies at K
+                of the parameter sets, E = site energy - 3 t2 + 6 t5. Without the alignment the single layer and the
+                AB pair are apart by the value the run prints; with it the single-layer level and the level of the
+                pair sites without an atom on top coincide (fourfold per K point), and the dimer level stays
+                0.0150 eV above.
 
 Exit status 1 if a check fails. Requires NumPy.
 """
@@ -66,10 +72,13 @@ class Runner:
     def __init__(self, a):
         self.a, self.failures = a, 0
 
-    def run(self, name, text, threads="2"):
+    def run(self, name, text, threads="2", files=None):
         d = os.path.join(self.a.work, name)
         shutil.rmtree(d, ignore_errors=True)
         os.makedirs(d)
+        if files:                        # structure files of a ReadXYZ run
+            for f in os.listdir(files):
+                shutil.copy(os.path.join(files, f), d)
         open(os.path.join(d, "Gendata.in"), "w").write("Prefix generate\n" + text)
         with open(os.path.join(d, "job.out"), "w") as out:
             rc = subprocess.run(self.a.launcher.split() + [os.path.abspath(self.a.bin), "Gendata.in"], cwd=d, stdout=out,
@@ -239,6 +248,40 @@ def twist_measure(r):
     return problems
 
 
+def model_alignment(r):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import model_cases
+    write = model_cases.stack([("C", False, 0), ("C", False, 0), ("C", False, 1)])
+    ec, e1, e2 = 0.4914, 0.4295, 0.4506
+    t2, t5, t2a, t5a, t2b, t5b = 0.2354, 0.0633, 0.2235, 0.04016, 0.2260, 0.0404      # defaults of the solver
+    single = ec - 3 * t2 + 6 * t5
+    base = ("TypeOfSystem ReadXYZ\nTypeOfBL Koshino\nreadLayerIndex .true.\nthreeLayers .true.\nmiddleTwist .true.\n"
+            "Neigh.LayerNeighbors 100\nNeigh.LayerDistFactor 6.2\nrenormalizeCoupling .true.\ncouplingFactor 0.0\n"
+            f"TB.OnSiteC {ec}\nTB.OnSiteC1 {e1}\nTB.OnSiteC2 {e2}\nStack.ModelFromTwist .true.\n"
+            + BANDS.replace("TB.NeighLevels 1", "TB.NeighLevels 5")
+            + path([("0.333333333333", "0.666666666667"), ("0.666666666667", "0.333333333333"), (0.0, 0.0)]))
+    problems = []
+    for tag, extra, pair, dimer in (("off", "", e1 - 3 * t2a + 6 * t5a, e2 - 3 * t2b + 6 * t5b),
+                                    ("on", "Stack.AlignModelEnergies .true.\n", single,
+                                     single + (e2 - e1) - 3 * (t2b - t2a) + 6 * (t5b - t5a))):
+        name = "model_alignment_" + tag
+        d = os.path.join(r.a.work, name + "_structure")
+        shutil.rmtree(d, ignore_errors=True)
+        os.makedirs(d)
+        write(d)
+        rows = r.run(name, base + extra, files=d)
+        e = np.concatenate(rows[:2])
+        counts = [int(np.sum(abs(e - x) < 2e-6)) for x in (single, pair, dimer)]
+        want = [8, 8, 4] if tag == "on" else [4, 4, 4]
+        print(f"  alignment {tag}: single layer {single:.5f} eV, pair {pair:.5f} eV, dimer sites {dimer:.5f} eV; "
+              f"levels found at the two K points: {counts}, expected {want}")
+        if counts != want:
+            problems.append(f"alignment {tag}: {counts} levels at the three energies instead of {want}")
+        if len(e) != 2 * 114:
+            problems.append(f"alignment {tag}: {len(e)} levels read instead of 228")
+    return problems
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--bin", required=True)
@@ -252,6 +295,7 @@ def main():
     r.check("tapw_two_way", lambda: tapw_two_way(r))
     r.check("input_messages", lambda: input_messages(r))
     r.check("twist_measure", lambda: twist_measure(r))
+    r.check("model_alignment", lambda: model_alignment(r))
     print()
     print("PASS: all physics checks" if not r.failures else f"FAIL: {r.failures} physics check(s)")
     sys.exit(1 if r.failures else 0)
