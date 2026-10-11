@@ -77,6 +77,14 @@ module ham
    real(dp), save :: strFactor     ! Strain factor for moiré patterns
    real(dp), save :: dCC           ! Carbon-carbon bond distance
    real(dp), save, public :: gZeeman       ! Zeeman coupling strength
+
+   ! Model of each pair of layers chosen from the structure (Stack.ModelFromTwist, filled by HamMeasureLayerTwist)
+   logical, save :: hamModelFromTwist = .false.
+   ! hamF2G2Site(i): 0 = single-layer F2G2 parameters; in an untwisted AB graphene pair: 1 = no atom of the
+   ! other layer above or below, 2 = an atom of the other layer above or below (dimer site)
+   integer, save, allocatable :: hamF2G2Site(:)
+   ! hamPairAB(L): the layers L and L+1 are an untwisted AB (Bernal) graphene pair
+   logical, save, allocatable :: hamPairAB(:)
    real(dp), save :: gPZeeman      ! Pseudo-Zeeman coupling strength
    real(dp), save :: hStr          ! Strain height amplitude
 
@@ -662,6 +670,8 @@ subroutine HamOnSite()
 #ifdef DEBUG
    print*, "onsite, B, N, C1, C2", e0_B, e0_N, e0_C1, e0_C2
 #endif /* DEBUG */
+   ! orientation of the layers and twist of the interfaces (opt-in; needed before the on-site terms)
+   call HamMeasureLayerTwist()
    call HamOnSiteSpeciesEnergies()
    if (nspin==2) then
       call MIO_Allocate(Ho,[inode1],[inode2],'Ho','ham')
@@ -3006,6 +3016,16 @@ subroutine HamOnSiteSpeciesEnergies()
          H0(i) = e0_B
       else if (Species(i)==4) then
          H0(i) = e0_N
+      else if (hamModelFromTwist .and. (e0_C1 .ne. 0.0_dp .or. e0_C2 .ne. 0.0)) then
+         ! pair model chosen from the structure: the two site energies of the bilayer F2G2 model in the AB
+         ! pairs (e0_C2 on the dimer sites), their average elsewhere
+         if (hamF2G2Site(i) == 1) then
+            H0(i) = e0_C1
+         else if (hamF2G2Site(i) == 2) then
+            H0(i) = e0_C2
+         else
+            H0(i) = (e0_C1+e0_C2)/2.0_dp
+         end if
       ! we dont enter this clause for most single layer F2G2 systems not sure why i am specifying it
       else if (e0_C1 .ne. 0.0_dp .or. e0_C2 .ne. 0.0) then
          if (fourLayers) then
@@ -3394,9 +3414,10 @@ subroutine HamMeasureLayerTwist()
    real(dp) :: tol
 
    ! Other local variables
-   integer :: i, j, L, nL, nlay
+   integer :: i, j, L, L2, nL, nlay
    real(dp) :: dxy, rcut, twist
-   integer, allocatable :: nBond(:), nC(:), nBN(:)
+   integer, allocatable :: nBond(:), nC(:), nBN(:), nTop(:,:)
+   logical, allocatable :: aligned(:), topLo(:), topUp(:)
    real(dp), allocatable :: phi(:), coh(:)
    complex(dp), allocatable :: z(:)
    character(len=12) :: what
@@ -3406,7 +3427,8 @@ subroutine HamMeasureLayerTwist()
 #endif /* DEBUG */
 
    call MIO_InputParameter('Stack.MeasureTwist',measure,.false.)
-   if (measure) then
+   call MIO_InputParameter('Stack.ModelFromTwist',hamModelFromTwist,.false.)
+   if (measure .or. hamModelFromTwist) then
       call MIO_InputParameter('Stack.TwistTolerance',tol,0.05_dp)
       nL = maxval(layerIndex(inode1:inode2))
       allocate(z(nL), nBond(nL), nC(nL), nBN(nL), phi(nL), coh(nL))
@@ -3463,8 +3485,79 @@ subroutine HamMeasureLayerTwist()
               '      not twisted','ham')
          end if
       end do
+      ! Untwisted graphene pairs. An atom is "on top" if an atom of the other layer of the pair lies above or
+      ! below it (in-plane distance below half a bond length). In AB (Bernal) stacking this holds for one
+      ! sublattice of each layer (the dimer sites), in AA stacking for all atoms.
+      allocate(aligned(nL), nTop(2,nL), topLo(inode1:inode2), topUp(inode1:inode2))
+      aligned = .false.
+      do L = 1, nL - 1
+         twist = phi(L+1) - phi(L)
+         twist = twist - 60.0_dp*nint(twist/60.0_dp)
+         if (nBN(L) == 0 .and. nBN(L+1) == 0 .and. nBond(L) > 0 .and. nBond(L+1) > 0 .and. abs(twist) <= tol) then
+            aligned(L) = .true.
+         end if
+      end do
+      nTop = 0
+      topLo = .false.                               ! on top with respect to the layer below
+      topUp = .false.                               ! on top with respect to the layer above
+      do i = inode1, inode2
+         L = layerIndex(i)
+         if (L < 1) cycle
+         do j = 1, Nneigh(i)
+            L2 = layerIndex(NList(j,i))
+            if (abs(L2 - L) /= 1) cycle
+            if (.not. aligned(min(L,L2))) cycle
+            dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+            if (dxy >= 0.5_dp*Nradii(1,1)/1.1_dp) cycle
+            if (L2 < L) topLo(i) = .true.
+            if (L2 > L) topUp(i) = .true.
+         end do
+         if (topUp(i)) nTop(1,L) = nTop(1,L) + 1     ! counted for the interface L - L+1, lower layer
+         if (topLo(i)) nTop(2,L-1) = nTop(2,L-1) + 1 ! counted for the interface L-1 - L, upper layer
+      end do
+      if (allocated(hamPairAB)) deallocate(hamPairAB)
+      if (allocated(hamF2G2Site)) deallocate(hamF2G2Site)
+      allocate(hamPairAB(nL), hamF2G2Site(inode1:inode2))
+      hamPairAB = .false.
+      hamF2G2Site = 0
+      if (any(aligned)) then
+         call MIO_Print('  untwisted graphene pairs: atoms with an atom of the','ham')
+         call MIO_Print('  other layer above or below ("on top"), and the stacking','ham')
+         call MIO_Print('  pair     on top, lower / upper layer    stacking','ham')
+         do L = 1, nL - 1
+            if (.not. aligned(L)) cycle
+            ! AB: half of the atoms of each layer are on top; AA: all of them; anything else: a shifted pair
+            if (abs(2*nTop(1,L) - nC(L)) <= nC(L)/10 .and. abs(2*nTop(2,L) - nC(L+1)) <= nC(L+1)/10) then
+               what = 'AB'
+               hamPairAB(L) = .true.
+            else if (nTop(1,L) >= nC(L) - nC(L)/10 .and. nTop(2,L) >= nC(L+1) - nC(L+1)/10) then
+               what = 'AA'
+            else
+               what = 'other'
+            end if
+            call MIO_Print('  '//trim(num2str(L))//' - '//trim(num2str(L+1))//'    '//trim(num2str(nTop(1,L)))//' of '// &
+              trim(num2str(nC(L)))//' / '//trim(num2str(nTop(2,L)))//' of '//trim(num2str(nC(L+1)))//'    '// &
+              trim(what),'ham')
+         end do
+      end if
+      do i = inode1, inode2
+         L = layerIndex(i)
+         if (L < 1) cycle
+         if (L < nL) then
+            if (hamPairAB(L)) hamF2G2Site(i) = merge(2, max(1,hamF2G2Site(i)), topUp(i))
+         end if
+         if (L > 1) then
+            if (hamPairAB(L-1)) hamF2G2Site(i) = merge(2, max(1,hamF2G2Site(i)), topLo(i))
+         end if
+      end do
+      if (hamModelFromTwist) then
+         call MIO_Print('  Stack.ModelFromTwist: the AB pairs take the bilayer F2G2 model (on-site,','ham')
+         call MIO_Print('  intralayer and interlayer terms); every other graphene layer the','ham')
+         call MIO_Print('  single-layer F2G2 parameters; other interfaces the model of TypeOfBL.','ham')
+         if (.not. any(hamPairAB)) call MIO_Print('  No AB pair was found: the switch changes nothing in this run.','ham')
+      end if
       call MIO_Print('')
-      deallocate(z, nBond, nC, nBN, phi, coh)
+      deallocate(z, nBond, nC, nBN, phi, coh, aligned, nTop, topLo, topUp)
    end if
 
 #ifdef DEBUG
@@ -4580,7 +4673,6 @@ subroutine HamHopping
    ! the 3-D length of the actual bond. Implemented for GBNtwoLayers, single MPI rank.
    call MIO_InputParameter('Strain.ShellsFromRigidPositions',shellsFromRigid,.false.)
    if (shellsFromRigid) call HamHopShellsFromRigid()
-   call HamMeasureLayerTwist()
 
    counter1 = 0
    hopp = 0.0_dp
@@ -4673,6 +4765,23 @@ subroutine HamHopping
              tBA2 = -tBA2/g0
              call MIO_InputParameter('Intralayer.BilayertBA0',tBA5,0.0001_dp)
              tBA5 = -tBA5/g0
+         end if
+         if (hamModelFromTwist .and. .not. (BilayerOneParameter .or. BilayerThreeParameters .or. F2G2Model)) then
+            ! interlayer terms of the bilayer F2G2 model, needed for the AB pairs found in the structure
+            call MIO_InputParameter('Intralayer.BilayertAA1',tAA1,0.09244_dp)
+            tAA1 = -tAA1/g0
+            call MIO_InputParameter('Intralayer.BilayertAA3',tAA2,-0.02299_dp)
+            tAA2 = -tAA2/g0
+            call MIO_InputParameter('Intralayer.BilayertAB1',tAB1,0.1391_dp)
+            tAB1 = -tAB1/g0
+            call MIO_InputParameter('Intralayer.BilayertAB3',tAB2,-0.07211_dp)
+            tAB2 = -tAB2/g0
+            call MIO_InputParameter('Intralayer.BilayertBA0',tBA0,0.331_dp)
+            tBA0 = -tBA0/g0
+            call MIO_InputParameter('Intralayer.BilayertBA0',tBA2,-0.01016_dp)
+            tBA2 = -tBA2/g0
+            call MIO_InputParameter('Intralayer.BilayertBA0',tBA5,0.0001_dp)
+            tBA5 = -tBA5/g0
          end if
          call MIO_InputParameter('Trilayer.FanZhang',FanZhang,.false.)
          if (FanZhang) then
@@ -4841,7 +4950,7 @@ subroutine HamHopping
          t5KB = t2KA
          call HamHopF2G2sParameters()
          call MIO_InputParameter('Intralayer.ForceBilayerF2G2Intralayer',forceBilayerF2G2Intralayer,.false.)
-         if (forceBilayerF2G2Intralayer) then
+         if (forceBilayerF2G2Intralayer .or. hamModelFromTwist) then
              t1K = g0/g0
              call MIO_InputParameter('Intralayer.Bilayert2KA',t2KA,-0.2235_dp)
              call MIO_InputParameter('Intralayer.Bilayert2KB',t2KB,-0.2260_dp)
@@ -5424,7 +5533,10 @@ subroutine HamHopping
                   else if (MIO_StringComp(str,'TwistedBilayer') &
                         .or. (MIO_StringComp(str,'ReadXYZ') .and. .not.(singleLayerXYZ)) &
                         .or. MIO_StringComp(str,'TwistedBilayerBasedOnMoireCell')) then
-                   if(MIO_StringComp(BilayerModel,'Jeil')) then
+                   if (HamBondInABPair(layerIndex(i), layerIndex(jj))) then
+                      ! untwisted AB pair found in the structure (Stack.ModelFromTwist): bilayer F2G2 model
+                      call HamHopInterlayerBernalF2G2(i, j, jj, numberOfInterlayerHoppings)
+                   else if(MIO_StringComp(BilayerModel,'Jeil')) then
                          call HamHopInterlayerJeil(i, j, dist, numberOfHAA1, numberOfHAA2, numberOfHAB1, &
                                numberOfHBA2, numberOfHBA1, numberOfHAB2)
                    else if (GBNtwoLayers .or. encapsulatedThreeLayers .or. encapsulatedFourLayers &
@@ -9278,7 +9390,10 @@ subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vpp
                                       hopp(j,i) = hopp(j,i)
                                  else if (dist .gt. aG*0.9_dp .and. dist .lt. aG*1.1_dp) then
                                       !if (i.eq.1) print*, "assigning intralayer F2G2 terms 2"
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                      if (hamModelFromTwist) then
+                                         ! pair model chosen from the structure (Stack.ModelFromTwist)
+                                         hopp(j,i) = hopp(j,i) + HamF2G2IntralayerShell(2, hamF2G2Site(i))
+                                      else if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
                                             .or. fiveLayersSandwiched .or. sixLayersSandwiched &
                                             .or. sevenLayersSandwiched .or. eightLayersSandwiched &
                                             .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
@@ -9349,7 +9464,10 @@ subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vpp
                                       end if
                                  else if (dist .gt. 2.0_dp*aCC*0.9_dp .and. dist .lt. aCC*2.0_dp*1.1_dp) then
                                       !if (i.eq.1) print*, "assigning intralayer F2G2 terms 3"
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                      if (hamModelFromTwist) then
+                                         ! pair model chosen from the structure (Stack.ModelFromTwist)
+                                         hopp(j,i) = hopp(j,i) + HamF2G2IntralayerShell(3, hamF2G2Site(i))
+                                      else if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
                                             .or. fiveLayersSandwiched .or. sixLayersSandwiched &
                                             .or. sevenLayersSandwiched .or. eightLayersSandwiched &
                                             .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
@@ -9387,7 +9505,10 @@ subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vpp
                                       end if
                                  else if (dist .gt. 2.0_dp*aCC*1.1_dp .and. dist .lt. 4.0_dp) then
                                       !if (i.eq.1) print*, "assigning intralayer F2G2 terms 4"
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                      if (hamModelFromTwist) then
+                                         ! pair model chosen from the structure (Stack.ModelFromTwist)
+                                         hopp(j,i) = hopp(j,i) + HamF2G2IntralayerShell(4, hamF2G2Site(i))
+                                      else if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
                                             .or. fiveLayersSandwiched .or. sixLayersSandwiched &
                                             .or. sevenLayersSandwiched .or. eightLayersSandwiched &
                                             .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
@@ -9425,7 +9546,10 @@ subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vpp
                                       end if
                                  else if (dist .gt. (aCC*3.0_dp)*0.9_dp .and. dist .lt. (aCC*3.0_dp)*1.1_dp) then
                                       !if (i.eq.1) print*, "assigning intralayer F2G2 terms 5", delta
-                                      if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
+                                      if (hamModelFromTwist) then
+                                         ! pair model chosen from the structure (Stack.ModelFromTwist)
+                                         hopp(j,i) = hopp(j,i) + HamF2G2IntralayerShell(5, hamF2G2Site(i))
+                                      else if (threeLayers .or. fourLayersSandwiched .or. helicalTwistedMBM &
                                             .or. fiveLayersSandwiched .or. sixLayersSandwiched &
                                             .or. sevenLayersSandwiched .or. eightLayersSandwiched &
                                             .or. tenLayersSandwiched .or. twentyLayersSandwiched) then
@@ -11276,6 +11400,78 @@ subroutine HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, 
                 end if
 
 end subroutine HamHopBondTermsMoire
+
+!> True if the layers L1 and L2 are an untwisted AB pair for which the model is chosen from the structure.
+logical function HamBondInABPair(L1, L2)
+
+   ! Arguments
+   integer, intent(in) :: L1
+   integer, intent(in) :: L2
+
+   HamBondInABPair = .false.
+   if (hamModelFromTwist .and. abs(L1 - L2) == 1) HamBondInABPair = hamPairAB(min(L1,L2))
+
+end function HamBondInABPair
+
+!> Intralayer hopping of the F2G2 models for the neighbor shell `shell` (2 to 5) of an atom of kind `site`:
+!! 0 = single-layer parameters; in an AB pair, 1 = site without an atom of the other layer above or below,
+!! 2 = dimer site (internal procedure of HamHopping: it uses the parameters of that routine).
+real(dp) function HamF2G2IntralayerShell(shell, site)
+
+   ! Arguments
+   integer, intent(in) :: shell
+   integer, intent(in) :: site
+
+   HamF2G2IntralayerShell = hamUnset
+   select case (shell)
+   case (2)
+      HamF2G2IntralayerShell = merge(t2KSL, merge(t2KA, t2KB, site == 1), site == 0)
+   case (3)
+      HamF2G2IntralayerShell = merge(t3KSL, t3K, site == 0)
+   case (4)
+      HamF2G2IntralayerShell = merge(t4KSL, t4K, site == 0)
+   case (5)
+      HamF2G2IntralayerShell = merge(t5KSL, merge(t5KA, t5KB, site == 1), site == 0)
+   end select
+
+end function HamF2G2IntralayerShell
+
+!> Interlayer hopping of the bilayer F2G2 model for a bond between the two layers of an untwisted AB pair.
+!! Internal procedure of HamHopping, called for one bond inside the parallel loop. The terms are those of the
+!! F2G2Model branch of the two-center procedure, by in-plane length of the bond; where that branch compares
+!! the sublattice labels of the two atoms, the kind of site measured from the structure is used instead
+!! (the labels are equal exactly when one atom is a dimer site and the other is not), so that the result
+!! does not depend on how the sublattices of the two layers are numbered.
+subroutine HamHopInterlayerBernalF2G2(i, j, jj, numberOfInterlayerHoppings)
+
+   ! Arguments
+   integer, intent(in) :: i
+   integer, intent(in) :: j
+   integer, intent(in) :: jj
+   integer, intent(inout) :: numberOfInterlayerHoppings
+
+   ! Other local variables
+   logical :: mixed
+   real(dp) :: dxy
+
+   dxy = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
+   mixed = (hamF2G2Site(i) /= hamF2G2Site(jj))
+   if (dxy<0.2_dp) then
+      hopp(j,i) = hopp(j,i) + tBA0
+   else if (dxy>aCC*0.9_dp .and. dxy<aCC*1.1_dp) then
+      hopp(j,i) = hopp(j,i) + merge(tAA1, tAB1, mixed)
+   else if (dxy>aG*0.9_dp .and. dxy<aG*1.1_dp) then
+      hopp(j,i) = hopp(j,i) + tBA2
+   else if (dxy>aCC*2.0_dp*0.9_dp .and. dxy<aCC*2.0_dp*1.1_dp) then
+      hopp(j,i) = hopp(j,i) + merge(tAA2, tAB2, mixed)
+   else if (dxy>(aCC*3.0_dp)*0.9_dp .and. dxy<(aCC*3.0_dp)*1.1_dp .and. .not. mixed) then
+      hopp(j,i) = hopp(j,i) + tBA5
+   else
+      return
+   end if
+   numberOfInterlayerHoppings = numberOfInterlayerHoppings + 1
+
+end subroutine HamHopInterlayerBernalF2G2
 
 end subroutine HamHopping
 

@@ -1651,6 +1651,26 @@
   "fingerprint": "5626214dc3277d3b",
   "status": "ok"
  },
+ "xyz4_tdbg": {
+  "fingerprint": "a0bf63cb9a61e6d5",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure": {
+  "fingerprint": "949a7fc751cf163a",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure+ModelFromTwist=F": {
+  "fingerprint": "29c9e2832c6e6606",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure_t5zero": {
+  "fingerprint": "fb81833e03eb15ea",
+  "status": "ok"
+ },
+ "xyz4_tdbg_t5zero": {
+  "fingerprint": "fb81833e03eb15ea",
+  "status": "ok"
+ },
  "xyz5": {
   "fingerprint": "aa961341da87dd4b",
   "status": "ok"

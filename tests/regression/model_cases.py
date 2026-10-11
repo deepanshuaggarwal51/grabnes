@@ -168,6 +168,7 @@ def stack(layers, mn=(3, 2), cell_height=None, relax=False):
 
 
 C, CT, CB, BN, BNT = ("C", False, 0), ("C", True, 0), ("C", False, 1), ("BN", False, 0), ("BN", True, 0)
+CTB = ("C", True, 1)
 STRUCTURES.update({
     "x1": stack([C]),
     "x2": stack([C, CT]),
@@ -177,6 +178,7 @@ STRUCTURES.update({
     "x3enc": stack([BNT, C, BNT]),
     "x4": stack([C, CT, CT, C]),
     "x4b": stack([C, CB, CT, CT]),
+    "x4dbl": stack([C, CB, CT, CTB]),       # AB pair / twist / AB pair (twisted double bilayer)
     "x4enc": stack([BNT, C, CB, BNT]),
     "x5": stack([C, CT, C, CT, C]),
     "x6": stack([C, CT] * 3),
@@ -237,6 +239,19 @@ xyz_case("xyz3_enc", "x3enc", encapsulatedThreeLayers=T)
 toggles("xyz3_enc", ["GBNOffDiag", "removeTopMoireInL2"], "x3enc")
 xyz_case("xyz4", "x4", fourLayers=T, forceBilayerF2G2Intralayer=T)
 case("xyz4+forceBilayerF2G2Intralayer=F", "xyz4", "x4", forceBilayerF2G2Intralayer=F)
+# Twisted double bilayer: the explicit switches (fourLayers: layers 1-2 and 3-4 are Bernal pairs with the bilayer
+# F2G2 model) and the choice of the model from the structure (Stack.ModelFromTwist) must build the same
+# Hamiltonian: xyz4_tdbg_t5zero and xyz4_tdbg_from_structure_t5zero must have the same fingerprint. They are run
+# with the fifth-shell parameters of the bilayer model set to zero, because the fourLayers branch adds that term
+# twice (a defect of the explicit route, kept as it is until it is decided; see xyz4_tdbg for its present result).
+TDBG = {"TB.OnSiteC1": "0.010", "TB.OnSiteC2": "0.025"}
+T5ZERO = dict(TDBG, Bilayert5KA="0.0", Bilayert5KB="0.0")
+xyz_case("xyz4_tdbg", "x4dbl", fourLayers=T, forceBilayerF2G2Intralayer=T, **TDBG)
+xyz_case("xyz4_tdbg_t5zero", "x4dbl", fourLayers=T, forceBilayerF2G2Intralayer=T, **T5ZERO)
+xyz_case("xyz4_tdbg_from_structure", "x4dbl", fourLayersSandwiched=T, middleTwist=T, **dict(TDBG, **{"Stack.ModelFromTwist": T}))
+xyz_case("xyz4_tdbg_from_structure_t5zero", "x4dbl", fourLayersSandwiched=T, middleTwist=T,
+         **dict(T5ZERO, **{"Stack.ModelFromTwist": T}))
+case("xyz4_tdbg_from_structure+ModelFromTwist=F", "xyz4_tdbg_from_structure", "x4dbl", **{"Stack.ModelFromTwist": F})
 xyz_case("xyz4_sandwiched", "x4", fourLayersSandwiched=T, middleTwist=T)
 case("xyz4_sandwiched+middleTwist=F", "xyz4_sandwiched", "x4", middleTwist=F)
 case("xyz4_sandwiched+bilayerF2G2", "xyz4_sandwiched", "x4", middleTwist=F, forceBilayerF2G2Intralayer=T)
