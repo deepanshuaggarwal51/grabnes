@@ -52,74 +52,53 @@ OpenMP region that is opened outside them.
 still long; they can be split further in the same way, by the model they
 serve.
 
-## Step 2 (not started): the main loop of `HamHopping`
+## Step 2 (done): the main loop of `HamHopping`
 
-The loop over atoms and neighbors is one OpenMP loop of 4500 lines:
+The loop over atoms and neighbors was one OpenMP loop of 4500 lines in which the model was decided again for
+every bond. It is now a loop of about 400 lines that dispatches to one procedure per model.
 
-```
-do i = 1, nAt                              ! one OpenMP parallel loop
-   bond terms of the moire models that depend on the atom only  (650 lines)
-   do j = 1, Nneigh(i)
-      if (same layer) then
-         do ilvl = 1, tbnn                 ! intralayer models, by shell  (2255 lines)
-      else
-         interlayer models, by TypeOfBL    (1529 lines)
-```
+1. **Constants out of the loop.** 192 assignments of literal constants of the Srivani model stood inside the
+   parallel loop, to shared variables (every thread wrote the same values for every bond). They are set once
+   in `HamHopSrivaniConstants`; `aCC` and `aBN1` likewise. The loop no longer assigns any shared local
+   variable except two print-once flags.
+2. **A defect found on the way.** Six switches of the Srivani model were read for `TypeOfBL BLSrivani` only
+   but tested for `BLKaxiras` too; in a Kaxiras run they were undefined and the result depended on the
+   compiler and on the build. They are read for both now, and the 22 Kaxiras survey cases have left the list
+   of compiler-dependent cases.
+3. **One procedure per model** (`tools/maintenance/outline_branch.py`). A branch of the loop is moved,
+   unchanged, into an internal procedure. The variables that have a copy per thread (PRIVATE, FIRSTPRIVATE,
+   REDUCTION, loop indices) are its arguments; the model parameters and the arrays of the Hamiltonian are
+   used from `HamHopping`. A `cycle` becomes the result of a logical function. Temporaries that only one model
+   uses are local to its procedure and start as "not set" for every bond, so a value left from another bond
+   cannot be used by mistake.
 
-Its branches cannot be moved into internal procedures: inside a parallel
-region the private variables of the routine would be shared in the procedure.
-They need procedures with argument lists, and the numbers show why this is a
-design task and not a mechanical one:
+   | Part of the loop | Procedures |
+   | --- | --- |
+   | bond terms of the moire models, per atom | `HamHopBondTermsMoire`, `HamHopBondTermsTBG`, `HamHopBondTermsGBN` |
+   | intralayer hopping | `HamHopIntralayerGraphene` (TypeOfBL Koshino, Mayou, HTC: F2G2, Koshino or Mayou intralayer models), `HamHopIntralayerGBN`, `HamHopIntralayerBNBN`, `HamHopIntralayerEncapsulated3` ... `7`, `HamHopIntralayerT3GwithBN`, `HamHopIntralayerBNt2GBN`, `HamHopIntralayerT2GBN`, `HamHopIntralayerKaxirasSrivani`, `HamHopIntralayerSrivani`, `HamHopIntralayerJeil`, `HamHopIntralayerDefault` |
+   | interlayer hopping | `HamHopInterlayerTwoCenter` (TypeOfBL Koshino, HTC; with `KoshinoSR` and `couplingFactor` this is the model for twisted graphene layers), `HamHopInterlayerGBN`, `HamHopInterlayerBNBN`, `HamHopInterlayerMayou`, `HamHopInterlayerKaxirasSrivani`, `HamHopInterlayerJeil` |
 
-- `HamHopping` declares 901 local variables; the main loop uses 646 of them.
-- 287 are only read in the loop: the parameters of the models, set before it.
-- 359 are assigned in the loop, 195 of which are in the `PRIVATE` clauses.
-  The remaining ones are mostly model constants that are assigned inside the
-  loop (`p1a0AA = 7.639_dp`, ...): every thread writes the same value, which
-  works but is a data race in the strict sense and is repeated for every bond.
+   The body of `HamHopping` went from 7390 to about 1900 lines, most of which is now the reading of the
+   switches and parameters.
+4. **Declarations** (`tools/maintenance/tidy_declarations.py`): 215 of the 917 local variables of
+   `HamHopping` were no longer used and are removed; the others are grouped under headings (switches,
+   model parameters, counters, per-thread variables, other).
 
-Target structure (agreed with NL, 11 October 2026): a developer must see at
-once which physical system a piece of code belongs to. `HamHopping` becomes a
-dispatcher that decides the models once, before any loop, and calls
+## Step 3 (next)
 
-- one routine per **intralayer** model, each with its own loop over the bonds
-  inside a layer;
-- one routine per **interlayer** model, each with its own loop over the bonds
-  between layers;
-- one routine for the bond terms of the moire models (`MoireOffDiag`,
-  `tBGOffDiag`, `GBNOffDiag`);
-- the steps that are separate already (strain, magnetic field, Haldane).
-
-Two passes rather than one loop per complete system, because the intralayer
-and the interlayer choice combine freely and a loop per combination would
-repeat the intralayer code. Today the model is decided again for every bond,
-by string comparisons inside the loop.
-
-A model is moved by adding its routine, running it next to the old branch
-until every survey case of that model gives the same fingerprint, and then
-deleting the old branch.
-
-Order of work proposed:
-
-1. **Parameters out of the loop.** Move the assignments of constants that do
-   not depend on the bond to the parameter procedures that run before the loop
-   (`HamHopInterlayerParameters` and one procedure per intralayer model).
-   This removes the shared assignments from the parallel loop and is verified
-   by the survey, one model at a time.
-2. **One derived type per model family** for the parameters (intralayer F2G2,
-   Koshino, Kaxiras, Srivani, the graphene/hBN distance laws, ...), filled by
-   those procedures. The loop then reads `par%...` instead of 287 separate
-   variables.
-3. **One function per model** that returns the hopping of a bond from the bond
-   geometry and the parameter type: `HamIntralayerF2G2(par, ilvl, species, d)`,
-   `HamInterlayerKoshino(par, d, dz)`, ... These are module procedures with a
-   short argument list and no access to the variables of `HamHopping`, so they
-   can be tested alone.
-4. The loop keeps the selection of the model and the assembly of `hopp`.
-
-Each of these steps changes statements, unlike step 1, so each is done for one
-model, checked with the survey and the production inputs, and committed
-before the next.
+- **Which model for which layers.** F2G2 is the more accurate intralayer model for untwisted layers; the
+  two-center interlayer model with `KoshinoSR` and `couplingFactor` is the one to use whenever two graphene
+  layers are twisted. Today this is spread over `middleTwist`, `forceBilayerF2G2Intralayer` and the stack
+  switches. Aim: a table built once, per layer or pair of layers, printed in the output of the run.
+- **One loop per model.** The procedures are called per bond from the common loop. Giving each its own loop
+  removes the dispatch from the loop and lets the model be chosen once.
+- **Parameter types.** The procedures still use the parameters of `HamHopping` by host association. A
+  derived type per model family, filled by the parameter procedures, turns them into module procedures with
+  short argument lists that can be tested alone.
+- **Duplicates.** `HamHopIntralayerEncapsulated3` to `7` are near copies of about 180 lines each; the
+  `...GBN`, `...T3GwithBN`, `...BNt2GBN`, `...T2GBN` procedures share most of their text with them.
+- `HamOnSiteMoirePotential` (1300 lines) and `HamHopRealStrain` (316 lines) can be split by model in the
+  same way.
 
 ## Not planned here
 

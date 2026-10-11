@@ -546,93 +546,57 @@ subroutine HamOnSite()
    use interface,            only : InterfacePot1
    use neigh,                only : NeighD
 
+
+   ! Named constants
    real(dp), parameter :: phi1= 1.884_dp, phi2 = 1.531_dp
-   logical :: threeLayers, twoLayers, fourLayers, middleTwist, fourLayersSandwiched, fiveLayersSandwiched, &
-         sixLayersSandwiched, sevenLayersSandwiched, eightLayersSandwiched, tenLayersSandwiched, twentyLayersSandwiched, &
-         helicalTwistedMBM, helicalTwistedMBM_CDW
-   logical :: l, w, v, u, z, twisted, twisted2, zz, deactivateASubLattice, deactivateBSubLattice
-   logical :: ll
-   real(dp) :: A, B, C, rand, A1, A2, B1, B2, lambda1, lambda2, CDWAmplitude, CDWPeriod
-   real(dp) :: AA, randomPot, randomPot2, randomPot3, tot, tot2, tot3, nImp
-   real(dp) :: rand2
-   real(dp) :: C0, Cz, Cab, Phi0, Phiz, Phiab, dx, dy, dxPrime, dyPrime, H0jj, Hzjj, Hkjj, Habjj, eps, eps2, ggg, Hjj, Hjj_b, Hjj_t
-   real(dp) :: dxTemp, dyTemp
-   real(dp) :: dxTemp_b, dyTemp_b
-   real(dp) :: dxTemp_t, dyTemp_t
-   real(dp) :: dx_b, dy_b
-   real(dp) :: dx_t, dy_t
-   real(dp) :: CAA, CBB, CApAp, CBpBp, PhiAA, PhiBB, PhiApAp, PhiBpBp
-   real(dp) :: CAA0, CBB0, CApAp0, CBpBp0
-   real(dp) :: CAA_global, CBB_global, CApAp_global, CBpBp_global, PhiAA_global, PhiBB_global, PhiApAp_global, PhiBpBp_global
-   real(dp) :: CAA0_global, CBB0_global, CApAp0_global, CBpBp0_global
-   integer :: i, j,k,n1, n2, m1, m2, n
+
+   ! Switches and options read from the input
+   logical :: addDisplacements, BNBNDiag, BNBNtwoLayers, BNBNuseDisplacementFile, BNt2GBN, &
+         cosinusModulationAddMassTerm, cosinusModulationUsingPeriod, cosinusModulationUsingPeriodY, &
+         deactivateASubLattice, deactivateBSubLattice, deactivateUpperLayer, deactivateUpperLayers, &
+         distanceDependentEffectiveModel, dontUseInplaneMoire, eightLayersSandwiched, encapsulatedFiveLayers, &
+         encapsulatedFourLayers, encapsulatedSevenLayers, encapsulatedSixLayers, encapsulatedThreeLayers, &
+         FanZhang, fiveLayersSandwiched, forceBilayerF2G2Intralayer, fourLayers, fourLayersSandwiched, &
+         GBNtwoLayers, GBNtwoLayersF2G2s, GBNuseDisplacementFile, GBNuseHarmonicApprox, helicalTwistedMBM, &
+         helicalTwistedMBM_CDW, invertE, l, ll, middleTwist, moireCDW, onlyBottomLayerMassTerm, readRigidXYZ, &
+         removeTopMoireInL2, rotateFirst, sevenLayersSandwiched, singleLayerXYZ, sinusModulationAddMassTerm, &
+         sinusModulationUsingPeriod, sinusModulationUsingPeriodY, sixLayersSandwiched, sublatticeBasis, &
+         switchHzjj, t2BG, t2GBN, t3BG, t3GwithBN, tBGDiag, tBGDiagPRB, tBGSwitchDxDy, &
+         tBGuseDisplacementFile, tenLayersSandwiched, threeLayers, twentyLayersSandwiched, twisted, twisted2, &
+         twoLayers, u, useLayerSpecificOnsiteEnergyTerms, v, w, writeData, z, zz
    character(len=80) :: str
-   !type(rand_t) :: rng
-   integer, pointer :: seed(:)
-   integer :: clock
-   real(dp) :: onsiteShift, KekuleAngle, KekuleEpsFactor, KekuleAngleGrad,H0_temp
-   real(dp) :: twistAngle, twistAngle2, twistAngleGrad, twistAngleGrad2,shift2, shift1, sign2, sign1, minZ, phi2M
-   real(dp) :: shift2_x, shift2_y
-   logical :: rotateFirst
-   real(dp) :: MoireBilayerTopAngle, MoireBilayerTopAngleGrad, ElectricShift, massterm, onsiteEnergyShift
-   real(dp) :: MoireBilayerBottomAngle, MoireBilayerBottomAngleGrad
-   real(dp) :: xValueBeforeRotate, xValueAfterRotate
-   real(dp) :: yValueBeforeRotate, yValueAfterRotate
-   integer :: checkerDivider, activatedCheckers
-   real(dp) :: checkerDensity
+
+   ! Model parameters read from the input
+   integer :: checkerDivider, Dcdw, m1, m2, n, n1, n2, nnn(4), NOWH, scX, scY, sinusNumberOfPeriod
+   real(dp) :: A, A1, A2, AA, Amp2, Amp3, B, B1, B2, BfactorC0, BfactorCz, C, C0, CAA, CAA0, CAA0_global, &
+         CAA_global, Cab, CApAp, CApAp0, CApAp0_global, CApAp_global, CBB, CBB0, CBB0_global, CBB_global, &
+         CBpBp, CBpBp0, CBpBp0_global, CBpBp_global, CDWAmplitude, cdwMass, CDWPeriod, cdwPhase, cdwScalar, &
+         checkerDensity, cosinusFactor, cosinusFactor2, cosinusModulationPeriod, Cz, delta, ElectricShift, &
+         eps, epsFactor, GBNAngle, Globalang, Globalang2, GlobalPhiL1, GlobalPhiL2, GlobalPhiL2a, &
+         GlobalPhiL2b, GlobalPhiL3, KekuleAngle, KekuleEpsFactor, layerShift1, layerShift2, layerShift3, &
+         layerShift4, massterm, minZ, MoireBilayerBottomAngle, MoireBilayerTopAngle, moirePreFactor, &
+         onsiteEnergyShift, onsiteShift, P1, P2, pct, Phi0, PhiAA, PhiAA_global, Phiab, PhiApAp, &
+         PhiApAp_global, PhiBB, PhiBB_global, PhiBpBp, PhiBpBp_global, Phiz, PNPAmp, rotationAngle, shift1, &
+         shift2, sign1, sign2, sinusFactor, sinusFactor2, sinusModulationPeriod, trDelta, twistAngle, &
+         twistAngle2, u1, u2, u3, z0
+
+   ! Variables with one copy per thread in the parallel loops
+   integer :: i
+
+   ! Other local variables
+   integer :: activatedCheckers, Efactor, hq, iii, iq, j, k, kq, nQcdw
+   real(dp) :: argq, C0d, Czd, dx, dx_b, dx_t, dxPrime, dxTemp, dxTemp_b, dxTemp_t, dy, dy_b, dy_t, dyPrime, &
+         dyTemp, dyTemp_b, dyTemp_t, eps2, GlobalPhi, GlobalPhi2, H, H0jj, Hjj, Hjj_b, Hjj_t, Hkjj, Hzjj, &
+         invertEposX, KekuleAngleGrad, lambda1, lambda2, limit0, limit1, limit2, limit3, limit4, &
+         MoireBilayerBottomAngleGrad, MoireBilayerTopAngleGrad, nImp, phi2M, PNPLeft, PNPRight, rand, rand2, &
+         randomPot, randomPot2, randomPot3, shift2_x, shift2_y, tot, tot2, tot3, twistAngleGrad, &
+         twistAngleGrad2, Vq
+
+   ! Declarations with attributes, initial values or their own comments
    logical, allocatable :: checkerActivate(:,:)
-   integer :: sinusNumberOfPeriod
-   real(dp) :: H, P1, P2, Amp2
-   integer :: NOWH
-   real(dp) :: Amp3
-   real(dp) :: PNPAmp, PNPLeft, PNPRight, limit0, limit1, limit2, limit3, limit4, delta
-   real(dp) :: pct
-
-   logical :: randomStrain, prnt
-   logical :: deactivateUpperLayer, deactivateUpperLayers
-   logical :: GBNtwoLayers, encapsulatedFourLayers, t3GwithBN, tBGDiag, tBGDiagPRB, dontUseInplaneMoire, BNt2GBN, BNBNDiag
-   logical :: encapsulatedThreeLayers, removeTopMoireInL2
-   logical :: encapsulatedFiveLayers
-   logical :: encapsulatedSixLayers
-   logical :: encapsulatedSevenLayers
-   logical :: useLayerSpecificOnsiteEnergyTerms
-   logical :: t2GBN
-   logical :: t2BG
-   logical :: t3BG
-   logical :: BNBNtwoLayers
-   logical :: GBNtwoLayersF2G2s, GBNuseDisplacementFile, GBNuseHarmonicApprox
-   logical :: tBGuseDisplacementFile, BNBNuseDisplacementFile
-   real(dp) :: GlobalPhi,Globalang, rotationAngle, epstBG
-   real(dp) :: GlobalPhi2,Globalang2, GlobalPhiL1, GlobalPhiL2, GlobalPhiL3, GlobalPhiL2a, GlobalPhiL2b
-
-   logical :: BNBNtwoLayersF2G2s
-
-   integer :: nnn(4)
-
-   logical :: tBGSwitchDxDy
-
-   logical :: FanZhang, sinusModulationUsingPeriod, sinusModulationAddMassTerm
-   logical :: cosinusModulationUsingPeriod, cosinusModulationAddMassTerm, sinusModulationUsingPeriodY, cosinusModulationUsingPeriodY
-   real(dp) :: tr1, tr2, tr3, tr4, trDelta, u1, u2, u3, sinusModulationPeriod, cosinusModulationPeriod
-
-   real(dp) :: epsFactor
-   real(dp) :: invertEposX, sinusFactor, sinusFactor2, cosinusFactor, cosinusFactor2
-   integer :: Efactor,iii
-   logical :: invertE, switchHzjj, writeData
-
-   logical :: singleLayerXYZ, distanceDependentEffectiveModel, onlyBottomLayerMassTerm
-   real (dp) :: C0d, Czd, BfactorC0, BfactorCz, z0, GBNAngle, moirePreFactor, tBGAngle
-
-   logical :: forceBilayerF2G2Intralayer, sublatticeBasis, addDisplacements, readRigidXYZ
-   real(dp) :: layerShift1, layerShift2, layerShift3, layerShift4
-
-   ! --- moireCDW: general commensurate superlattice potential (opt-in) ---
-   logical :: moireCDW
-   integer :: nQcdw, iq, hq, kq, Dcdw, scX, scY
    integer, allocatable :: Qcdw(:,:)
-   real(dp) :: cdwScalar, cdwMass, cdwPhase, argq, Vq
-   ! >>> unset markers
    real(dp) :: hamUnset                    ! NaN: marks variables that have not been set
+
    ! <<< unset markers
    ! >>> unset markers
    ! Value of a variable that has not been set: any use of it gives NaN, and the run stops
@@ -4136,58 +4100,103 @@ subroutine HamHopping
    use math,                 only : CrossProd, norm
    use name,                 only : prefix, sysname
 
-   integer :: i, j, ilvl, nlay
-   real(dp) :: d, flux, phase, v1(3), v2(3), h1, h2
-   real(dp) :: uvec(3), vvec(3), axb(3), vvecR(3)
-   logical :: w, BilayerOneParameter, BilayerThreeParameters, FanZhang
-   real(dp) :: Cab, tAB3, tAB4, Phiab, dx, dy, eps, realH, imagH, del(3), delta, eps2, ggg
-   real(dp) :: realH_b, imagH_b
-   real(dp) :: realH_t, imagH_t
-   real(dp) :: dxTemp, dyTemp
-   real(dp) :: dxTemp_b, dyTemp_b
-   real(dp) :: dxTemp_t, dyTemp_t
-   real(dp) :: dx_b, dy_b
-   real(dp) :: dx_t, dy_t
-   real(dp) :: PhiabG, PhiabBN
-   real(dp) :: tr1, tr2, tr3, tr4, trDelta
+
+   ! Switches and options read from the input
+   logical :: addDisplacements, addExponentialDecayForDihedral, addPressureDependence, addShift, Bernal, &
+         BernalReadXYZ, bigBubble, BilayerOneParameter, BilayerThreeParameters, BNBNtwoLayers, BNt2GBN, &
+         bridge, bubbleGauss, bubbleInPlaneStrain, bulk, changeLatticeParameterForSrivaniModel, &
+         deactivateInterlayer, deactivateInterlayer12, deactivateInterlayer23, deactivateInterlayer34, &
+         deactivateInterlayerBG, deactivateInterlayert2BG2to3, deactivateInterlayert2GBN1to2, &
+         deactivateInterlayert2GBN2to3, deactivateInterlayert3BG1to2, deactivateInterlayert3BG2to3, &
+         deactivateInterlayert3BG3to4, deactivateInterlayert3BG4to5, deactivateInterlayert3BG5to6, &
+         deactivateInterlayerTwisted, deactivateIntersublattice, deactivateIntrasublattice, &
+         deactivateIntraSublatticeForC, deactivateUpperLayer, deactivateUpperLayers, deactivateV3, &
+         deactivateV6, differentCouplings, distanceDependentEffectiveModel, eightLayersSandwiched, &
+         encapsulatedFiveLayers, encapsulatedFourLayers, encapsulatedFourLayersF2G2, encapsulatedSevenLayers, &
+         encapsulatedSixLayers, encapsulatedThreeLayers, F2G2Model, FanZhang, findThetasGeometrically, &
+         fiveLayersSandwiched, forceBilayerF2G2Intralayer, fourLayers, fourLayersSandwiched, Frank, &
+         GBNOffdiag, GBNtwoLayers, GBNtwoLayersF2G2s, GBNuseDisplacementFile, HaldaneBothLayers_deprecated, &
+         HaldaneOppositePhase, helicalTwistedMBM, KoshinoIntralayer, KoshinoSR, l, ll, lll, manyBubbles, &
+         MayouIntralayer, middleTwist, moireMid, newFittingFunctions, oldParameterSet, oneLayer, &
+         onlyFirstNeighborRealStrain, onlyV0, onlyvppsigma, oppositedxdy, paperOrientation, periodicStrain, &
+         randomStrain, readRigidXYZ, realisticBubbles, realStrain, removeF2G2Flag, removeTopMoireInL2, &
+         renormalizeCoupling, rotateFirst, setnLayersToZero, sevenLayersSandwiched, singleLayerXYZ, &
+         sixLayersSandwiched, strainedMoire, sublatticeDependent, sublatticeIndependent, switchV3Sign, t2GBN, &
+         t3BG, t3GwithBN, tBGOffDiag, tBGOffDiagPRB, tBGSwitchDxDy, tBGuseDisplacementFile, &
+         tenLayersSandwiched, threeLayers, threeLayerShort, twentyLayersSandwiched, twisted, twisted2, &
+         twoLayers, useBNGKaxiras, useBNGSrivani, useOldGrapheneF2G2, useOnlyVAB, useTheta, useThetaIJ, w, &
+         writeData, zz
+   character(len=200) :: shellRigidFile
+   character(len=80) :: BilayerModel, SinglelayerModel, str
+
+   ! Model parameters read from the input
+   integer :: mB, n(4), nnn(4), nPeriod
+   real(dp) :: bubbleC, bubbleRadius, bubbleShift, bubbleSigmaR, Cab, CabBN, CabG_global, couplingFactor, &
+         couplingFactor2, distFact, eps, epsFactor, flux, GBNAngle, Globalang, Globalang2, GlobalPhiL1, &
+         GlobalPhiL2, GlobalPhiL2a, GlobalPhiL2b, GlobalPhiL3, interlayerdistance, KaxirasCutoff, minDelta, &
+         MoireBilayerBottomAngle, MoireBilayerTopAngle, per, Phiab, PhiabBN, PhiabG, rotationAngle, shift1, &
+         shift2, sign1, sign2, t2, t2Complex, t2KA, t2KB, t2KSL, t2KSLBN_B, t2KSLBN_N, t2KSLBNfromGBNA, &
+         t2KSLBNfromGBNB, t2KSLGfromGBNA, t2KSLGfromGBNB, t2Value, t3K, t3KSL, t3KSLBN, t3KSLBNfromGBN, &
+         t3KSLGfromGBN, t4K, t4KSL, t4KSLBN, t4KSLBNfromGBN, t4KSLGfromGBN, t5KA, t5KB, t5KSL, t5KSLBN_B, &
+         t5KSLBN_N, t5KSLBNfromGBNA, t5KSLBNfromGBNB, t5KSLGfromGBNA, t5KSLGfromGBNB, t6K, t6KBN, &
+         t6KSLBNfromGBNA, t6KSLBNfromGBNB, t6KSLGfromGBNA, t6KSLGfromGBNB, t7K, t7KBN, t7KSLBNfromGBN, &
+         t7KSLGfromGBN, t8K, t8KBN, t8KSLBNfromGBN, t8KSLGfromGBN, tA1A1_1, tA1A1_2, tA1A2, tA1A2_2, tA1A3, &
+         tA1A3_2, tA1B2, tA1B2_2, tA1B3, tA1B3_1, tA1B3_2, tA2A2_1, tA2A2_2, tAA1, tAA2, tAB1, tAB2, tAB3, &
+         tAB4, tB1A2, tB1A2_1, tB1A2_2, tB1A3, tB1A3_2, tB1B1_1, tB1B1_2, tB1B2, tB1B2_2, tBA0, tBA2, tBA5, &
+         tBGAngle, tbt, tr1, tr2, tr3, tr4, trDelta, twistAngle, twistAngle2, u0, umax, vpppi0, vppsigma0
+
+   ! Counters summed over the parallel loop
+   integer :: countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, countG1, &
+         countG2, countG3, countG4, countG5, countG6, countG7, countG8, numberOfDel1, numberOfDel2, &
+         numberOfDel3, numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHAB2, numberOfHBA1, numberOfHBA2, &
+         numberOfInterlayerHoppings
+
+   ! Variables with one copy per thread in the parallel loops
+   logical :: checking
+   integer :: firstNN(3), i, iii, j, jj, jj1, jj2, k, kk, kkk, mm, mmm, nlay
+   real(dp) :: aval, BLdelta, bval, CabG, d, del(3), delta, dist, distXY, distXYZ, dx, dxTemp, dy, dyTemp, &
+         Fc, imagH, kappa0, kappa6, kappa6b, lambda0, lambda3, lambda6, lambda6b, realH, &
+         renormalizeHoppingFactorAAp, renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp, &
+         renormalizeHoppingFactorBBp, twistAngleGrad, v1(3), v2(3), vpppi, vppsigma, x3, x6, x6b, xi0, xi3, &
+         xi6, xi6b
    complex*16 :: Habjj, HBL
-   complex*16 :: Habjj_b, Habjj_t
-   logical :: GBNOffdiag
 
-   real(dp) :: dxi, dyi, dxj, dyj
+   ! Other local variables
+   logical :: saidHTCBNBN, saidHTCGBN
+   integer :: clock, counter1, ii, ilvl, lllll, n1, n2, nImp, nLayers, nnnnn, nshellDiff, totImp, u
+   real(dp) :: aBN1, aCC, aGSrivani, bubbleR, bubbleSigmaR2, bubbleTheta, c0AAV0, c0ABV0, c10_0, c10_1, &
+         c10_2, c11_0, c11_1, c11_2, c12_0, c12_1, c12_2, c13_0, c13_1, c13_2, c14_0, c14_1, c14_2, c1_0, &
+         c1_1, c1_2, c1AAV0, c1ABV0, c2_0, c2_1, c2_2, c2AAV0, c2ABV0, c3_0, c3_1, c3_2, c4_0, c4_1, c4_2, &
+         c5_0, c5_1, c5_2, c6_0, c6_1, c6_2, c7_0, c7_1, c7_2, c8_0, c8_1, c8_2, c9_0, c9_1, c9_2, &
+         deltaAngle, diffBubbleX, diffBubbleY, diffx, diffy, dist2, dlij, dsel, dshellMax, eps2, epsilon0, &
+         epsilon0_CB, epsilon0_CN, epsilon3, epsilon3_BC, epsilon3_CB, epsilon3_CN, epsilon3_NC, epsilon6, &
+         epsilon6b, epstBG, gAngle, ggg, GlobalPhi, GlobalPhi2, h1, h2, kappa0_CB, kappa0_CN, kappa0AAp, &
+         kappa0ABp, kappa0bAAp, kappa0bABp, kappa0BAp, kappa0bBAp, kappa3, KaxirasCutoff2, lambda0_CB, &
+         lambda0_CN, lambda0AAp, lambda0ABp, lambda0bAAp, lambda0bABp, lambda0BAp, lambda0bBAp, lambda3_BC, &
+         lambda3_CB, lambda3_CN, lambda3_NC, lambda3ABp, lambda3bABp, lambda3BAp, lambda3bBAp, lc, LMoire, &
+         minDiffBubbleX, minDiffBubbleY, mmphi, MoireBilayerBottomAngleGrad, MoireBilayerTopAngleGrad, &
+         p1a0AA, p1a0AB, p1a0BA, p1a0BB, p1a3AA, p1a3AB, p1a3BA, p1a3BB, p1a6AA, p1a6AB, p1a6BA, p1a6BB, &
+         p1b0AA, p1b0AB, p1b0BA, p1b0BB, p1b3AA, p1b3AB, p1b3BA, p1b3BB, p1b6AA, p1b6AB, p1b6BA, p1b6BB, &
+         p1c0AA, p1c0AB, p1c0BA, p1c0BB, p1c3AA, p1c3AB, p1c3BA, p1c3BB, p1c6AA, p1c6AB, p1c6BA, p1c6BB, &
+         p1d0AA, p1d0AB, p1d0BA, p1d0BB, p1d3AA, p1d3AB, p1d3BA, p1d3BB, p1d6AA, p1d6AB, p1d6BA, p1d6BB, &
+         p1h0AA, p1h0AB, p1h0BA, p1h0BB, p1j0AA, p1j0AB, p1k0AA, p1k0AB, p2a0AA, p2a0AB, p2a0BA, p2a0BB, &
+         p2a3AA, p2a3AB, p2a3BA, p2a3BB, p2a6AA, p2a6AB, p2a6BA, p2a6BB, p2b0AA, p2b0AB, p2b0BA, p2b0BB, &
+         p2b3AA, p2b3AB, p2b3BA, p2b3BB, p2b6AA, p2b6AB, p2b6BA, p2b6BB, p2c0AA, p2c0AB, p2c0BA, p2c0BB, &
+         p2c3AA, p2c3AB, p2c3BA, p2c3BB, p2c6AA, p2c6AB, p2c6BA, p2c6BB, p2d0AA, p2d0AB, p2d0BA, p2d0BB, &
+         p2d3AA, p2d3AB, p2d3BA, p2d3BB, p2d6AA, p2d6AB, p2d6BA, p2d6BB, p2h0AA, p2h0AB, p2h0BA, p2h0BB, &
+         p2j0AA, p2j0AB, p2k0AA, p2k0AB, p3a0AA, p3a0AB, p3a0BA, p3a0BB, p3a3AA, p3a3AB, p3a3BA, p3a3BB, &
+         p3a6AA, p3a6AB, p3a6BA, p3a6BB, p3b0AA, p3b0AB, p3b0BA, p3b0BB, p3b3AA, p3b3AB, p3b3BA, p3b3BB, &
+         p3b6AA, p3b6AB, p3b6BA, p3b6BB, p3c0AA, p3c0AB, p3c0BA, p3c0BB, p3c3AA, p3c3AB, p3c3BA, p3c3BB, &
+         p3c6AA, p3c6AB, p3c6BA, p3c6BB, p3d0AA, p3d0AB, p3d0BA, p3d0BB, p3d3AA, p3d3AB, p3d3BA, p3d3BB, &
+         p3d6AA, p3d6AB, p3d6BA, p3d6BB, p3h0AA, p3h0AB, p3h0BA, p3h0BB, p3j0AA, p3j0AB, p3k0AA, p3k0AB, &
+         phase, phi2M, qpi, qsigma, rand, rc, refDist, shift2_x, shift2_y, t1K, t2K, t2KN, t6KSL, t7KSL, &
+         t8KSL, tAB, twistAngleGrad2, twistedBilayerAngle, twistedBilayerAngleGrad, x0, x3_BC, x3_CB, x3_CN, &
+         x3_NC, x3ABp, x3bABp, x3BAp, x3bBAp, xi0_CB, xi0_CN, xi0AAp, xi0ABp, xi0bAAp, xi0bABp, xi0BAp, &
+         xi0bBAp, xi3_BC, xi3_CB, xi3_CN, xi3_NC, xi3ABp, xi3bABp, xi3BAp, xi3bBAp, xShift, yShift
+   character(len=200) :: shellSpc
 
-   complex(dp) :: HAA, HAB, HBA
-
-   real(dp) :: posOrNeg
-
-   logical :: l,ll, lll, twisted, twisted2, zz, deactivateUpperLayer, deactivateUpperLayers, paperOrientation
-   logical :: moireMid
-
-   integer :: numberOfDel1, numberOfDel2, numberOfDel3, numberOfInterlayerHoppings
-   integer :: numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHAB2, numberOfHBA1, numberOfHBA2
-
-   real(dp) :: MoireBilayerTopAngle, MoireBilayerTopAngleGrad, twistAngle, twistAngleGrad, twistAngle2, twistAngleGrad2, &
-         shift2, shift1
-   real(dp) :: phi2M
-   real(dp) :: shift2_x, shift2_y
-   real(dp) :: MoireBilayerBottomAngle, MoireBilayerBottomAngleGrad
-   real(dp) :: sign2
-   real(dp) :: twistedBilayerAngle, twistedBilayerAngleGrad, tbt
-
-   logical :: rotateFirst
-
-   character(len=80) :: str, BilayerModel, SinglelayerModel
-
-   real(dp) :: t2Complex
-   real(dp) :: t2
-
-   real(dp) :: n1minm1, n2minm2, dist2, distXY, distXYZ
-   real(dp) :: aCC, refDist
+   ! Declarations with attributes, initial values or their own comments
    integer :: nStrainNoRef                  ! realStrain: hoppings of bonds outside every shell window
-
-   logical :: prnt
-
-   real(dp) :: dlij
    real(dp), pointer :: epsxx(:,:)=>NULL()
    real(dp), pointer :: epsyy(:,:)=>NULL()
    real(dp), pointer :: epsxy(:,:)=>NULL()
@@ -4198,581 +4207,26 @@ subroutine HamHopping
    integer, pointer :: bubbleCenterY(:)=>NULL()
    logical, pointer :: def(:)=>NULL()
    integer, pointer :: seed(:)
-
    real(dp), pointer :: onsiteShift(:)=>NULL()
-   real(dp) :: bubbleSigmaR, bubbleSigmaR2, bubbleShift, bubbleRadius
-   real(dp) :: bubbleC, bubbleR, bubbleTheta, minDiffBubbleX, minDiffBubbleY, diffBubbleX, diffBubbleY
-   integer :: ic1, ic2, clock
-
-   logical :: bigBubble, manyBubbles, bubbleInPlaneStrain, realisticBubbles, bubbleGauss
-
-   real(dp) :: dist, vpppi, vpppi0, vppsigma, vppsigma0, BLdelta, per, rand
-   integer :: nImp, totImp, ii, kk
-
-   real(dp) :: yShift, xShift
-   logical :: addShift, Bernal, bridge
-
-   real(dp) :: gAngle, deltaAngle
-   integer :: n(4)
-   integer :: firstNN(3)
-   integer :: k
-
-   real(dp) :: expFactor
-
-   real(dp) :: maxDist
-   integer :: jj,jj1, jj2, iii
-
-   integer :: nPeriod, nn
-   real(dp) :: LMoire, u0
-
-   logical :: randomStrain, periodicStrain, strainedMoire
-   real(dp) :: umax
-
-   type(cl_file) :: file
-   integer u
-
-   integer :: nnn(4)
-
-   real (dp) :: sign1, minDelta
-
-   real(dp) :: limit0, limit1, limit2, limit3, DBShiftRatio, boundaryWidth
-   logical :: createBLDomainBoundary
-   integer :: nnnn
-
-   logical :: sublatticeDependent, sublatticeIndependent, useThetaIJ, useTheta
-
-   real(dp) :: t1K, t2K, t3K, t4K, t5K, t2KA, t5KA, t2KB, t5KB, t2KN, t6K, t7K, t8K
-   real(dp) :: t2KSL, t3KSL, t4KSL, t5KSL, t6KSL, t7KSL, t8KSL
-   real(dp) :: t2KSLBN_B, t2KSLBN_N, t3KSLBN, t4KSLBN, t5KSLBN_B, t5KSLBN_N, t6KBN, t7KBN, t8KBN
-   real(dp) :: V0, V3, V6, theta
-   real(dp) :: V0AA, V3AA, V6AA
-   real(dp) :: V0AB, V3AB, V6AB
-   real(dp) :: V0AAp, V3AAp, V6AAp
-   real(dp) :: V0ABp, V3ABp, V6ABp
-   real(dp) :: V0BAp, V3BAp, V6BAp
-   real(dp) :: V0BBp, V3BBp, V6BBp
-   real(dp) :: lambda0, lambda3, lambda6, lambda6b
-   real(dp) :: epsilon0, epsilon3, epsilon6, epsilon6b
-   real(dp) :: x0, x3, x6, x6b
-   real(dp) :: xi0, xi3, xi6, xi6b
-   real(dp) :: kappa0, kappa3, kappa6, kappa6b
-   real(dp) :: lambda0AA, lambda3AA, lambda6AA
-   real(dp) :: epsilon0AA, epsilon3AA, epsilon6AA
-   real(dp) :: x0AA, x3AA, x6AA
-   real(dp) :: xi0AA, xi3AA, xi6AA
-   real(dp) :: kappa0AA, kappa3AA, kappa6AA
-   real(dp) :: lambda0AB, lambda3AB, lambda6AB
-   real(dp) :: epsilon0AB, epsilon3AB, epsilon6AB
-   real(dp) :: x0AB, x3AB, x6AB
-   real(dp) :: xi0AB, xi3AB, xi6AB
-   real(dp) :: kappa0AB, kappa3AB, kappa6AB
-   real(dp) :: rbar
-
-   real(dp) :: p1a0AA
-   real(dp) :: p1b0AA
-   real(dp) :: p1c0AA
-   real(dp) :: p1d0AA
-   real(dp) :: p1h0AA
-   real(dp) :: p1j0AA
-   real(dp) :: p1k0AA
-   real(dp) :: p2a0AA
-   real(dp) :: p2b0AA
-   real(dp) :: p2c0AA
-   real(dp) :: p2d0AA
-   real(dp) :: p2h0AA
-   real(dp) :: p2j0AA
-   real(dp) :: p2k0AA
-   real(dp) :: p3a0AA
-   real(dp) :: p3b0AA
-   real(dp) :: p3c0AA
-   real(dp) :: p3d0AA
-   real(dp) :: p3h0AA
-   real(dp) :: p3j0AA
-   real(dp) :: p3k0AA
-   real(dp) :: p1a3AA
-   real(dp) :: p1b3AA
-   real(dp) :: p1c3AA
-   real(dp) :: p1d3AA
-   real(dp) :: p2a3AA
-   real(dp) :: p2b3AA
-   real(dp) :: p2c3AA
-   real(dp) :: p2d3AA
-   real(dp) :: p3a3AA
-   real(dp) :: p3b3AA
-   real(dp) :: p3c3AA
-   real(dp) :: p3d3AA
-   real(dp) :: p1a6AA
-   real(dp) :: p1b6AA
-   real(dp) :: p1c6AA
-   real(dp) :: p1d6AA
-   real(dp) :: p2a6AA
-   real(dp) :: p2b6AA
-   real(dp) :: p2c6AA
-   real(dp) :: p2d6AA
-   real(dp) :: p3a6AA
-   real(dp) :: p3b6AA
-   real(dp) :: p3c6AA
-   real(dp) :: p3d6AA
-   real(dp) :: a0AA
-   real(dp) :: b0AA
-   real(dp) :: c0AA
-   real(dp) :: d0AA
-   real(dp) :: h0AA
-   real(dp) :: j0AA
-   real(dp) :: k0AA
-   real(dp) :: a3AA
-   real(dp) :: b3AA
-   real(dp) :: c3AA
-   real(dp) :: d3AA
-   real(dp) :: a6AA
-   real(dp) :: b6AA
-   real(dp) :: c6AA
-   real(dp) :: d6AA
-   real(dp) :: p1a0AB
-   real(dp) :: p1b0AB
-   real(dp) :: p1c0AB
-   real(dp) :: p1d0AB
-   real(dp) :: p1h0AB
-   real(dp) :: p1j0AB
-   real(dp) :: p1k0AB
-   real(dp) :: p2a0AB
-   real(dp) :: p2b0AB
-   real(dp) :: p2c0AB
-   real(dp) :: p2d0AB
-   real(dp) :: p2h0AB
-   real(dp) :: p2j0AB
-   real(dp) :: p2k0AB
-   real(dp) :: p3a0AB
-   real(dp) :: p3b0AB
-   real(dp) :: p3c0AB
-   real(dp) :: p3d0AB
-   real(dp) :: p3h0AB
-   real(dp) :: p3j0AB
-   real(dp) :: p3k0AB
-   real(dp) :: p1a3AB
-   real(dp) :: p1b3AB
-   real(dp) :: p1c3AB
-   real(dp) :: p1d3AB
-   real(dp) :: p2a3AB
-   real(dp) :: p2b3AB
-   real(dp) :: p2c3AB
-   real(dp) :: p2d3AB
-   real(dp) :: p3a3AB
-   real(dp) :: p3b3AB
-   real(dp) :: p3c3AB
-   real(dp) :: p3d3AB
-   real(dp) :: p1a6AB
-   real(dp) :: p1b6AB
-   real(dp) :: p1c6AB
-   real(dp) :: p1d6AB
-   real(dp) :: p2a6AB
-   real(dp) :: p2b6AB
-   real(dp) :: p2c6AB
-   real(dp) :: p2d6AB
-   real(dp) :: p3a6AB
-   real(dp) :: p3b6AB
-   real(dp) :: p3c6AB
-   real(dp) :: p3d6AB
-   real(dp) :: a0AB
-   real(dp) :: b0AB
-   real(dp) :: c0AB
-   real(dp) :: d0AB
-   real(dp) :: h0AB
-   real(dp) :: j0AB
-   real(dp) :: k0AB
-   real(dp) :: a3AB
-   real(dp) :: b3AB
-   real(dp) :: c3AB
-   real(dp) :: d3AB
-   real(dp) :: a6AB
-   real(dp) :: b6AB
-   real(dp) :: c6AB
-   real(dp) :: d6AB
-   real(dp) :: p1a0BA
-   real(dp) :: p1b0BA
-   real(dp) :: p1c0BA
-   real(dp) :: p1d0BA
-   real(dp) :: p1h0BA
-   real(dp) :: p1j0BA
-   real(dp) :: p1k0BA
-   real(dp) :: p2a0BA
-   real(dp) :: p2b0BA
-   real(dp) :: p2c0BA
-   real(dp) :: p2d0BA
-   real(dp) :: p2h0BA
-   real(dp) :: p2j0BA
-   real(dp) :: p2k0BA
-   real(dp) :: p3a0BA
-   real(dp) :: p3b0BA
-   real(dp) :: p3c0BA
-   real(dp) :: p3d0BA
-   real(dp) :: p3h0BA
-   real(dp) :: p3j0BA
-   real(dp) :: p3k0BA
-   real(dp) :: p1a3BA
-   real(dp) :: p1b3BA
-   real(dp) :: p1c3BA
-   real(dp) :: p1d3BA
-   real(dp) :: p2a3BA
-   real(dp) :: p2b3BA
-   real(dp) :: p2c3BA
-   real(dp) :: p2d3BA
-   real(dp) :: p3a3BA
-   real(dp) :: p3b3BA
-   real(dp) :: p3c3BA
-   real(dp) :: p3d3BA
-   real(dp) :: p1a6BA
-   real(dp) :: p1b6BA
-   real(dp) :: p1c6BA
-   real(dp) :: p1d6BA
-   real(dp) :: p2a6BA
-   real(dp) :: p2b6BA
-   real(dp) :: p2c6BA
-   real(dp) :: p2d6BA
-   real(dp) :: p3a6BA
-   real(dp) :: p3b6BA
-   real(dp) :: p3c6BA
-   real(dp) :: p3d6BA
-   real(dp) :: a0BA
-   real(dp) :: b0BA
-   real(dp) :: c0BA
-   real(dp) :: d0BA
-   real(dp) :: h0BA
-   real(dp) :: j0BA
-   real(dp) :: k0BA
-   real(dp) :: a3BA
-   real(dp) :: b3BA
-   real(dp) :: c3BA
-   real(dp) :: d3BA
-   real(dp) :: a6BA
-   real(dp) :: b6BA
-   real(dp) :: c6BA
-   real(dp) :: d6BA
-   real(dp) :: p1a0BB
-   real(dp) :: p1b0BB
-   real(dp) :: p1c0BB
-   real(dp) :: p1d0BB
-   real(dp) :: p1h0BB
-   real(dp) :: p1j0BB
-   real(dp) :: p1k0BB
-   real(dp) :: p2a0BB
-   real(dp) :: p2b0BB
-   real(dp) :: p2c0BB
-   real(dp) :: p2d0BB
-   real(dp) :: p2h0BB
-   real(dp) :: p2j0BB
-   real(dp) :: p2k0BB
-   real(dp) :: p3a0BB
-   real(dp) :: p3b0BB
-   real(dp) :: p3c0BB
-   real(dp) :: p3d0BB
-   real(dp) :: p3h0BB
-   real(dp) :: p3j0BB
-   real(dp) :: p3k0BB
-   real(dp) :: p1a3BB
-   real(dp) :: p1b3BB
-   real(dp) :: p1c3BB
-   real(dp) :: p1d3BB
-   real(dp) :: p2a3BB
-   real(dp) :: p2b3BB
-   real(dp) :: p2c3BB
-   real(dp) :: p2d3BB
-   real(dp) :: p3a3BB
-   real(dp) :: p3b3BB
-   real(dp) :: p3c3BB
-   real(dp) :: p3d3BB
-   real(dp) :: p1a6BB
-   real(dp) :: p1b6BB
-   real(dp) :: p1c6BB
-   real(dp) :: p1d6BB
-   real(dp) :: p2a6BB
-   real(dp) :: p2b6BB
-   real(dp) :: p2c6BB
-   real(dp) :: p2d6BB
-   real(dp) :: p3a6BB
-   real(dp) :: p3b6BB
-   real(dp) :: p3c6BB
-   real(dp) :: p3d6BB
-   real(dp) :: a0BB
-   real(dp) :: b0BB
-   real(dp) :: c0BB
-   real(dp) :: d0BB
-   real(dp) :: h0BB
-   real(dp) :: j0BB
-   real(dp) :: k0BB
-   real(dp) :: a3BB
-   real(dp) :: b3BB
-   real(dp) :: c3BB
-   real(dp) :: d3BB
-   real(dp) :: a6BB
-   real(dp) :: b6BB
-   real(dp) :: c6BB
-   real(dp) :: d6BB
-
-   real(dp) ::  lambda0AAp
-   real(dp) ::  xi0AAp
-   real(dp) ::  kappa0AAp
-   real(dp) ::  lambda0bAAp
-   real(dp) ::  xi0bAAp
-   real(dp) ::  kappa0bAAp
-   real(dp) ::  lambda0ABp
-   real(dp) ::  xi0ABp
-   real(dp) ::  kappa0ABp
-   real(dp) ::  lambda0bABp
-   real(dp) ::  xi0bABp
-   real(dp) ::  kappa0bABp
-   real(dp) ::  lambda0BAp
-   real(dp) ::  xi0BAp
-   real(dp) ::  kappa0BAp
-   real(dp) ::  lambda0bBAp
-   real(dp) ::  xi0bBAp
-   real(dp) ::  kappa0bBAp
-   real(dp) ::  lambda3ABp
-   real(dp) ::  xi3ABp
-   real(dp) ::  x3ABp
-   real(dp) ::  lambda3bABp
-   real(dp) ::  xi3bABp
-   real(dp) ::  x3bABp
-   real(dp) ::  lambda3BAp
-   real(dp) ::  xi3BAp
-   real(dp) ::  x3BAp
-   real(dp) ::  lambda3bBAp
-   real(dp) ::  xi3bBAp
-   real(dp) ::  x3bBAp
-
-   real(dp) :: theta12, theta21, d122, d132, d232, d232F
-   integer :: mmm, mm, kkk
-
-   real(dp) :: KaxirasCutoff, KaxirasCutoff2, distFact
-   real(dp) :: SrivaniCutoff
-
-   logical :: checking, SrivaniAA, SrivaniAB, useBNGKaxiras, fourLayers, threeLayers, middleTwist, useBNGSrivani, &
-         twoLayers, fourLayersSandwiched, fiveLayersSandwiched, sixLayersSandwiched, sevenLayersSandwiched, &
-         eightLayersSandwiched, tenLayersSandwiched, twentyLayersSandwiched, helicalTwistedMBM
-   logical :: GBNtwoLayers, BNBNtwoLayers, encapsulatedFourLayers, encapsulatedFourLayersF2G2, t3GwithBN, t2GBN, t2BG, t3BG, BNt2GBN
-   logical :: encapsulatedThreeLayers, encapsulatedFiveLayers, removeTopMoireInL2
-   logical :: encapsulatedSixLayers, encapsulatedSevenLayers
-   logical :: GBNtwoLayersF2G2s, BNBNtwoLayersF2G2s, GBNuseDisplacementFile, tBGOffDiag, tBGOffDiagPRB
-   logical :: oneLayer
-   logical :: tBGuseDisplacementFile
-   logical :: addPressureDependence
-   logical :: F2G2Model, useOldGrapheneF2G2
-   real(dp) :: GlobalPhi,Globalang
-   real(dp) :: GlobalPhi2,Globalang2
-   real(dp) :: GlobalPhiL1, GlobalPhiL2, GlobalPhiL3, GlobalPhiL2a, GlobalPhiL2b
-
-   real(dp) :: interlayerdistance
-   real(dp) :: epsKax
-
-   real (dp) :: a1AA
-   real (dp) :: b1AA
-   real (dp) :: c1AA
-   real (dp) :: d1AA
-   real (dp) :: a2AA
-   real (dp) :: b2AA
-   real (dp) :: c2AA
-   real (dp) :: a1AB
-   real (dp) :: b1AB
-   real (dp) :: c1AB
-   real (dp) :: d1AB
-   real (dp) :: a2AB
-   real (dp) :: b2AB
-   real (dp) :: c2AB
-
-   real (dp) :: V0_CB, lambda0_CB, xi0_CB, kappa0_CB
-   real (dp) :: V3_BC, lambda3_BC, xi3_BC, x3_BC
-   real (dp) :: V3_CB, lambda3_CB, xi3_CB, x3_CB
-   real (dp) :: V0_CN, lambda0_CN, xi0_CN, kappa0_CN
-   real (dp) :: V3_NC, lambda3_NC, xi3_NC, x3_NC
-   real (dp) :: V3_CN, lambda3_CN, xi3_CN, x3_CN
-   real (dp) :: theta_BC
-   real (dp) :: theta_CB
-   real (dp) :: theta_NC
-   real (dp) :: theta_CN
-
-   real (dp) :: epsilon0_CB
-   real (dp) :: epsilon3_BC
-   real (dp) :: epsilon3_CB
-   real (dp) :: epsilon0_CN
-   real (dp) :: epsilon3_NC
-   real (dp) :: epsilon3_CN
-
-   real (dp) :: c1_0
-   real (dp) :: c1_1
-   real (dp) :: c1_2
-   real (dp) :: c2_0
-   real (dp) :: c2_1
-   real (dp) :: c2_2
-   real (dp) :: c3_0
-   real (dp) :: c3_1
-   real (dp) :: c3_2
-   real (dp) :: c4_0
-   real (dp) :: c4_1
-   real (dp) :: c4_2
-   real (dp) :: c5_0
-   real (dp) :: c5_1
-   real (dp) :: c5_2
-   real (dp) :: c6_0
-   real (dp) :: c6_1
-   real (dp) :: c6_2
-   real (dp) :: c7_0
-   real (dp) :: c7_1
-   real (dp) :: c7_2
-   real (dp) :: c8_0
-   real (dp) :: c8_1
-   real (dp) :: c8_2
-   real (dp) :: c9_0
-   real (dp) :: c9_1
-   real (dp) :: c9_2
-   real (dp) :: c10_0
-   real (dp) :: c10_1
-   real (dp) :: c10_2
-   real (dp) :: c11_0
-   real (dp) :: c11_1
-   real (dp) :: c11_2
-   real (dp) :: c12_0
-   real (dp) :: c12_1
-   real (dp) :: c12_2
-   real (dp) :: c13_0
-   real (dp) :: c13_1
-   real (dp) :: c13_2
-   real (dp) :: c14_0
-   real (dp) :: c14_1
-   real (dp) :: c14_2
-
-   real (dp) :: tAA1
-   real (dp) :: tAA2
-   real (dp) :: tAB1
-   real (dp) :: tAB2
-   real (dp) :: tBA0
-   real (dp) :: tBA2
-   real (dp) :: tBA5
-
-   real (dp) :: c0AAV0
-   real (dp) :: c1AAV0
-   real (dp) :: c2AAV0
-   real (dp) :: c0ABV0
-   real (dp) :: c1ABV0
-   real (dp) :: c2ABV0
-
-   real (dp) :: t2KSLGfromGBNA
-   real (dp) :: t2KSLGfromGBNB
-   real (dp) :: t3KSLGfromGBN
-   real (dp) :: t4KSLGfromGBN
-   real (dp) :: t5KSLGfromGBNA
-   real (dp) :: t5KSLGfromGBNB
-   real (dp) :: t6KSLGfromGBNA
-   real (dp) :: t6KSLGfromGBNB
-   real (dp) :: t7KSLGfromGBN
-   real (dp) :: t8KSLGfromGBN
-   real (dp) :: t2KSLBNfromGBNA
-   real (dp) :: t2KSLBNfromGBNB
-   real (dp) :: t3KSLBNfromGBN
-   real (dp) :: t4KSLBNfromGBN
-   real (dp) :: t5KSLBNfromGBNA
-   real (dp) :: t5KSLBNfromGBNB
-   real (dp) :: t6KSLBNfromGBNA
-   real (dp) :: t6KSLBNfromGBNB
-   real (dp) :: t7KSLBNfromGBN
-   real (dp) :: t8KSLBNfromGBN
-
-   real (dp) :: signChange
-
-   real (dp) :: tAB
-
-   real (dp) :: aGSrivani
-   real (dp) :: t2Value
-
-   integer :: countG1
-   integer :: countG2
-   integer :: countG3
-   integer :: countG4
-   integer :: countG5
-   integer :: countG6
-   integer :: countG7
-   integer :: countG8
-   integer :: countBN1
-   integer :: countBN2
-   integer :: countBN3
-   integer :: countBN4
-   integer :: countBN5
-   integer :: countBN6
-   integer :: countBN7
-   integer :: countBN8
-
-   logical :: singleLayerXYZ, changeLatticeParameterForSrivaniModel
    real (dp) :: Cabd, BfactorCab, z0 ! it should be ok to take the first neighbor as it is effective model with only 3 neighbors
-   real (dp) :: CabG, CabBN
-   logical :: saidHTCGBN, saidHTCBNBN
-   real (dp) :: CabG_global
-   logical :: distanceDependentEffectiveModel, findThetasGeometrically
-
-   logical :: deactivateInterlayer, removeF2G2Flag, switchV3Sign, DCT, oldParameterSet, KoshinoIntralayer, &
-         forceBilayerF2G2Intralayer, MayouIntralayer
-   logical :: deactivateInterlayer12, deactivateInterlayer23, deactivateInterlayer34
-   logical :: deactivateInterlayerBG
-   logical :: deactivateInterlayert2GBN1to2, deactivateInterlayert2GBN2to3
-   logical :: deactivateInterlayert2BG2to3
-   logical :: deactivateInterlayert3BG1to2, deactivateInterlayert3BG2to3, deactivateInterlayert3BG3to4, &
-         deactivateInterlayert3BG4to5, deactivateInterlayert3BG5to6
-   logical :: useOnlyVAB, addExponentialDecayForDihedral, newFittingFunctions, onlyV0
-   logical :: deactivateInterlayerTwisted, renormalizeHoppings, deactivateV6, deactivateV3
-   real(dp) :: epsFactor, renormalizeHoppingFactorAAp, renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp, &
-         renormalizeHoppingFactorBBp
-
-   logical :: tBGSwitchDxDy
-   logical :: renormalizeCoupling, KoshinoSR, writeData, addDisplacements, realStrain, onlyFirstNeighborRealStrain, BernalReadXYZ
    real(dp) :: realStrainBeta   ! realStrain decay exponent (opt-in; default 3.37 = the previous literal)
    logical :: shellsFromRigid   ! neighbour shells from a rigid reference structure (opt-in; default = in-plane bond length)
-   real(dp) :: dsel, dshellMax
-   character(len=200) :: shellRigidFile, shellSpc
-   integer :: nshellDiff
-   real(dp) :: couplingFactor, couplingFactor2
-   logical :: differentCouplings, deactivateIntrasublattice, deactivateIntersublattice, deactivateIntraSublatticeForC
-
-   real(dp) :: lc, rc, qsigma, qpi, Fc, aval, bval, avalC1B, avalC2B, avalC1N , avalC2N, bvalC1B, bvalC2B, bvalC1N , bvalC2N
-   real(dp) :: GBNAngle, tBGAngle
-
-   real(dp) :: aBN1
    real(dp) :: aBNR, aBN1R ! B to N distance
    real(dp) :: aGR, accR ! B to N distance
-   real(dp) :: rotationAngle, epstBG
-
-   integer :: counter1, nLayers
-   logical :: readRigidXYZ, oppositedxdy, bulk, HaldaneOppositePhase
-   logical :: onlyvppsigma, setnLayersToZero, HaldaneBothLayers_deprecated
    logical :: corrugatedInterlayerTwoCenter   ! optional: interlayer 2-centre with local p_z axes
    integer :: pzNGhost                         ! size of the MPI halo region of pzNormal
    integer :: pzNfallback                       ! # atoms that fell back to z_hat in ComputePzNormals
-   ! Local p_z orbital axis per atom (+MPI halo). SAVEd only so MIO_Allocate can
-   ! reuse the buffer across repeated HamHopping calls; scoped to this routine.
    real(dp), pointer :: pzNormal(:,:) => NULL()
-
-   logical :: threeLayerShort
-   real(dp) :: tA1B2, tA1A2, tB1B2, tA1A3, tB1A3
-   real(dp) :: tA1B2_2, tA1A2_2, tB1B2_2, tA1A3_2, tB1A3_2
-   real(dp) :: tB1A2, tA1B3
-   real(dp) :: tA1A1_1, tB1B1_1, tA2A2_1, tA1B3_1, tB1A2_1
-   real(dp) :: tA1A1_2, tB1B1_2, tA2A2_2, tA1B3_2, tB1A2_2
-
-   logical :: Frank
-   integer :: n1, n2, lllll, nnnnn, mB
-   real(dp) :: diffx, diffy, mmphi
-   ! >>> unset markers
    real(dp) :: hamUnset                    ! NaN: marks variables that have not been set
+   type(cl_file) :: file
+
    ! <<< unset markers
    ! >>> unset markers
    ! Value of a variable that has not been set: any use of it gives NaN, and the run stops
    ! in HamCheckFinite instead of continuing with whatever the memory holds.
    hamUnset = ieee_value(hamUnset, ieee_quiet_nan)
-   a0aa = hamUnset
-   a0ab = hamUnset
    aval = hamUnset
-   b0aa = hamUnset
-   b0ab = hamUnset
    bval = hamUnset
-   c0aa = hamUnset
-   c0ab = hamUnset
    c1_0 = hamUnset
    c10_0 = hamUnset
    c10_1 = hamUnset
@@ -4815,19 +4269,9 @@ subroutine HamHopping
    c9_0 = hamUnset
    c9_1 = hamUnset
    c9_2 = hamUnset
-   d0aa = hamUnset
-   d0ab = hamUnset
    del = hamUnset
-   dx_b = hamUnset
-   dx_t = hamUnset
-   dy_b = hamUnset
-   dy_t = hamUnset
    eps2 = hamUnset
-   h0aa = hamUnset
-   h0ab = hamUnset
    imagh = hamUnset
-   imagh_b = hamUnset
-   imagh_t = hamUnset
    kappa0 = hamUnset
    kappa6 = hamUnset
    kappa6b = hamUnset
@@ -4855,8 +4299,6 @@ subroutine HamHopping
    p3k0aa = hamUnset
    p3k0ab = hamUnset
    realh = hamUnset
-   realh_b = hamUnset
-   realh_t = hamUnset
    renormalizehoppingfactoraap = hamUnset
    renormalizehoppingfactorabp = hamUnset
    renormalizehoppingfactorbap = hamUnset
@@ -4866,9 +4308,6 @@ subroutine HamHopping
    t6ksl = hamUnset
    t7ksl = hamUnset
    t8ksl = hamUnset
-   theta = hamUnset
-   theta12 = hamUnset
-   theta21 = hamUnset
    x3 = hamUnset
    x6 = hamUnset
    x6b = hamUnset
@@ -5464,42 +4903,21 @@ subroutine HamHopping
          ! ---------------------------------------------------------------------
          !!!$OMP& PRIVATE (expFactor, dist, yDistance, DBShiftRatio,boundaryWidth, limit2, limit1, limit0), &
          !!!$OMP& PRIVATE (nnnn), &
-         !$OMP PARALLEL DO PRIVATE(d,nlay,delta,del,realH,imagH,Habjj,dx,dy,dxTemp,dyTemp,HBL,HAA,HAB,HBA,dxi,dxj), &
-         !$OMP& FIRSTPRIVATE (BLdelta, twistAngleGrad), &
-         !$OMP& PRIVATE(realH_b,imagH_b,Habjj_b,dx_b,dy_b,dxTemp_b,dyTemp_b), &
-         !$OMP& PRIVATE(realH_t,imagH_t,Habjj_t,dx_t,dy_t,dxTemp_t,dyTemp_t), &
-         !$OMP& PRIVATE (dyi,dyj,vpppi,vppsigma,posOrNeg,jj,jj1,jj2,maxDist,k,firstNN), &
-         !$OMP& PRIVATE (rbar, V0, V3, V6, theta, d122,d232, d132, d232F), &
-         !$OMP& PRIVATE (Cabd, Fc, renormalizeHoppingFactorAAp, renormalizeHoppingFactorBBp, renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp), &
-         !$OMP& PRIVATE (uvec, vvec, vvecR, epsKax), &
-         !$OMP& PRIVATE (lambda0, lambda3, lambda6, lambda6b, xi0, xi3, xi6, xi6b, x3, x6, x6b, kappa0, kappa6, kappa6b), &
-         !$OMP& PRIVATE (signChange), &
-         !$OMP& PRIVATE (a0AA, b0AA, c0AA, d0AA, h0AA, j0AA, k0AA), &
-         !$OMP& PRIVATE (a3AA, b3AA, c3AA, d3AA), &
-         !$OMP& PRIVATE (a6AA, b6AA, c6AA, d6AA), &
-         !$OMP& PRIVATE (a0BA, b0BA, c0BA, d0BA, h0BA, j0BA, k0BA), &
-         !$OMP& PRIVATE (a3BA, b3BA, c3BA, d3BA), &
-         !$OMP& PRIVATE (a6BA, b6BA, c6BA, d6BA), &
-         !$OMP& PRIVATE (a0AB, b0AB, c0AB, d0AB, h0AB, j0AB, k0AB), &
-         !$OMP& PRIVATE (a3AB, b3AB, c3AB, d3AB), &
-         !$OMP& PRIVATE (a6AB, b6AB, c6AB, d6AB), &
-         !$OMP& PRIVATE (a0BB, b0BB, c0BB, d0BB, h0BB, j0BB, k0BB), &
-         !$OMP& PRIVATE (a3BB, b3BB, c3BB, d3BB), &
-         !$OMP& PRIVATE (a6BB, b6BB, c6BB, d6BB), &
-         !$OMP& PRIVATE (V0AA, V3AA, V6AA), &
-         !$OMP& PRIVATE (V0AB, V3AB, V6AB), &
-         !$OMP& PRIVATE (V0AAp, V3AAp, V6AAp), &
-         !$OMP& PRIVATE (V0ABp, V3ABp, V6ABp), &
-         !$OMP& PRIVATE (V0BAp, V3BAp, V6BAp), &
-         !$OMP& PRIVATE (V0BBp, V3BBp, V6BBp), &
-         !$OMP& PRIVATE (checking, theta12, theta21, mmm,mm,kk,kkk),&
-         !$OMP& PRIVATE (aval, bval),&
-         !$OMP& PRIVATE (CabG),&
-         !$OMP& PRIVATE (expFactor, dist, distXY, distXYZ), &
-         !$OMP& REDUCTION (+:numberOfDel1,numberOfDel2,numberOfDel3,numberOfInterlayerHoppings), &
-         !$OMP& REDUCTION (+:numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHAB2, numberOfHBA1, numberOfHBA2), &
-         !$OMP& REDUCTION (+:countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8), &
-         !$OMP& REDUCTION (+:countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8)
+         !$OMP PARALLEL DO PRIVATE(d, nlay, delta, del, realH, imagH, Habjj, dx, dy, dxTemp, dyTemp, HBL), &
+         !$OMP& FIRSTPRIVATE(BLdelta, twistAngleGrad), &
+         !$OMP& PRIVATE(vpppi, vppsigma, jj, jj1, jj2, k, firstNN), &
+         !$OMP& PRIVATE(Cabd, Fc, renormalizeHoppingFactorAAp, renormalizeHoppingFactorBBp), &
+         !$OMP& PRIVATE(renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp), &
+         !$OMP& PRIVATE(lambda0, lambda3, lambda6, lambda6b, xi0, xi3, xi6, xi6b, x3, x6, x6b, kappa0, kappa6), &
+         !$OMP& PRIVATE(kappa6b), &
+         !$OMP& PRIVATE(checking, mmm, mm, kk, kkk), &
+         !$OMP& PRIVATE(aval, bval), &
+         !$OMP& PRIVATE(CabG), &
+         !$OMP& PRIVATE(dist, distXY, distXYZ), &
+         !$OMP& REDUCTION(+:numberOfDel1, numberOfDel2, numberOfDel3, numberOfInterlayerHoppings), &
+         !$OMP& REDUCTION(+:numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHAB2, numberOfHBA1, numberOfHBA2), &
+         !$OMP& REDUCTION(+:countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8), &
+         !$OMP& REDUCTION(+:countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8)
          do i=1,nAt
             ! >>> unset markers
             d = hamUnset
@@ -5513,50 +4931,14 @@ subroutine HamHopping
             dxtemp = hamUnset
             dytemp = hamUnset
             hbl = cmplx(hamUnset,hamUnset,dp)
-            haa = cmplx(hamUnset,hamUnset,dp)
-            hab = cmplx(hamUnset,hamUnset,dp)
-            hba = cmplx(hamUnset,hamUnset,dp)
-            dxi = hamUnset
-            dxj = hamUnset
-            realh_b = hamUnset
-            imagh_b = hamUnset
-            habjj_b = cmplx(hamUnset,hamUnset,dp)
-            dx_b = hamUnset
-            dy_b = hamUnset
-            dxtemp_b = hamUnset
-            dytemp_b = hamUnset
-            realh_t = hamUnset
-            imagh_t = hamUnset
-            habjj_t = cmplx(hamUnset,hamUnset,dp)
-            dx_t = hamUnset
-            dy_t = hamUnset
-            dxtemp_t = hamUnset
-            dytemp_t = hamUnset
-            dyi = hamUnset
-            dyj = hamUnset
             vpppi = hamUnset
             vppsigma = hamUnset
-            posorneg = hamUnset
-            maxdist = hamUnset
-            rbar = hamUnset
-            v0 = hamUnset
-            v3 = hamUnset
-            v6 = hamUnset
-            theta = hamUnset
-            d122 = hamUnset
-            d232 = hamUnset
-            d132 = hamUnset
-            d232f = hamUnset
             cabd = hamUnset
             fc = hamUnset
             renormalizehoppingfactoraap = hamUnset
             renormalizehoppingfactorbbp = hamUnset
             renormalizehoppingfactorabp = hamUnset
             renormalizehoppingfactorbap = hamUnset
-            uvec = hamUnset
-            vvec = hamUnset
-            vvecr = hamUnset
-            epskax = hamUnset
             lambda0 = hamUnset
             lambda3 = hamUnset
             lambda6 = hamUnset
@@ -5571,91 +4953,9 @@ subroutine HamHopping
             kappa0 = hamUnset
             kappa6 = hamUnset
             kappa6b = hamUnset
-            signchange = hamUnset
-            a0aa = hamUnset
-            b0aa = hamUnset
-            c0aa = hamUnset
-            d0aa = hamUnset
-            h0aa = hamUnset
-            j0aa = hamUnset
-            k0aa = hamUnset
-            a3aa = hamUnset
-            b3aa = hamUnset
-            c3aa = hamUnset
-            d3aa = hamUnset
-            a6aa = hamUnset
-            b6aa = hamUnset
-            c6aa = hamUnset
-            d6aa = hamUnset
-            a0ba = hamUnset
-            b0ba = hamUnset
-            c0ba = hamUnset
-            d0ba = hamUnset
-            h0ba = hamUnset
-            j0ba = hamUnset
-            k0ba = hamUnset
-            a3ba = hamUnset
-            b3ba = hamUnset
-            c3ba = hamUnset
-            d3ba = hamUnset
-            a6ba = hamUnset
-            b6ba = hamUnset
-            c6ba = hamUnset
-            d6ba = hamUnset
-            a0ab = hamUnset
-            b0ab = hamUnset
-            c0ab = hamUnset
-            d0ab = hamUnset
-            h0ab = hamUnset
-            j0ab = hamUnset
-            k0ab = hamUnset
-            a3ab = hamUnset
-            b3ab = hamUnset
-            c3ab = hamUnset
-            d3ab = hamUnset
-            a6ab = hamUnset
-            b6ab = hamUnset
-            c6ab = hamUnset
-            d6ab = hamUnset
-            a0bb = hamUnset
-            b0bb = hamUnset
-            c0bb = hamUnset
-            d0bb = hamUnset
-            h0bb = hamUnset
-            j0bb = hamUnset
-            k0bb = hamUnset
-            a3bb = hamUnset
-            b3bb = hamUnset
-            c3bb = hamUnset
-            d3bb = hamUnset
-            a6bb = hamUnset
-            b6bb = hamUnset
-            c6bb = hamUnset
-            d6bb = hamUnset
-            v0aa = hamUnset
-            v3aa = hamUnset
-            v6aa = hamUnset
-            v0ab = hamUnset
-            v3ab = hamUnset
-            v6ab = hamUnset
-            v0aap = hamUnset
-            v3aap = hamUnset
-            v6aap = hamUnset
-            v0abp = hamUnset
-            v3abp = hamUnset
-            v6abp = hamUnset
-            v0bap = hamUnset
-            v3bap = hamUnset
-            v6bap = hamUnset
-            v0bbp = hamUnset
-            v3bbp = hamUnset
-            v6bbp = hamUnset
-            theta12 = hamUnset
-            theta21 = hamUnset
             aval = hamUnset
             bval = hamUnset
             cabg = hamUnset
-            expfactor = hamUnset
             dist = hamUnset
             distxy = hamUnset
             distxyz = hamUnset
