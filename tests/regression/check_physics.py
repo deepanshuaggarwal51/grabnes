@@ -21,6 +21,9 @@ tapw_two_way    The same bilayer with the plane-wave reduction (TAPW, 124 states
 input_messages  Messages of the input library: a key given twice is reported (the first value is used), and a
                 key that nothing reads, here a misspelt one, is listed at the end of the run.
 
+twist_measure   Stack.MeasureTwist on the generated twisted bilayer: the twist angle measured from the bond
+                directions must be the angle the cell generator prints (6.0089 degrees), and the interface reported as twisted.
+
 Exit status 1 if a check fails. Requires NumPy.
 """
 import argparse
@@ -219,6 +222,23 @@ def input_messages(r):
     return problems
 
 
+def twist_measure(r):
+    r.run("twist_measure", TBG + "Stack.MeasureTwist .true.\n")
+    log = open(os.path.join(r.a.work, "twist_measure", "job.out")).read()
+    cell = [float(l.split()[-2]) for l in log.split("\n") if l.startswith("cell: Angle:")]
+    rows = [l.split() for l in log.split("\n") if l.startswith("ham:   1 - 2")]
+    if not cell or not rows:
+        return ["the angle of the cell or the measured twist is missing from the output"]
+    measured, verdict = abs(float(rows[0][4])), " ".join(rows[0][5:])
+    print(f"  angle of the generated cell {cell[0]:.4f} deg, twist measured from the structure {measured:.4f} deg ({verdict})")
+    problems = []
+    if abs(measured - cell[0]) > 2e-4:
+        problems.append("the twist measured from the structure is not the angle of the generated cell")
+    if verdict != "twisted":
+        problems.append("the interface is not reported as twisted")
+    return problems
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--bin", required=True)
@@ -231,6 +251,7 @@ def main():
     r.check("sparse_dense", lambda: sparse_dense(r))
     r.check("tapw_two_way", lambda: tapw_two_way(r))
     r.check("input_messages", lambda: input_messages(r))
+    r.check("twist_measure", lambda: twist_measure(r))
     print()
     print("PASS: all physics checks" if not r.failures else f"FAIL: {r.failures} physics check(s)")
     sys.exit(1 if r.failures else 0)

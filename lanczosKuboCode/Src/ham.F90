@@ -3369,6 +3369,110 @@ pure function interlayerTwoCenter(vpi, vsig, rvec, dist, ni, nj, corrugated) res
 
 end function interlayerTwoCenter
 
+!> Orientation of every layer and twist angle of every interface, measured from the structure.
+!!
+!! Opt-in: `Stack.MeasureTwist .true.`. Nothing in the Hamiltonian depends on the result yet; the table is
+!! printed so that the choice of the model for each pair of layers (F2G2 parameters for layers that are
+!! not twisted, the two-center interlayer model where they are) can be checked against the structure.
+!!
+!! The orientation of a layer is the phase of the average of exp(6 i theta) over its first-shell in-plane
+!! bonds, theta being the angle of the bond with the x axis. In a honeycomb lattice the bonds of both
+!! sublattices give the same value, so the phase divided by 6 is the lattice orientation modulo 60 degrees;
+!! the modulus of the average ("coherence") is 1 for a rigid layer and smaller for a relaxed one. The twist
+!! of an interface is the difference of the orientations of its two layers, folded into (-30, 30] degrees.
+!! An interface is called twisted if the angle exceeds `Stack.TwistTolerance` (degrees, default 0.05).
+subroutine HamMeasureLayerTwist()
+
+   use neigh,                only : NeighD, NList, Nneigh, Nradii
+   use atoms,                only : Species, layerIndex, inode1, inode2
+   use constants,            only : pi, cmplx_i
+
+   ! Switches and options read from the input
+   logical :: measure
+
+   ! Model parameters read from the input
+   real(dp) :: tol
+
+   ! Other local variables
+   integer :: i, j, L, nL, nlay
+   real(dp) :: dxy, rcut, twist
+   integer, allocatable :: nBond(:), nC(:), nBN(:)
+   real(dp), allocatable :: phi(:), coh(:)
+   complex(dp), allocatable :: z(:)
+   character(len=12) :: what
+
+#ifdef DEBUG
+   call MIO_Debug('HamMeasureLayerTwist',0)
+#endif /* DEBUG */
+
+   call MIO_InputParameter('Stack.MeasureTwist',measure,.false.)
+   if (measure) then
+      call MIO_InputParameter('Stack.TwistTolerance',tol,0.05_dp)
+      nL = maxval(layerIndex(inode1:inode2))
+      allocate(z(nL), nBond(nL), nC(nL), nBN(nL), phi(nL), coh(nL))
+      z = (0.0_dp,0.0_dp)
+      nBond = 0
+      nC = 0
+      nBN = 0
+      do i = inode1, inode2
+         L = layerIndex(i)
+         if (L < 1) cycle
+         nlay = (Species(i) - 1)/2 + 1
+         if (nlay == 1) then
+            nC(L) = nC(L) + 1
+         else
+            nBN(L) = nBN(L) + 1
+         end if
+         rcut = Nradii(1,nlay)
+         do j = 1, Nneigh(i)
+            if (layerIndex(NList(j,i)) /= L) cycle
+            dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+            if (dxy >= rcut .or. dxy < 1.0e-6_dp) cycle
+            z(L) = z(L) + exp(6.0_dp*cmplx_i*atan2(NeighD(2,j,i),NeighD(1,j,i)))
+            nBond(L) = nBond(L) + 1
+         end do
+      end do
+      call MIO_Print('')
+      call MIO_Print('Layer orientations measured from the structure (Stack.MeasureTwist):','ham')
+      call MIO_Print('  layer   atoms  kind      orientation [deg]   coherence','ham')
+      do L = 1, nL
+         phi(L) = 0.0_dp
+         coh(L) = 0.0_dp
+         if (nBond(L) > 0) then
+            phi(L) = atan2(aimag(z(L)),real(z(L)))/6.0_dp*180.0_dp/pi
+            coh(L) = abs(z(L))/nBond(L)
+         end if
+         what = 'mixed'
+         if (nBN(L) == 0) what = 'graphene'
+         if (nC(L) == 0) what = 'hBN'
+         call MIO_Print('  '//trim(num2str(L))//'       '//trim(num2str(nC(L)+nBN(L)))//'   '//what// &
+           trim(num2str(phi(L),4))//'             '//trim(num2str(coh(L),4)),'ham')
+      end do
+      call MIO_Print('  interface   twist [deg]   (tolerance '//trim(num2str(tol,3))//' deg)','ham')
+      do L = 1, nL - 1
+         twist = phi(L+1) - phi(L)
+         twist = twist - 60.0_dp*nint(twist/60.0_dp)
+         if (nBond(L) == 0 .or. nBond(L+1) == 0) then
+            call MIO_Print('  '//trim(num2str(L))//' - '//trim(num2str(L+1))//'       not measured (a layer '// &
+              'without first-shell bonds)','ham')
+         else if (abs(twist) > tol) then
+            call MIO_Print('  '//trim(num2str(L))//' - '//trim(num2str(L+1))//'       '//trim(num2str(twist,4))// &
+              '      twisted','ham')
+         else
+            call MIO_Print('  '//trim(num2str(L))//' - '//trim(num2str(L+1))//'       '//trim(num2str(twist,4))// &
+              '      not twisted','ham')
+         end if
+      end do
+      call MIO_Print('')
+      deallocate(z, nBond, nC, nBN, phi, coh)
+   end if
+
+#ifdef DEBUG
+   call MIO_Debug('HamMeasureLayerTwist',1)
+#endif /* DEBUG */
+
+end subroutine HamMeasureLayerTwist
+
 !> @brief Build one local p_z orbital axis per locally-owned atom from its
 !!        first-shell same-layer neighbour bond vectors. Used only when
 !!        corrugatedInterlayerTwoCenter = .true.
@@ -4476,6 +4580,7 @@ subroutine HamHopping
    ! the 3-D length of the actual bond. Implemented for GBNtwoLayers, single MPI rank.
    call MIO_InputParameter('Strain.ShellsFromRigidPositions',shellsFromRigid,.false.)
    if (shellsFromRigid) call HamHopShellsFromRigid()
+   call HamMeasureLayerTwist()
 
    counter1 = 0
    hopp = 0.0_dp
