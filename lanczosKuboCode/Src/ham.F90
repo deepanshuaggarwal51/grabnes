@@ -107,9 +107,15 @@ function HamRigidBondXY(i, jj, bond) result(d)
    use atoms,  only : Rat
    use cell,   only : ucell
 
-   integer, intent(in) :: i, jj
+
+   ! Arguments
+   integer, intent(in) :: i
+   integer, intent(in) :: jj
    real(dp), intent(in) :: bond(3)
-   real(dp) :: d, du(2), f(2), det
+
+   ! Other local variables
+   real(dp) :: d, det, du(2), f(2)
+
 
    du = (Rat(1:2,jj) - RshellRig(1:2,jj)) - (Rat(1:2,i) - RshellRig(1:2,i))
    det = ucell(1,1)*ucell(2,2) - ucell(1,2)*ucell(2,1)
@@ -144,44 +150,40 @@ subroutine HamInit()
    use gauss,                only : GaussHeight
 
    ! System configuration flags
+
+   ! Named constants
+   integer, parameter :: numN(5) = [3,6,3,6,6]  ! Number of neighbors for each shell
+
+   ! Switches and options read from the input
+   logical :: l, ll, lll
+   character(len=80) :: str
+
+   ! Variables with one copy per thread in the parallel loops
+   integer :: TID
+
+   ! Other local variables
+   integer :: i, nHaldaneLayersRead, nSOCLayersRead, OMP_GET_THREAD_NUM, tempHaldaneLayers(maxHaldaneLayers), &
+         tempSOCLayers(maxSOCLayers)
+   character(len=500) :: HaldaneLayersString, SOCLayersString
+
+   ! Declarations with attributes, initial values or their own comments
    logical :: printBubble           ! Add a bubble to the system
    logical :: prnt                  ! Print flag for debugging
-   logical :: createBLDomainBoundary ! Create bilayer domain boundary
    logical :: cutAtNN3              ! Cut at third nearest neighbor
    logical :: haldaneOn             ! The Haldane term is switched on
    logical :: F2G2Model             ! Use F2G2 model
    logical :: readDataFiles         ! Read data from files instead of computing
    logical :: bulk, bulksmall, small ! System size flags
-
-   ! Physical parameters
-   integer, parameter :: numN(5) = [3,6,3,6,6]  ! Number of neighbors for each shell
    real(dp) :: aCC                  ! Carbon-carbon bond length
    real(dp) :: cutoff2, cutoff, cutoff2bis  ! Cutoff distances for neighbor search
    real(dp) :: A1(3), A2(3), A3    ! Lattice vectors
-   real(dp) :: distFact, d, dist   ! Distance factors and distances
+   real(dp) :: distFact, d   ! Distance factors and distances
    real(dp) :: w, sigma, dist2, dy, dx  ! Strain and displacement parameters
-   real(dp) :: limit0, limit1, limit2, limit3, DBShiftRatio, boundaryWidth  ! Domain boundary parameters
-
-   ! Neighbor counting
    integer :: inplaneNeigh, outplaneNeigh  ! In-plane and out-of-plane neighbor counts
    integer :: nShells, modelShells         ! Intralayer shells searched / reached by the model
    real(dp) :: intraRadius                 ! Neigh.IntralayerRadius [Ang] (0 = shell table)
    integer :: maxnn                        ! Maximum number of neighbors
 
-   ! Loop variables
-   integer :: i, j, n
-   integer :: kkk, kk
-
-   ! OpenMP variables
-   integer :: TID, OMP_GET_THREAD_NUM
-
-   ! Temporary variables (consider removing if unused)
-   logical :: l, ll, lll
-   character(len=80) :: str
-   integer :: tempSOCLayers(maxSOCLayers), nSOCLayersRead
-   character(len=500) :: SOCLayersString
-   integer :: tempHaldaneLayers(maxHaldaneLayers), nHaldaneLayersRead
-   character(len=500) :: HaldaneLayersString
 
    ! Get OpenMP thread ID for potential thread-specific operations
    !$OMP PARALLEL PRIVATE(TID)
@@ -548,6 +550,8 @@ subroutine HamOnSite()
 
 
    ! Named constants
+
+   ! Named constants
    real(dp), parameter :: phi1= 1.884_dp, phi2 = 1.531_dp
 
    ! Switches and options read from the input
@@ -596,6 +600,7 @@ subroutine HamOnSite()
    logical, allocatable :: checkerActivate(:,:)
    integer, allocatable :: Qcdw(:,:)
    real(dp) :: hamUnset                    ! NaN: marks variables that have not been set
+
 
    ! <<< unset markers
    ! >>> unset markers
@@ -3277,8 +3282,13 @@ end subroutine HamOnSite
 !! @param[in]  high   Upper bound of output range
 subroutine randomInRange(rand,rand2, low,high)
 
-    real(dp), intent(in) :: low, high, rand
-    real(dp), intent(out) :: rand2
+
+   ! Arguments
+   real(dp), intent(in) :: rand
+   real(dp), intent(out) :: rand2
+   real(dp), intent(in) :: low
+   real(dp), intent(in) :: high
+
 
     rand2 = (rand*(high-low))+low
 
@@ -3290,11 +3300,14 @@ end subroutine randomInRange
 !! @param[out] Cjj        Fitted coupling parameter
 subroutine fitFunSrivani(p1, p2, p3, dist, Cjj)
 
+
+   ! Declarations with attributes, initial values or their own comments
     real(dp) :: p1 ! parabolic function coefficient
     real(dp) :: p2 ! parabolic function coefficient
     real(dp) :: p3 ! parabolic function coefficient
     real(dp) :: dist ! distance separating the two layers
     real(dp) :: Cjj ! fitted value
+
 
     Cjj = p1*abs(dist)**2 + p2*abs(dist) + p3
     return
@@ -3308,9 +3321,14 @@ end subroutine fitFunSrivani
 !! @param[in]  z0      Reference interlayer distance
 subroutine distanceDependentC(Cd, C0, Bfactor, z, z0)
 
-    real(dp), intent(in) :: C0, z, z0, Bfactor
-    real(dp), intent(out) :: Cd
-    logical :: writeData
+
+   ! Arguments
+   real(dp), intent(out) :: Cd
+   real(dp), intent(in) :: C0
+   real(dp), intent(in) :: Bfactor
+   real(dp), intent(in) :: z
+   real(dp), intent(in) :: z0
+
 
     Cd = C0 * exp(-Bfactor * (z-z0))
     return
@@ -3367,11 +3385,15 @@ subroutine ComputePzNormals(pzn, nfallback)
    use atoms,  only : Species, layerIndex, inode1, inode2
    use math,   only : CrossProd, norm
 
+
+   ! Other local variables
+   integer :: i, ja, jb, nlay
+   real(dp) :: acc(3), ba(3), bb(3), c(3), la, lb, na, nc, rcut
+
+   ! Declarations with attributes, initial values or their own comments
    real(dp), intent(inout) :: pzn(:, inode1:)   ! filled for the owned range inode1:inode2
    integer,  intent(out)   :: nfallback         ! # owned atoms that fell back to z_hat
 
-   integer  :: i, ja, jb, nlay
-   real(dp) :: acc(3), c(3), ba(3), bb(3), la, lb, rcut, nc, na
 
 #ifdef DEBUG
    call MIO_Debug('ComputePzNormals',0)
@@ -3425,12 +3447,18 @@ subroutine HamPrintNormalStats(pzn, nfallback)
    use math,       only : norm
    use constants,  only : pi
 
-   real(dp), intent(in) :: pzn(:, inode1:)
-   integer,  intent(in) :: nfallback
 
+   ! Arguments
+   real(dp), intent(in) :: pzn(:, inode1:)
+   integer, intent(in) :: nfallback
+
+   ! Named constants
    real(dp), parameter :: r2d = 180.0_dp / pi
-   integer  :: i, lay, laymin, laymax, ntot, imaxtilt
-   real(dp) :: nx0, nx1, ny0, ny1, nz0, nz1, m0, m1, mag, tilt, tmax, tsum, maxmagdev
+
+   ! Other local variables
+   integer :: i, imaxtilt, lay, laymax, laymin, ntot
+   real(dp) :: m0, m1, mag, maxmagdev, nx0, nx1, ny0, ny1, nz0, nz1, tilt, tmax, tsum
+
 
 #ifdef DEBUG
    call MIO_Debug('HamPrintNormalStats',0)
@@ -3494,7 +3522,10 @@ subroutine HamCheckFinite()
    use atoms,  only : inode1, inode2
    use neigh,  only : Nneigh
 
-   integer :: i, j, nhop, nons, ifirst
+
+   ! Other local variables
+   integer :: i, ifirst, j, nhop, nons
+
 
    nhop = 0
    nons = 0
@@ -3538,9 +3569,14 @@ subroutine HamCheckHermiticity()
    use neigh,  only : NList, Nneigh, neighCell
    use tbpar,  only : g0
 
-   logical :: moireOD, tbgOD, gbnOD, moireMid, haldane, haldanePhase
-   integer :: i, j, m, j2, npairs, nmissing
+
+   ! Switches and options read from the input
+   logical :: gbnOD, haldane, haldanePhase, moireMid, moireOD, tbgOD
+
+   ! Other local variables
+   integer :: i, j, j2, m, nmissing, npairs
    real(dp) :: asym, maxAsym
+
 
    call MIO_InputParameter('Moire.OffDiag',moireOD,.false.)
    call MIO_InputParameter('TBG.OffDiag',tbgOD,.false.)
@@ -3648,10 +3684,15 @@ subroutine diagoH0FromAABB(H0,dx,dy, z, moirePreFactor)
     use constants,            only : pi
     use cell,                 only : aG
     use tbpar,                only : g0
-    real(dp), intent(in):: z, moirePreFactor
-    real(dp):: dx, dy, G1, CAA0, CBB0, phiAA, phiBB
-    real(dp) :: HdAA, HdBB, CAAd, CBBd
-    real(dp), intent(out) :: H0
+
+   ! Arguments
+   real(dp), intent(out) :: H0
+   real(dp), intent(in) :: z
+   real(dp), intent(in) :: moirePreFactor
+
+   ! Other local variables
+   real(dp) :: CAA0, CAAd, CBB0, CBBd, dx, dy, HdAA, HdBB, phiAA, phiBB
+
 
     !% gbn
 
@@ -3682,10 +3723,15 @@ subroutine diagoHzFromAABB(Hz,dx,dy,z,moirePreFactor)
     use constants,            only : pi
     use cell,                 only : aG
     use tbpar,                only : g0
-    real(dp), intent(in):: z, moirePreFactor
-    real(dp):: dx, dy, G1, CAA0, CBB0, phiAA, phiBB
-    real(dp) :: HdAA, HdBB, CAAd, CBBd
-    real(dp), intent(out) :: Hz
+
+   ! Arguments
+   real(dp), intent(out) :: Hz
+   real(dp), intent(in) :: z
+   real(dp), intent(in) :: moirePreFactor
+
+   ! Other local variables
+   real(dp) :: CAA0, CAAd, CBB0, CBBd, dx, dy, HdAA, HdBB, phiAA, phiBB
+
 
     CAA0 = -0.01488_dp/g0*moirePreFactor
     CBB0 = 0.01209_dp/g0*moirePreFactor
@@ -3712,9 +3758,15 @@ subroutine diago(Hdjj,dx,dy,Cjj,Phijj)
 
     use constants,            only : pi, cmplx_i
     use cell,                 only : aG
-    real(dp), intent(in):: Cjj, Phijj
-    real(dp):: dx, dy, G1
-    real(dp), intent(out) :: Hdjj
+
+   ! Arguments
+   real(dp), intent(out) :: Hdjj
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+
+   ! Other local variables
+   real(dp) :: dx, dy, G1
+
 
     G1 = 4.0_dp*pi/sqrt(3.0_dp)/(aG)
 
@@ -3734,10 +3786,16 @@ subroutine diagoGBN(Hdjj,dx,dy,Cjj,Phijj,Cjj0)
 
     use constants,            only : pi, cmplx_i
     use cell,                 only : aG
-    real(dp), intent(in):: Cjj, Phijj
-    real(dp), intent(in):: Cjj0
-    real(dp):: dx, dy, G1
-    real(dp), intent(out) :: Hdjj
+
+   ! Arguments
+   real(dp), intent(out) :: Hdjj
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+   real(dp), intent(in) :: Cjj0
+
+   ! Other local variables
+   real(dp) :: dx, dy, G1
+
 
     G1 = 4.0_dp*pi/sqrt(3.0_dp)/(aG)
 
@@ -3756,9 +3814,17 @@ subroutine offdiago(Hodjj,dx,dy,Cjj,Phijj)
 
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in)::  dx, dy, Cjj, Phijj
-   real(dp):: G1
+
+   ! Arguments
    complex*16, intent(out) :: Hodjj
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+
+   ! Other local variables
+   real(dp) :: G1
+
 
    G1 = 4.0_dp*pi/sqrt(3.0_dp)/(aG)
 
@@ -3778,9 +3844,17 @@ end subroutine offdiago
 subroutine offdiago2(Hodjj,dx,dy,Cjj,Phijj)
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in)::  dx, dy, Cjj, Phijj
-   real(dp):: G1
+
+   ! Arguments
    complex*16, intent(out) :: Hodjj
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+
+   ! Other local variables
+   real(dp) :: G1
+
 
    G1 = 4.0_dp*pi/sqrt(3.0_dp)/(aG)
 
@@ -3808,12 +3882,26 @@ end subroutine offdiago2
 !! @param[out] delta      Hopping correction of this bond (subtracted from hopp)
 subroutine MoireBondDeltaMidpoint(ri, bond, spec, epsM, thM, preShiftY, flipD, postShift, flipImag, swap23, CabM, PhiM, delta)
    use cell,                 only : aG
-   real(dp), intent(in) :: ri(2), bond(2), epsM, thM, preShiftY, postShift(2), CabM, PhiM
+
+   ! Arguments
+   real(dp), intent(in) :: ri(2)
+   real(dp), intent(in) :: bond(2)
    integer, intent(in) :: spec
-   logical, intent(in) :: flipD, flipImag, swap23
+   real(dp), intent(in) :: epsM
+   real(dp), intent(in) :: thM
+   real(dp), intent(in) :: preShiftY
+   logical, intent(in) :: flipD
+   real(dp), intent(in) :: postShift(2)
+   logical, intent(in) :: flipImag
+   logical, intent(in) :: swap23
+   real(dp), intent(in) :: CabM
+   real(dp), intent(in) :: PhiM
    real(dp), intent(out) :: delta
-   real(dp) :: rm(2), ddx, ddy, re, im, d2, d3
+
+   ! Other local variables
+   real(dp) :: d2, d3, ddx, ddy, im, re, rm(2)
    complex*16 :: Hab
+
 
    delta = 0.0_dp
    if (spec.ne.1 .and. spec.ne.2) return
@@ -3863,9 +3951,17 @@ end subroutine MoireBondDeltaMidpoint
 subroutine offdiagoGBN(Hodjj,dx,dy,Cjj,Phijj)
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in)::  dx, dy, Cjj, Phijj
-   real(dp):: G1
+
+   ! Arguments
    complex*16, intent(out) :: Hodjj
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+
+   ! Other local variables
+   real(dp) :: G1
+
 
    G1 = 4.0_dp*pi/(sqrt(3.0_dp))
 
@@ -3885,9 +3981,17 @@ end subroutine offdiagoGBN
 subroutine offdiagotBG(Hodjj,dx,dy,Cjj,Phijj)
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in)::  dx, dy, Cjj, Phijj
-   real(dp):: G1
+
+   ! Arguments
    complex*16, intent(out) :: Hodjj
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+
+   ! Other local variables
+   real(dp) :: G1
+
 
    G1 = 4.0_dp*pi/(sqrt(3.0_dp))
 
@@ -3908,9 +4012,18 @@ end subroutine offdiagotBG
 subroutine diagotBG(Hodjj,dx,dy,Cjj,Phijj,Cjj0)
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in)::  dx, dy, Cjj, Phijj, Cjj0
-   real(dp):: G1
+
+   ! Arguments
    real(dp), intent(out) :: Hodjj
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: Cjj
+   real(dp), intent(in) :: Phijj
+   real(dp), intent(in) :: Cjj0
+
+   ! Other local variables
+   real(dp) :: G1
+
 
    G1 = 4.0_dp*pi/(sqrt(3.0_dp))
 
@@ -3994,9 +4107,17 @@ end subroutine
 subroutine interlayerBLAB(HAB,dx,dy,tbt,posOrNeg)
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in) ::  dx, dy, tbt, posOrNeg
-   real(dp) :: Gplusx, Gplusy, Gminx, Gminy, phi
+
+   ! Arguments
    complex(dp), intent(out) :: HAB
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: tbt
+   real(dp), intent(in) :: posOrNeg
+
+   ! Other local variables
+   real(dp) :: Gminx, Gminy, Gplusx, Gplusy, phi
+
 
    Gplusx = 4.0_dp * pi / (sqrt(3.0_dp) * aG) * (-sqrt(3.0_dp)/2.0_dp)
    Gplusy = 4.0_dp * pi / (sqrt(3.0_dp) * aG) * (1.0_dp/2.0_dp)
@@ -4020,9 +4141,17 @@ subroutine interlayerBLBA(HBA,dx,dy,tbt,posOrNeg)
 
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in) ::  dx, dy, tbt, posOrNeg
-   real(dp) :: Gplusx, Gplusy, Gminx, Gminy, phi
+
+   ! Arguments
    complex(dp), intent(out) :: HBA
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: tbt
+   real(dp), intent(in) :: posOrNeg
+
+   ! Other local variables
+   real(dp) :: Gminx, Gminy, Gplusx, Gplusy, phi
+
 
    Gplusx = 4.0_dp * pi / (sqrt(3.0_dp) * aG) * (-sqrt(3.0_dp)/2.0_dp)
    Gplusy = 4.0_dp * pi / (sqrt(3.0_dp) * aG) * (1.0_dp/2.0_dp)
@@ -4046,9 +4175,17 @@ subroutine interlayerBLAA(HAA,dx,dy,tbt,posOrNeg)
 
    use constants,            only : pi, cmplx_i
    use cell,                 only : aG
-   real(dp), intent(in) ::  dx, dy, tbt, posOrNeg
-   real(dp) :: Gplusx, Gplusy, Gminx, Gminy
+
+   ! Arguments
    complex(dp), intent(out) :: HAA
+   real(dp), intent(in) :: dx
+   real(dp), intent(in) :: dy
+   real(dp), intent(in) :: tbt
+   real(dp), intent(in) :: posOrNeg
+
+   ! Other local variables
+   real(dp) :: Gminx, Gminy, Gplusx, Gplusy
+
 
    Gplusx = 4.0_dp * pi / (sqrt(3.0_dp) * aG) * (-sqrt(3.0_dp)/2.0_dp)
    Gplusy = 4.0_dp * pi / (sqrt(3.0_dp) * aG) * (1.0_dp/2.0_dp)
@@ -4101,6 +4238,8 @@ subroutine HamHopping
    use math,                 only : CrossProd, norm
    use name,                 only : prefix, sysname
 
+
+   ! Switches and options read from the input
 
    ! Switches and options read from the input
    logical :: addDisplacements, addExponentialDecayForDihedral, addPressureDependence, addShift, Bernal, &
@@ -4220,6 +4359,7 @@ subroutine HamHopping
    real(dp), pointer :: pzNormal(:,:) => NULL()
    real(dp) :: hamUnset                    ! NaN: marks variables that have not been set
    type(cl_file) :: file
+
 
    ! <<< unset markers
    ! >>> unset markers
@@ -7111,6 +7251,8 @@ function HamHopInterlayerKaxirasSrivani(jj, j, i, dist, numberOfInterlayerHoppin
       twistAngleGrad, checking, kk, mm, kkk, mmm, renormalizeHoppingFactorAAp, renormalizeHoppingFactorBBp, &
       renormalizeHoppingFactorABp, renormalizeHoppingFactorBAp, aval, bval) result(skipBond)
 
+
+   ! Arguments
    integer, intent(inout) :: jj
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -7131,106 +7273,17 @@ function HamHopInterlayerKaxirasSrivani(jj, j, i, dist, numberOfInterlayerHoppin
    real(dp), intent(inout) :: renormalizeHoppingFactorBAp
    real(dp), intent(inout) :: aval
    real(dp), intent(inout) :: bval
-   logical :: skipBond
 
-   real(dp) :: d122
-   real(dp) :: theta12
-   real(dp) :: theta21
-   real(dp) :: uvec(3)
-   real(dp) :: vvec(3)
-   real(dp) :: vvecR(3)
-   real(dp) :: d232
-   real(dp) :: d132
-   real(dp) :: d232F
-   real(dp) :: rbar
-   real(dp) :: epsKax
-   real(dp) :: a0AA
-   real(dp) :: b0AA
-   real(dp) :: c0AA
-   real(dp) :: d0AA
-   real(dp) :: h0AA
-   real(dp) :: a3AA
-   real(dp) :: b3AA
-   real(dp) :: c3AA
-   real(dp) :: d3AA
-   real(dp) :: a6AA
-   real(dp) :: b6AA
-   real(dp) :: c6AA
-   real(dp) :: d6AA
-   real(dp) :: a0AB
-   real(dp) :: b0AB
-   real(dp) :: c0AB
-   real(dp) :: d0AB
-   real(dp) :: h0AB
-   real(dp) :: a3AB
-   real(dp) :: b3AB
-   real(dp) :: c3AB
-   real(dp) :: d3AB
-   real(dp) :: a6AB
-   real(dp) :: b6AB
-   real(dp) :: c6AB
-   real(dp) :: d6AB
-   real(dp) :: a0BA
-   real(dp) :: b0BA
-   real(dp) :: c0BA
-   real(dp) :: d0BA
-   real(dp) :: h0BA
-   real(dp) :: a3BA
-   real(dp) :: b3BA
-   real(dp) :: c3BA
-   real(dp) :: d3BA
-   real(dp) :: a6BA
-   real(dp) :: b6BA
-   real(dp) :: c6BA
-   real(dp) :: d6BA
-   real(dp) :: a0BB
-   real(dp) :: b0BB
-   real(dp) :: c0BB
-   real(dp) :: d0BB
-   real(dp) :: h0BB
-   real(dp) :: a3BB
-   real(dp) :: b3BB
-   real(dp) :: c3BB
-   real(dp) :: d3BB
-   real(dp) :: a6BB
-   real(dp) :: b6BB
-   real(dp) :: c6BB
-   real(dp) :: d6BB
-   real(dp) :: V0AAp
-   real(dp) :: V0ABp
-   real(dp) :: V0BAp
-   real(dp) :: V0BBp
-   real(dp) :: V3AAp
-   real(dp) :: V3ABp
-   real(dp) :: V3BAp
-   real(dp) :: V3BBp
-   real(dp) :: V6AAp
-   real(dp) :: V6ABp
-   real(dp) :: V6BAp
-   real(dp) :: V6BBp
-   real(dp) :: signChange
-   real(dp) :: theta
-   real(dp) :: lambda0
-   real(dp) :: lambda3
-   real(dp) :: lambda6
-   real(dp) :: lambda6b
-   real(dp) :: xi0
-   real(dp) :: xi3
-   real(dp) :: xi6
-   real(dp) :: xi6b
-   real(dp) :: x3
-   real(dp) :: x6
-   real(dp) :: x6b
-   real(dp) :: kappa0
-   real(dp) :: kappa6
-   real(dp) :: kappa6b
-   real(dp) :: j0AA
-   real(dp) :: k0AA
-   real(dp) :: j0AB
-   real(dp) :: k0AB
-   real(dp) :: V0
-   real(dp) :: V3
-   real(dp) :: V6
+   ! Other local variables
+   logical :: skipBond
+   real(dp) :: a0AA, a0AB, a0BA, a0BB, a3AA, a3AB, a3BA, a3BB, a6AA, a6AB, a6BA, a6BB, b0AA, b0AB, b0BA, &
+         b0BB, b3AA, b3AB, b3BA, b3BB, b6AA, b6AB, b6BA, b6BB, c0AA, c0AB, c0BA, c0BB, c3AA, c3AB, c3BA, &
+         c3BB, c6AA, c6AB, c6BA, c6BB, d0AA, d0AB, d0BA, d0BB, d122, d132, d232, d232F, d3AA, d3AB, d3BA, &
+         d3BB, d6AA, d6AB, d6BA, d6BB, epsKax, h0AA, h0AB, h0BA, h0BB, j0AA, j0AB, k0AA, k0AB, kappa0, &
+         kappa6, kappa6b, lambda0, lambda3, lambda6, lambda6b, rbar, signChange, theta, theta12, theta21, &
+         uvec(3), V0, V0AAp, V0ABp, V0BAp, V0BBp, V3, V3AAp, V3ABp, V3BAp, V3BBp, V6, V6AAp, V6ABp, V6BAp, &
+         V6BBp, vvec(3), vvecR(3), x3, x6, x6b, xi0, xi3, xi6, xi6b
+
 
    skipBond = .false.
    d122 = hamUnset
@@ -8141,6 +8194,8 @@ end function HamHopInterlayerKaxirasSrivani
 !! of HamHopping. The result is .true. where the bond is to be skipped (cycle).
 function HamHopInterlayerMayou(dist, j, i, Fc, vppsigma, renormalizeHoppingFactorAAp, vpppi) result(skipBond)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -8148,7 +8203,10 @@ function HamHopInterlayerMayou(dist, j, i, Fc, vppsigma, renormalizeHoppingFacto
    real(dp), intent(inout) :: vppsigma
    real(dp), intent(inout) :: renormalizeHoppingFactorAAp
    real(dp), intent(inout) :: vpppi
+
+   ! Other local variables
    logical :: skipBond
+
 
    skipBond = .false.
 
@@ -8178,6 +8236,8 @@ end function HamHopInterlayerMayou
 function HamHopInterlayerTwoCenter(i, j, jj, dist, numberOfInterlayerHoppings, aval, bval, &
       renormalizeHoppingFactorAAp, vppsigma, BLdelta, vpppi) result(skipBond)
 
+
+   ! Arguments
    integer, intent(in) :: i
    integer, intent(in) :: j
    integer, intent(inout) :: jj
@@ -8189,7 +8249,10 @@ function HamHopInterlayerTwoCenter(i, j, jj, dist, numberOfInterlayerHoppings, a
    real(dp), intent(inout) :: vppsigma
    real(dp), intent(inout) :: BLdelta
    real(dp), intent(inout) :: vpppi
+
+   ! Other local variables
    logical :: skipBond
+
 
    skipBond = .false.
 
@@ -8396,8 +8459,11 @@ end function HamHopInterlayerTwoCenter
 !! of HamHopping.
 subroutine HamHopInterlayerBNBN(i, jj)
 
+
+   ! Arguments
    integer, intent(in) :: i
    integer, intent(inout) :: jj
+
 
 
                       if ((layerIndex(i) .eq. layerIndex(jj) + 1 .or. layerIndex(i).eq. layerIndex(jj)-1)) then ! INTERLAYER
@@ -8419,6 +8485,8 @@ end subroutine HamHopInterlayerBNBN
 function HamHopInterlayerGBN(i, jj, dist, j, numberOfInterlayerHoppings, aval, bval, renormalizeHoppingFactorAAp, &
       BLdelta, vppsigma, vpppi) result(skipBond)
 
+
+   ! Arguments
    integer, intent(in) :: i
    integer, intent(inout) :: jj
    real(dp), intent(inout) :: dist
@@ -8430,7 +8498,10 @@ function HamHopInterlayerGBN(i, jj, dist, j, numberOfInterlayerHoppings, aval, b
    real(dp), intent(inout) :: BLdelta
    real(dp), intent(inout) :: vppsigma
    real(dp), intent(inout) :: vpppi
+
+   ! Other local variables
    logical :: skipBond
+
 
    skipBond = .false.
 
@@ -8633,6 +8704,8 @@ end function HamHopInterlayerGBN
 subroutine HamHopInterlayerJeil(i, j, dist, numberOfHAA1, numberOfHAA2, numberOfHAB1, numberOfHBA2, numberOfHBA1, &
       numberOfHAB2)
 
+
+   ! Arguments
    integer, intent(in) :: i
    integer, intent(in) :: j
    real(dp), intent(inout) :: dist
@@ -8643,15 +8716,10 @@ subroutine HamHopInterlayerJeil(i, j, dist, numberOfHAA1, numberOfHAA2, numberOf
    integer, intent(inout) :: numberOfHBA1
    integer, intent(inout) :: numberOfHAB2
 
-   real(dp) :: dxi
-   real(dp) :: dyi
-   real(dp) :: dxj
-   real(dp) :: dyj
-   real(dp) :: expFactor
-   real(dp) :: posOrNeg
-   complex(dp) :: HAA
-   complex(dp) :: HAB
-   complex(dp) :: HBA
+   ! Other local variables
+   real(dp) :: dxi, dxj, dyi, dyj, expFactor, posOrNeg
+   complex(dp) :: HAA, HAB, HBA
+
 
    dxi = hamUnset
    dyi = hamUnset
@@ -8725,11 +8793,14 @@ end subroutine HamHopInterlayerJeil
 !! of HamHopping.
 subroutine HamHopIntralayerDefault(d, delta, j, i, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: j
    integer, intent(in) :: i
    integer, intent(in) :: ilvl
+
 
 
                            if (d > 1.5_dp) then
@@ -8745,11 +8816,14 @@ end subroutine HamHopIntralayerDefault
 !! of HamHopping.
 subroutine HamHopIntralayerJeil(d, delta, j, i, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: j
    integer, intent(in) :: i
    integer, intent(in) :: ilvl
+
 
 
                            if (d > 1.5_dp) then
@@ -8765,9 +8839,12 @@ end subroutine HamHopIntralayerJeil
 !! of HamHopping.
 subroutine HamHopIntralayerSrivani(dist, j, i)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -8789,12 +8866,15 @@ end subroutine HamHopIntralayerSrivani
 !! of HamHopping.
 subroutine HamHopIntralayerKaxirasSrivani(dist, j, i, d, delta, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -9024,6 +9104,8 @@ end subroutine HamHopIntralayerKaxirasSrivani
 subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vppsigma, BLdelta, vpppi, Fc, d, delta, &
       ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: renormalizeHoppingFactorAAp
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
@@ -9035,6 +9117,7 @@ subroutine HamHopIntralayerGraphene(renormalizeHoppingFactorAAp, dist, j, i, vpp
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            if (frac) call AtomsSetCart()
@@ -9343,6 +9426,8 @@ end subroutine HamHopIntralayerGraphene
 subroutine HamHopIntralayerT2GBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8, &
       countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -9365,6 +9450,7 @@ subroutine HamHopIntralayerT2GBN(dist, j, i, countG1, countG2, countG3, countG4,
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -9598,6 +9684,8 @@ end subroutine HamHopIntralayerT2GBN
 subroutine HamHopIntralayerBNt2GBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
       countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -9620,6 +9708,7 @@ subroutine HamHopIntralayerBNt2GBN(dist, j, i, countG1, countG2, countG3, countG
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -9766,6 +9855,8 @@ end subroutine HamHopIntralayerBNt2GBN
 subroutine HamHopIntralayerT3GwithBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
       countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -9788,6 +9879,7 @@ subroutine HamHopIntralayerT3GwithBN(dist, j, i, countG1, countG2, countG3, coun
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -9975,6 +10067,8 @@ end subroutine HamHopIntralayerT3GwithBN
 subroutine HamHopIntralayerEncapsulated(nLay, dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, &
       countG8, countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, d, delta, ilvl)
 
+
+   ! Arguments
    integer, intent(in) :: nLay
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
@@ -9998,6 +10092,7 @@ subroutine HamHopIntralayerEncapsulated(nLay, dist, j, i, countG1, countG2, coun
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -10189,6 +10284,8 @@ end subroutine HamHopIntralayerEncapsulated
 subroutine HamHopIntralayerBNBN(dist, j, i, countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8, &
       d, delta, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -10203,6 +10300,7 @@ subroutine HamHopIntralayerBNBN(dist, j, i, countG1, countG2, countG3, countG4, 
    real(dp), intent(inout) :: d
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -10266,6 +10364,8 @@ end subroutine HamHopIntralayerBNBN
 subroutine HamHopIntralayerGBN(dist, j, i, d, countG1, countG2, countG3, countG4, countG5, countG6, countG7, countG8, &
       countBN1, countBN2, countBN3, countBN4, countBN5, countBN6, countBN7, countBN8, delta, ilvl)
 
+
+   ! Arguments
    real(dp), intent(inout) :: dist
    integer, intent(in) :: j
    integer, intent(in) :: i
@@ -10288,6 +10388,7 @@ subroutine HamHopIntralayerGBN(dist, j, i, d, countG1, countG2, countG3, countG4
    integer, intent(inout) :: countBN8
    real(dp), intent(inout) :: delta
    integer, intent(in) :: ilvl
+
 
 
                            dist = sqrt(NeighD(1,j,i)**2.0_dp+NeighD(2,j,i)**2.0_dp)
@@ -10481,6 +10582,8 @@ end subroutine HamHopIntralayerGBN
 !! entry, so that a value left from another bond cannot be used by mistake.
 subroutine HamHopAtomJeil(jj1, jj2, i, d, firstNN, k)
 
+
+   ! Arguments
    integer, intent(inout) :: jj1
    integer, intent(inout) :: jj2
    integer, intent(in) :: i
@@ -10488,7 +10591,9 @@ subroutine HamHopAtomJeil(jj1, jj2, i, d, firstNN, k)
    integer, intent(inout) :: firstNN(3)
    integer, intent(inout) :: k
 
+   ! Other local variables
    real(dp) :: maxDist
+
 
    maxDist = hamUnset
 
@@ -10546,6 +10651,8 @@ end subroutine HamHopAtomJeil
 !! entry, so that a value left from another bond cannot be used by mistake.
 subroutine HamHopBondTermsGBN(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, imagH, del)
 
+
+   ! Arguments
    real(dp), intent(inout) :: CabG
    integer, intent(in) :: i
    real(dp), intent(inout) :: dx
@@ -10557,20 +10664,11 @@ subroutine HamHopBondTermsGBN(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, ima
    real(dp), intent(inout) :: imagH
    real(dp), intent(inout) :: del(3)
 
-   real(dp) :: dx_b
-   real(dp) :: dy_b
-   real(dp) :: dx_t
-   real(dp) :: dy_t
-   real(dp) :: dxTemp_b
-   real(dp) :: dyTemp_b
-   real(dp) :: dxTemp_t
-   real(dp) :: dyTemp_t
-   complex*16 :: Habjj_b
-   complex*16 :: Habjj_t
-   real(dp) :: realH_b
-   real(dp) :: imagH_b
-   real(dp) :: realH_t
-   real(dp) :: imagH_t
+   ! Other local variables
+   real(dp) :: dx_b, dx_t, dxTemp_b, dxTemp_t, dy_b, dy_t, dyTemp_b, dyTemp_t, imagH_b, imagH_t, realH_b, &
+         realH_t
+   complex*16 :: Habjj_b, Habjj_t
+
 
    dx_b = hamUnset
    dy_b = hamUnset
@@ -10840,6 +10938,8 @@ end subroutine HamHopBondTermsGBN
 !! of HamHopping.
 subroutine HamHopBondTermsTBG(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, imagH, del)
 
+
+   ! Arguments
    real(dp), intent(inout) :: CabG
    integer, intent(in) :: i
    real(dp), intent(inout) :: dx
@@ -10850,6 +10950,7 @@ subroutine HamHopBondTermsTBG(CabG, i, dx, dy, dxTemp, dyTemp, Habjj, realH, ima
    real(dp), intent(inout) :: realH
    real(dp), intent(inout) :: imagH
    real(dp), intent(inout) :: del(3)
+
 
 
               if (tBGOffDiag) then
@@ -10933,6 +11034,8 @@ end subroutine HamHopBondTermsTBG
 !! entry, so that a value left from another bond cannot be used by mistake.
 subroutine HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, del)
 
+
+   ! Arguments
    integer, intent(in) :: i
    real(dp), intent(inout) :: dx
    real(dp), intent(inout) :: dy
@@ -10942,7 +11045,9 @@ subroutine HamHopBondTermsMoire(i, dx, dy, twistAngleGrad, Habjj, realH, imagH, 
    real(dp), intent(inout) :: imagH
    real(dp), intent(inout) :: del(3)
 
+   ! Other local variables
    real(dp) :: Cabd
+
 
    Cabd = hamUnset
 
@@ -11356,8 +11461,14 @@ end
 function cross(a,b) result (axb)
    implicit none
 
-   real(dp), dimension(3), intent(in) :: a, b
+
+   ! Arguments
+   real(dp), dimension(3), intent(in) :: a
+   real(dp), dimension(3), intent(in) :: b
+
+   ! Declarations with attributes, initial values or their own comments
    real(dp), dimension(3) :: axb
+
 
    axb(1) = a(2)*b(3) - a(3)*b(2)
    axb(2) = a(3)*b(1) - a(1)*b(3)
@@ -11369,9 +11480,14 @@ end function cross
 !! @param[in] layerIndex Layer index to check
 !! @return True if SOC should be applied to this layer
 function SOCEnabledForLayer(layerIndex) result(enabled)
+
+   ! Arguments
    integer, intent(in) :: layerIndex
+
+   ! Other local variables
    logical :: enabled
    integer :: i
+
 
    if (.not. SOCLayerControl) then
       ! If layer control is disabled, apply SOC to all layers
@@ -11394,9 +11510,14 @@ end function SOCEnabledForLayer
 !! @param[in] layerIndex Layer index to check
 !! @return True if Haldane should be applied to this layer
 function HaldaneEnabledForLayer(layerIndex) result(enabled)
+
+   ! Arguments
    integer, intent(in) :: layerIndex
+
+   ! Other local variables
    logical :: enabled
    integer :: i
+
 
    if (.not. HaldaneLayerControl) then
       ! If layer control is disabled, apply Haldane to all layers

@@ -41,7 +41,11 @@ contains
 !!        past their end.
 subroutine NeighCheckCount(NNcount,maxnn)
 
-   integer, intent(in) :: NNcount, maxnn
+
+   ! Arguments
+   integer, intent(in) :: NNcount
+   integer, intent(in) :: maxnn
+
 
    if (NNcount > maxnn) then
       call MIO_Kill('An atom has more neighbours within the cutoffs than the '// &
@@ -58,9 +62,14 @@ end subroutine NeighCheckCount
 !!          it tolerates moderately strained or relaxed lattices.
 function NeighShellCutoff2(nshell,aCC) result(cut2)
 
+
+   ! Arguments
    integer, intent(in) :: nshell
    real(dp), intent(in) :: aCC
+
+   ! Other local variables
    real(dp) :: cut2
+
 
    if (nshell < 1 .or. nshell > maxShells) then
       call MIO_Kill('TB.NeighLevels must be between 1 and '//trim(num2str(maxShells))// &
@@ -76,9 +85,14 @@ end function NeighShellCutoff2
 !!        and the radius. Pairs found there belong to a strained structure.
 function NeighShellWarn2(nshell,aCC) result(warn2)
 
+
+   ! Arguments
    integer, intent(in) :: nshell
    real(dp), intent(in) :: aCC
-   real(dp) :: warn2, r
+
+   ! Other local variables
+   real(dp) :: r, warn2
+
 
    r = 0.5_dp*(shellRadius(nshell)+shellRadius(nshell+1))
    warn2 = ((r - 0.25_dp*(r-shellRadius(nshell)))*aCC)**2
@@ -104,20 +118,39 @@ subroutine NeighSearchLayered(natoms,x,y,z,A1,A2,cut2intra,cut2inter,periodicZ,A
 
    use atoms,                only : inode1, inode2
 
-   integer, intent(in) :: natoms
-   real(dp), intent(in) :: x(natoms), y(natoms), z(natoms)
-   real(dp), intent(in) :: A1(3), A2(3), cut2intra, cut2inter, A3
-   logical, intent(in) :: periodicZ, secondLayer
 
+   ! Arguments
+   integer, intent(in) :: natoms
+   real(dp), intent(in) :: x(natoms)
+   real(dp), intent(in) :: y(natoms)
+   real(dp), intent(in) :: z(natoms)
+   real(dp), intent(in) :: A1(3)
+   real(dp), intent(in) :: A2(3)
+   real(dp), intent(in) :: cut2intra
+   real(dp), intent(in) :: cut2inter
+   logical, intent(in) :: periodicZ
+   real(dp), intent(in) :: A3
+   logical, intent(in) :: secondLayer
+
+   ! Named constants
    real(dp), parameter :: dzIntra = 1.5_dp, dzInter = 4.5_dp, dzSecond = 7.5_dp
 
-   real(dp) :: det, rmax, dzmax, h1, h2, s1, s2, s1min, s1max, s2min, s2max
-   real(dp) :: xlo, xhi, ylo, yhi, zlo, zhi, wx, wy, px, py, pz, tx, ty, tz
-   real(dp) :: ddx, ddy, ddz, adz, d2
-   integer :: n1, n2, n3, u1, u2, u3, i, m, n, c, ncand, nbx, nby, ib, ibx, iby, ax, ay
-   integer :: pass, cnt, nclose
+   ! Counters summed over the parallel loop
+   integer :: nclose
+
+   ! Variables with one copy per thread in the parallel loops
    logical :: keep
+   integer :: ax, ay, c, cnt, ibx, iby, m, n
+   real(dp) :: adz, d2, ddx, ddy, ddz, tx, ty, tz
+
+   ! Other local variables
+   integer :: i, n1, n2, n3, nbx, nby, ncand, pass, u1, u2, u3
+   real(dp) :: det, dzmax, h1, h2, px, py, pz, rmax, s1, s1max, s1min, s2, s2max, s2min, wx, wy, xhi, xlo, &
+         yhi, ylo, zhi, zlo
+
+   ! Declarations with attributes, initial values or their own comments
    integer, allocatable :: cidx(:), cu(:,:), head(:,:), next(:)
+
 
 #ifdef DEBUG
    call MIO_Debug('NeighSearchLayered',0)
@@ -210,8 +243,9 @@ subroutine NeighSearchLayered(natoms,x,y,z,A1,A2,cut2intra,cut2inter,periodicZ,A
          call MIO_Allocate(neighCell,[1,1,inode1],[3,maxNeigh,inode2],'neighCell','neigh')
       end if
       nclose = 0
-      !$OMP PARALLEL DO SCHEDULE(static) REDUCTION(+:nclose) &
-      !$OMP& PRIVATE(n,c,m,ibx,iby,ax,ay,ib,cnt,tx,ty,tz,ddx,ddy,ddz,adz,d2,keep)
+      !$OMP PARALLEL DO SCHEDULE(static), &
+      !$OMP& REDUCTION(+:nclose), &
+      !$OMP& PRIVATE(n, c, m, ibx, iby, ax, ay, cnt, tx, ty, tz, ddx, ddy, ddz, adz, d2, keep)
       do n=1,natoms
          cnt = 0
          ! The home image of atom n is the candidate with zero translation;
@@ -286,7 +320,10 @@ subroutine NeighFinishSearch()
 
    use atoms,                only : inode1, inode2
 
+
+   ! Switches and options read from the input
    logical :: prnt
+
 
 #ifdef DEBUG
    call MIO_Debug('NeighFinishSearch',0)
@@ -311,8 +348,13 @@ subroutine NeighSetRadii()
    use tbpar,                only : tbnn
    use cell,                 only : aG, aBN
 
+
+   ! Switches and options read from the input
    character(len=50) :: str
+
+   ! Other local variables
    integer :: i
+
 
 #ifdef DEBUG
    call MIO_Debug('NeighSetRadii',0)
@@ -344,7 +386,10 @@ subroutine NeighWriteDataFiles()
 
    use atoms,                only : nAt, Species, Rat
 
+
+   ! Other local variables
    integer :: i, j
+
 
 #ifdef DEBUG
    call MIO_Debug('NeighWriteDataFiles',0)
@@ -401,9 +446,14 @@ subroutine NeighReadDataFiles()
    use cell,                 only : aG, ucell
    use math,                 only : norm
 
+
+   ! Switches and options read from the input
    logical :: readNeighborDetails
-   integer :: i, j, jj, ix, iy, ncell(3)
-   real(dp) :: v(3), d
+
+   ! Other local variables
+   integer :: i, ix, iy, j, jj, ncell(3)
+   real(dp) :: d, v(3)
+
 
 #ifdef DEBUG
    call MIO_Debug('NeighReadDataFiles',0)
@@ -1283,10 +1333,22 @@ subroutine NeighIndxCell(isec,secd,insec,ncell, &
 
    implicit none
 
-   integer, intent(in) :: isec, secd(2), xDiv, yDiv, xSubdiv, ySubdiv, proc, secAt(:)
-   integer, intent(out) :: insec(2), ncell(3)
 
-   integer :: div(2), is, nsub, n, indx, nAt, i
+   ! Arguments
+   integer, intent(in) :: isec
+   integer, intent(in) :: secd(2)
+   integer, intent(out) :: insec(2)
+   integer, intent(out) :: ncell(3)
+   integer, intent(in) :: xDiv
+   integer, intent(in) :: yDiv
+   integer, intent(in) :: xSubdiv
+   integer, intent(in) :: ySubdiv
+   integer, intent(in) :: proc
+   integer, intent(in) :: secAt(:)
+
+   ! Other local variables
+   integer :: div(2), i, indx, is, n, nAt, nsub
+
 
    ncell = 0
    div = 0
@@ -1384,11 +1446,20 @@ subroutine fastNNnotsquare(natoms,x,y,z,cutoff2,cutoff2bis,A1,A2)
    ! cutoff2 and cutoff2bis are the squared in-plane radii of the intralayer and
    ! interlayer searches (see NeighSearchLayered).
 
-   integer, intent(in) :: natoms
-   real(dp), intent(in) :: x(natoms), y(natoms), z(natoms)
-   real(dp), intent(in) :: cutoff2, cutoff2bis, A1(3), A2(3)
 
+   ! Arguments
+   integer, intent(in) :: natoms
+   real(dp), intent(in) :: x(natoms)
+   real(dp), intent(in) :: y(natoms)
+   real(dp), intent(in) :: z(natoms)
+   real(dp), intent(in) :: cutoff2
+   real(dp), intent(in) :: cutoff2bis
+   real(dp), intent(in) :: A1(3)
+   real(dp), intent(in) :: A2(3)
+
+   ! Switches and options read from the input
    logical :: readDataFiles
+
 
 #ifdef DEBUG
    call MIO_Debug('fastNNnotsquare',0)
@@ -1416,47 +1487,46 @@ subroutine fastNNnotsquareSmall(natoms,x,y,z,aCC,cutoff2,cutoff2bis,A1,A2,maxnn)
    use atoms,                only : AtomsSetCart, frac
    use math,                 only : norm
    implicit none
-   integer, intent(in) :: natoms,maxnn
-   real(dp), intent(in) :: x(natoms),y(natoms),z(natoms)
-   integer :: nn(natoms,maxnn)
-   real(dp), intent(in) :: aCC,cutoff2,cutoff2bis,A1(3),A2(3)
-   integer :: num0,num1,num2,num3,num4,num5,num6,num7,num8,num9,num10,num11,num12,num13,num14
-   integer :: i,j,k,l,m,n
-   real(dp) :: dx(natoms,maxnn),dy(natoms,maxnn),dz(natoms,maxnn)
 
-   real(dp) :: dx_t,dy_t,dz_t,d2_t, d2_t2
-   real(dp) :: xmin,xmax,ymin,ymax,xcell,ycell,rho
+   ! Arguments
+   integer, intent(in) :: natoms
+   real(dp), intent(in) :: x(natoms)
+   real(dp), intent(in) :: y(natoms)
+   real(dp), intent(in) :: z(natoms)
+   real(dp), intent(in) :: aCC
+   real(dp), intent(in) :: cutoff2
+   real(dp), intent(in) :: cutoff2bis
+   real(dp), intent(in) :: A1(3)
+   real(dp), intent(in) :: A2(3)
+   integer, intent(in) :: maxnn
 
-   real(dp) :: xnew(11*11*natoms*3),ynew(11*11*natoms*3),znew(11*11*natoms*3)
-   integer :: ixs(11*11*natoms*3),iys(11*11*natoms*3),vecino
-   integer :: nInteger(11*11*natoms*3)
-   integer :: mInteger(11*11*natoms*3)
-
-   integer :: Nx,Ny,ix,iy
-   integer, allocatable :: cells(:,:,:)
-   integer :: NNcount,addx,addy
-
+   ! Named constants
    real(dp), parameter :: rad(5) = [1.0_dp/sqrt(3.0_dp),1.0_dp,2.0_dp/sqrt(3.0_dp),3.0_dp/sqrt(3.0_dp),3.0_dp/sqrt(3.0_dp)]
+
+   ! Switches and options read from the input
+   logical :: only000Cell, prnt, readDataFiles
    character(len=50) :: str
 
-   integer :: ncell(3,9)
-   real(dp) :: d, v(3), vtemp(3)
-   real(dp) :: rmax, r0, rmaxTemp
-
-   integer, pointer :: countN(:,:), cnt(:,:)
-   integer :: np
-
-   integer :: safetycounter
-   logical :: prnt
-   logical :: BLInPlaneInteractionRadius
-
-   real(dp) :: distFact, dist
-
+   ! Model parameters read from the input
    integer :: sCell
+   real(dp) :: distFact
 
-   logical :: readDataFiles, only000Cell
+   ! Variables with one copy per thread in the parallel loops
+   integer :: i, ix, iy, j, ncell(3,9)
+   real(dp) :: d, dist, v(3)
 
-   integer :: uX, uY, uZ, nmax, unitsX, unitsY
+   ! Other local variables
+   integer :: addx, addy, ixs(11*11*natoms*3), iys(11*11*natoms*3), m, mInteger(11*11*natoms*3), n, &
+         nInteger(11*11*natoms*3), nmax, nn(natoms,maxnn), NNcount, num0, num1, num10, num11, num12, num13, &
+         num14, num2, num3, num4, num5, num6, num7, num8, num9, Nx, Ny, safetycounter, unitsX, unitsY, uX, &
+         uY, uZ, vecino
+   real(dp) :: d2_t, d2_t2, dx(natoms,maxnn), dx_t, dy(natoms,maxnn), dy_t, dz(natoms,maxnn), dz_t, rho, &
+         rmax, xcell, xmax, xmin, xnew(11*11*natoms*3), ycell, ymax, ymin, ynew(11*11*natoms*3), &
+         znew(11*11*natoms*3)
+
+   ! Declarations with attributes, initial values or their own comments
+   integer, allocatable :: cells(:,:,:)
+
 
 #ifdef DEBUG
    call MIO_Debug('fastNNnotsquareSmall',0)
@@ -1856,11 +1926,21 @@ subroutine fastNNnotsquareBulk(natoms,x,y,z,cutoff2,cutoff2bis,A1,A2,A3)
 
    ! As fastNNnotsquare, for a system that is also periodic along z with period A3.
 
-   integer, intent(in) :: natoms
-   real(dp), intent(in) :: x(natoms), y(natoms), z(natoms)
-   real(dp), intent(in) :: cutoff2, cutoff2bis, A1(3), A2(3), A3
 
+   ! Arguments
+   integer, intent(in) :: natoms
+   real(dp), intent(in) :: x(natoms)
+   real(dp), intent(in) :: y(natoms)
+   real(dp), intent(in) :: z(natoms)
+   real(dp), intent(in) :: cutoff2
+   real(dp), intent(in) :: cutoff2bis
+   real(dp), intent(in) :: A1(3)
+   real(dp), intent(in) :: A2(3)
+   real(dp), intent(in) :: A3
+
+   ! Switches and options read from the input
    logical :: readDataFiles
+
 
 #ifdef DEBUG
    call MIO_Debug('fastNNnotsquareBulk',0)
@@ -1886,11 +1966,21 @@ subroutine fastNNnotsquareBulkSmall(natoms,x,y,z,cutoff2,cutoff2bis,A1,A2,A3)
    ! atoms it was written for. The shared search needs no special treatment
    ! of small cells. Optionally includes pairs two layers apart.
 
-   integer, intent(in) :: natoms
-   real(dp), intent(in) :: x(natoms), y(natoms), z(natoms)
-   real(dp), intent(in) :: cutoff2, cutoff2bis, A1(3), A2(3), A3
 
-   logical :: readDataFiles, addSecondLayerInteractions
+   ! Arguments
+   integer, intent(in) :: natoms
+   real(dp), intent(in) :: x(natoms)
+   real(dp), intent(in) :: y(natoms)
+   real(dp), intent(in) :: z(natoms)
+   real(dp), intent(in) :: cutoff2
+   real(dp), intent(in) :: cutoff2bis
+   real(dp), intent(in) :: A1(3)
+   real(dp), intent(in) :: A2(3)
+   real(dp), intent(in) :: A3
+
+   ! Switches and options read from the input
+   logical :: addSecondLayerInteractions, readDataFiles
+
 
 #ifdef DEBUG
    call MIO_Debug('fastNNnotsquareBulkSmall',0)
@@ -1919,38 +2009,36 @@ subroutine fastNNnotsquareNotRectangle(natoms,x,y,z,aCC,cutoff2,cutoff2bis,A1,A2
    use cell,                 only : aG, aBN,ucell
    use math,                 only : norm
    implicit none
-   integer, intent(in) :: natoms,maxnn
-   real(dp), intent(in) :: x(natoms),y(natoms),z(natoms)
-   integer :: nn(natoms,maxnn)
-   real(dp) :: aCC,cutoff2,cutoff2bis,A1(3),A2(3)
-   integer :: num0,num1,num2,num3,num4,num5,num6,num7,num8,num9,num10
-   integer :: i,j,k,l,m,n
-   real(dp) :: dx(natoms,maxnn),dy(natoms,maxnn),dz(natoms,maxnn)
 
-   real(dp) :: dx_t,dy_t,dz_t,d2_t, d2_t2
-   real(dp) :: xmin,xmax,ymin,ymax,xcell,ycell,rho
+   ! Arguments
+   integer, intent(in) :: natoms
+   real(dp), intent(in) :: x(natoms)
+   real(dp), intent(in) :: y(natoms)
+   real(dp), intent(in) :: z(natoms)
+   integer, intent(in) :: maxnn
 
-   real(dp) :: xnew(9*natoms),ynew(9*natoms),znew(9*natoms)
-   integer :: ixs(9*natoms),iys(9*natoms),vecino
-
-   integer :: Nx,Ny,ix,iy
-   integer, allocatable :: cells(:,:,:)
-   integer :: NNcount,addx,addy
-
+   ! Named constants
    real(dp), parameter :: rad(3) = [1.0_dp/sqrt(3.0_dp),1.0_dp,2.0_dp/sqrt(3.0_dp)]
+
+   ! Switches and options read from the input
+   logical :: prnt
    character(len=50) :: str
 
-   integer :: ncell(3,9)
+   ! Variables with one copy per thread in the parallel loops
+   integer :: i, ix, iy, j, ncell(3,9), np
    real(dp) :: d, v(3)
-   real(dp) :: rmax
 
+   ! Other local variables
+   integer :: addx, addy, ixs(9*natoms), iys(9*natoms), k, m, n, nn(natoms,maxnn), NNcount, num0, num1, &
+         num10, num2, num3, num4, num5, num6, num7, num8, num9, Nx, Ny, safetycounter, vecino
+   real(dp) :: A1(3), A2(3), aCC, cutoff2, cutoff2bis, d2_t, d2_t2, dx(natoms,maxnn), dx_t, dy(natoms,maxnn), &
+         dy_t, dz(natoms,maxnn), dz_t, fracFactor, fracFactor2, rho, rmax, xcell, xmax, xmin, xnew(9*natoms), &
+         ycell, ymax, ymin, ynew(9*natoms), znew(9*natoms)
+
+   ! Declarations with attributes, initial values or their own comments
+   integer, allocatable :: cells(:,:,:)
    integer, pointer :: countN(:,:), cnt(:,:)
-   integer :: np
 
-   integer :: safetycounter
-   logical :: prnt
-
-   real(dp) :: fracFactor, fracFactor2
 
 #ifdef DEBUG
    call MIO_Debug('fastNNnotsquareNotRectangle',0)

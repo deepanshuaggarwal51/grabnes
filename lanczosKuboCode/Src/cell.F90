@@ -19,11 +19,19 @@ subroutine CellGet()
    use constants,            only : twopi, pi
    use name,                 only : prefix
 
-   real(dp) :: h, vn(3), uc(2,2), g, delta, phi
-   integer :: superCellX, superCellY
+
+   ! Switches and options read from the input
+   logical :: l, ll
    character(len=80) :: str
-   integer :: n, n2,  m(4), m1(2,2), i, j, nC, nBN
-   logical l, ll
+
+   ! Model parameters read from the input
+   integer :: m(4), n, nBN, nC
+   real(dp) :: h
+
+   ! Other local variables
+   integer :: i, j, m1(2,2)
+   real(dp) :: delta, g, phi, uc(2,2), vn(3)
+
 
 #ifdef DEBUG
    call MIO_Debug('CellGet',0)

@@ -10,6 +10,7 @@
    set. With `implicit none` a variable that is removed by mistake is a compilation error.
 
 2. The declarations that remain are written in groups, each under a heading:
+     - arguments, in the order of the argument list, one per line with its intent;
      - named constants (kept as they were, in their order: other declarations may depend on them);
      - switches and options read from the input   (logical and character variables read by MIO_InputParameter);
      - model parameters read from the input        (numbers read by MIO_InputParameter);
@@ -49,12 +50,15 @@ def main():
     a = p.parse_args()
 
     lines = open(a.file).read().split("\n")
-    r0 = next(i for i, l in enumerate(lines) if re.match(r"^\s*subroutine\s+" + a.routine + r"\b", l, re.I))
-    r1 = next(i for i, l in enumerate(lines) if i > r0 and re.match(r"^\s*end\s+subroutine\s+" + a.routine + r"\b", l, re.I))
+    r0 = next(i for i, l in enumerate(lines) if re.match(r"^\s*(?:subroutine|function)\s+" + a.routine + r"\b", l, re.I))
+    r1 = next(i for i, l in enumerate(lines) if i > r0 and re.match(r"^\s*end\s+(?:subroutine|function)\s+" + a.routine + r"\b", l, re.I))
     contains = next((i for i in range(r0, r1) if re.match(r"^\s*contains\s*$", ob.code(lines[i]), re.I)), r1)
 
     # ---- specification part: from the first declaration to the last one before the first executable statement
-    st = ob.statements(lines, r0 + 1, contains)
+    h = r0
+    while ob.code(lines[h]).rstrip().endswith("&"):       # the routine statement may be continued
+        h += 1
+    st = ob.statements(lines, h + 1, contains)
     spec_first = spec_last = None
     cpp = 0
     entries = []                    # (first line, last line, kind, payload)
@@ -81,7 +85,8 @@ def main():
             spec_first = i
         spec_last = j
     if spec_first is None:
-        sys.exit("no declarations found")
+        print(f"{a.routine}: no declarations")
+        return
     # drop trailing non-declaration entries
     while entries and entries[-1][0] > spec_last:
         entries.pop()
@@ -101,8 +106,10 @@ def main():
             if not mm:
                 sys.exit(f"line {i + 1}: declaration not understood: {item}")
             name = mm.group(1)
+            is_arg = any(x.lower().startswith("intent") for x in attrs)
             var[name.lower()] = dict(name=name, typ=typ, attrs=attrs, dims=mm.group(2) or "", init=mm.group(3) or "",
-                                     verbatim=bool(attrs) or bool(mm.group(3)) or has_comment or in_cpp, entry=(i, j))
+                                     verbatim=(bool(attrs) and not is_arg) or bool(mm.group(3)) or has_comment or in_cpp,
+                                     entry=(i, j), arg=is_arg and not in_cpp and not has_comment)
             order.append(name.lower())
 
     # ---- where is each variable used?
@@ -145,6 +152,8 @@ def main():
 
     unused = []
     for n in order:
+        if any(x.lower().startswith("intent") for x in var[n]["attrs"]):
+            continue
         w = word(n)
         if w.search(host_text) or w.search(spec_text.replace(var[n]["dims"], "", 1) if False else ""):
             continue
@@ -274,8 +283,12 @@ def main():
         if kind in ("head",):
             spec += out[i:j + 1]
     groups = {"switch": [], "param": [], "count": [], "thread": [], "other": []}
+    arguments = []
     for nme in keep:
         v = var[nme]
+        if v.get("arg") and not a.no_reorder:
+            arguments.append(nme)
+            continue
         is_const = any(x.lower() == "parameter" for x in v["attrs"])
         if v["verbatim"] or a.no_reorder:
             if v["entry"] not in seen_entry:
@@ -329,6 +342,17 @@ def main():
               ("count", "Counters summed over the parallel loop"),
               ("thread", "Variables with one copy per thread in the parallel loops"),
               ("other", "Other local variables")]
+    if arguments:
+        # in the order of the argument list of the routine
+        headtext = " ".join(ob.code(l) for l in lines[r0:h + 1])
+        pos = {q: (re.search(r"(?<![\w%])" + re.escape(q) + r"(?!\w)", headtext.lower()) or re.search("$", headtext)).start()
+               for q in arguments}
+        spec += ["", ind + "! Arguments"]
+        for q in sorted(arguments, key=lambda x: pos[x]):
+            v = var[q]
+            m = decl_match(ob.statements(lines, v["entry"][0], v["entry"][1] + 1)[0][2])
+            written = (m.group(1) + (m.group(2) or "")).strip()
+            spec.append(f"{ind}{written}, {', '.join(v['attrs'])} :: {v['name']}{v['dims']}")
     if const_entries:
         spec += ["", ind + "! Named constants"]
         for e in const_entries:

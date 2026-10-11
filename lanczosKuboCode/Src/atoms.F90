@@ -38,9 +38,14 @@ subroutine AtomsRotate(angle)
 
    use constants,            only : pi
 
-   integer i
+
+   ! Arguments
    real(dp), intent(in) :: angle
+
+   ! Other local variables
+   integer :: i
    real(dp) :: a, tempRat1
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsRotate',0)
@@ -70,112 +75,36 @@ subroutine AtomsPos()
    use hybrid,               only : HybridGen
    use name,                 only : prefix
 
+
+   ! Switches and options read from the input
+   logical :: addShift, Bernal, boundaryTypeArmAA, boundaryTypeArmSP, bridge, createBLDomainBoundary, &
+         distanceDependentEffectiveModel, eightLayersSandwiched, encapsulatedFourLayers, &
+         encapsulatedThreeLayers, fiveLayersSandwiched, fourLayers, fourLayersSandwiched, GBNtwoLayers, &
+         GBNuseDisplacementFile, helicalTwistedMBM, invertDisplacements, l, ll, oneLayer, &
+         readInterlayerDistances, readLayerIndex, readRigidXYZ, sevenLayersSandwiched, sixLayersSandwiched, &
+         t2BG, t2GBN, t3BG, tBGuseDisplacementFile, tenLayersSandwiched, threeLayers, twentyLayersSandwiched, &
+         twoLayers, useSublatticeFile
    character(len=80) :: str, str2, str3, str4, str5
-   integer :: m(2), m2(2), i, j, n(4), sh, nC, nBN
-   real(dp) :: g, delta, phi, h, yShift, BLAngle
-   real(dp) :: vn(3)
-   integer :: shiftFactor, ncell
+
+   ! Model parameters read from the input
+   integer :: m(2), n(4), nBN, nC, numberOfShifts, shiftFactor, SuperCellX, SuperCellY
+   real(dp) :: BLAngle, boundaryWidth, eightLayersZ1, eightLayersZ2, eightLayersZ3, eightLayersZ4, &
+         eightLayersZ5, eightLayersZ6, eightLayersZ7, eightLayersZ8, fiveLayersZ1, fiveLayersZ2, &
+         fiveLayersZ3, fiveLayersZ4, fiveLayersZ5, fourLayersZ1, fourLayersZ2, fourLayersZ3, fourLayersZ4, h, &
+         sevenLayersZ1, sevenLayersZ2, sevenLayersZ3, sevenLayersZ4, sevenLayersZ5, sevenLayersZ6, &
+         sevenLayersZ7, sixLayersZ1, sixLayersZ2, sixLayersZ3, sixLayersZ4, sixLayersZ5, sixLayersZ6, &
+         tenLayersZ1, tenLayersZ10, tenLayersZ2, tenLayersZ3, tenLayersZ4, tenLayersZ5, tenLayersZ6, &
+         tenLayersZ7, tenLayersZ8, tenLayersZ9, threeLayersZ1, threeLayersZ2, threeLayersZ3, twentyLayersZ1, &
+         twentyLayersZ10, twentyLayersZ11, twentyLayersZ12, twentyLayersZ13, twentyLayersZ14, &
+         twentyLayersZ15, twentyLayersZ16, twentyLayersZ17, twentyLayersZ18, twentyLayersZ19, twentyLayersZ2, &
+         twentyLayersZ20, twentyLayersZ3, twentyLayersZ4, twentyLayersZ5, twentyLayersZ6, twentyLayersZ7, &
+         twentyLayersZ8, twentyLayersZ9, twoLayersZ1, twoLayersZ2
+
+   ! Other local variables
+   integer :: dontcare, i, ii, j, jj, kk, m2(2), ncell, sh
+   real(dp) :: DBShiftRatio, delta, g, ggg, limit0, limit1, limit2, ORZ, phi, vn(3), yShift
    character(len=3) :: spc
 
-   logical :: l, ll
-   logical :: randomStrain
-   logical :: addShift, Bernal, bridge
-
-   real(dp) :: limit0, limit1, limit2, limit3, DBShiftRatio, boundaryWidth
-   logical :: createBLDomainBoundary, AtomsOrderDeactivated
-   logical :: boundaryTypeArmAA, boundaryTypeArmSP
-   integer :: numberOfShifts
-
-   real(dp) :: ggg, ORZ
-
-   logical :: twoLayers, oneLayer, GBNtwoLayers, GBNuseDisplacementFile, encapsulatedFourLayers, tBGuseDisplacementFile
-   logical :: t2GBN
-   logical :: t2BG
-   logical :: t3BG
-  logical :: fourLayers
-  logical :: fourLayersSandwiched
-  logical :: helicalTwistedMBM
-  logical :: fiveLayersSandwiched
-   logical :: sixLayersSandwiched
-   logical :: sevenLayersSandwiched
-   logical :: eightLayersSandwiched
-   logical :: tenLayersSandwiched
-   logical :: twentyLayersSandwiched
-   logical :: threeLayers
-
-   logical :: useSublatticeFile, readInterlayerDistances, distanceDependentEffectiveModel
-   logical :: readRigidXYZ, invertDisplacements, readLayerIndex
-
-   real(dp) :: twoLayersZ1
-   real(dp) :: twoLayersZ2
-   real(dp) :: fourLayersZ1
-   real(dp) :: fourLayersZ2
-   real(dp) :: fourLayersZ3
-   real(dp) :: fourLayersZ4
-   real(dp) :: threeLayersZ1
-   real(dp) :: threeLayersZ2
-   real(dp) :: threeLayersZ3
-   real(dp) :: fiveLayersZ1
-   real(dp) :: fiveLayersZ2
-   real(dp) :: fiveLayersZ3
-   real(dp) :: fiveLayersZ4
-   real(dp) :: fiveLayersZ5
-   real(dp) :: sixLayersZ1
-   real(dp) :: sixLayersZ2
-   real(dp) :: sixLayersZ3
-   real(dp) :: sixLayersZ4
-   real(dp) :: sixLayersZ5
-   real(dp) :: sixLayersZ6
-   real(dp) :: sevenLayersZ1
-   real(dp) :: sevenLayersZ2
-   real(dp) :: sevenLayersZ3
-   real(dp) :: sevenLayersZ4
-   real(dp) :: sevenLayersZ5
-   real(dp) :: sevenLayersZ6
-   real(dp) :: sevenLayersZ7
-   real(dp) :: eightLayersZ1
-   real(dp) :: eightLayersZ2
-   real(dp) :: eightLayersZ3
-   real(dp) :: eightLayersZ4
-   real(dp) :: eightLayersZ5
-   real(dp) :: eightLayersZ6
-   real(dp) :: eightLayersZ7
-   real(dp) :: eightLayersZ8
-   real(dp) :: tenLayersZ1
-   real(dp) :: tenLayersZ2
-   real(dp) :: tenLayersZ3
-   real(dp) :: tenLayersZ4
-   real(dp) :: tenLayersZ5
-   real(dp) :: tenLayersZ6
-   real(dp) :: tenLayersZ7
-   real(dp) :: tenLayersZ8
-   real(dp) :: tenLayersZ9
-   real(dp) :: tenLayersZ10
-   real(dp) :: twentyLayersZ1
-   real(dp) :: twentyLayersZ2
-   real(dp) :: twentyLayersZ3
-   real(dp) :: twentyLayersZ4
-   real(dp) :: twentyLayersZ5
-   real(dp) :: twentyLayersZ6
-   real(dp) :: twentyLayersZ7
-   real(dp) :: twentyLayersZ8
-   real(dp) :: twentyLayersZ9
-   real(dp) :: twentyLayersZ10
-   real(dp) :: twentyLayersZ11
-   real(dp) :: twentyLayersZ12
-   real(dp) :: twentyLayersZ13
-   real(dp) :: twentyLayersZ14
-   real(dp) :: twentyLayersZ15
-   real(dp) :: twentyLayersZ16
-   real(dp) :: twentyLayersZ17
-   real(dp) :: twentyLayersZ18
-   real(dp) :: twentyLayersZ19
-   real(dp) :: twentyLayersZ20
-
-   integer :: dontcare
-   integer :: ii, jj, kk
-   integer :: SuperCellX, SuperCellY
-   logical :: encapsulatedThreeLayers
 
 #ifdef DEBUG
    call MIO_Debug('AtomsPos',0)
@@ -1259,19 +1188,27 @@ subroutine AtomsConstruct(X,mm,angle,label,d,yShift)
 
    use constants,            only : pi
 
+
+   ! Arguments
    real(dp), intent(out), pointer :: X(:,:)
    integer, intent(in) :: mm(2)
-   real(dp), intent(in) :: angle,d, yShift
+   real(dp), intent(in) :: angle
    character(*), intent(in) :: label
+   real(dp), intent(in) :: d
+   real(dp), intent(in) :: yShift
 
+   ! Named constants
    real(dp), parameter :: bss(2,2) = reshape((/1.0_dp/3.0_dp,1.0_dp/3.0_dp, &
                           2.0_dp/3.0_dp,2.0_dp/3.0_dp/),(/2,2/))
 
-   integer :: ncell, i1, i2, j, n1, n2, m(2,2)
-   real(dp) :: ucell(3,2), Rcell(3,2), a
+   ! Variables with one copy per thread in the parallel loops
    real(dp) :: f(3)
-   real(dp) :: basis(3,2)
+
+   ! Other local variables
+   integer :: i1, i2, j, m(2,2), n1, n2, ncell
+   real(dp) :: a, basis(3,2), Rcell(3,2), ucell(3,2)
    character(len=80) :: str
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsConstruct',0)
@@ -1348,19 +1285,28 @@ subroutine AtomsConstructAsymm(X,mm,mm2,angle,label,d,yShift)
 
    use constants,            only : pi
 
-   real(dp), intent(out), pointer :: X(:,:)
-   integer, intent(in) :: mm(2),mm2(2)
-   real(dp), intent(in) :: angle,d, yShift
-   character(*), intent(in) :: label
 
+   ! Arguments
+   real(dp), intent(out), pointer :: X(:,:)
+   integer, intent(in) :: mm(2)
+   integer, intent(in) :: mm2(2)
+   real(dp), intent(in) :: angle
+   character(*), intent(in) :: label
+   real(dp), intent(in) :: d
+   real(dp), intent(in) :: yShift
+
+   ! Named constants
    real(dp), parameter :: bss(2,2) = reshape((/1.0_dp/3.0_dp,1.0_dp/3.0_dp, &
                           2.0_dp/3.0_dp,2.0_dp/3.0_dp/),(/2,2/))
 
-   integer :: ncell, i1, i2, j, n1, n2, m(2,2)
-   real(dp) :: ucell(3,2), Rcell(3,2), a
+   ! Variables with one copy per thread in the parallel loops
    real(dp) :: f(3)
-   real(dp) :: basis(3,2)
+
+   ! Other local variables
+   integer :: i1, i2, j, m(2,2), n1, n2, ncell
+   real(dp) :: a, basis(3,2), Rcell(3,2), ucell(3,2)
    character(len=80) :: str
+
 
    ! Modified
 #ifdef DEBUG
@@ -1421,6 +1367,16 @@ end subroutine AtomsConstructAsymm
 
 subroutine AtomsRibbons(type,nC,nBN,n,X,Sp)
 
+
+   ! Arguments
+   character, intent(in) :: type
+   integer, intent(in) :: nC
+   integer, intent(in) :: nBN
+   integer, intent(in) :: n
+   real(dp), intent(out) :: X(3,n)
+   integer, intent(out) :: Sp(n)
+
+   ! Named constants
    real(dp), parameter :: v0Z(3)=[0.0_dp,1.0_dp/(2.0_dp*sqrt(3.0_dp)),0.0_dp]
    real(dp), parameter :: v0A(3)=[0.0_dp,1.0_dp/4.0_dp,0.0_dp]
    real(dp), parameter :: bssZ(3,2)= reshape([1.0_dp/4.0_dp,0.0_dp,0.0_dp, &
@@ -1434,12 +1390,9 @@ subroutine AtomsRibbons(type,nC,nBN,n,X,Sp)
    real(dp), parameter :: displyZ(3) = [0.0_dp,sqrt(3.0_dp)/2.0_dp,0.0_dp]
    real(dp), parameter :: displyA(3) = [0.0_dp,1.0_dp/2.0_dp,0.0_dp]
 
-   character, intent(in) :: type
-   integer, intent(in) :: nC, nBN, n
-   real(dp), intent(out) :: X(3,n)
-   integer, intent(out) :: Sp(n)
-
+   ! Other local variables
    integer :: i
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsRibbons',0)
@@ -1493,7 +1446,10 @@ subroutine AtomsSetCart()
 
    use cell,                 only : ucell
 
+
+   ! Other local variables
    integer :: i
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsSetCart',0)
@@ -1518,7 +1474,10 @@ subroutine AtomsSetFrac()
 
    use cell,                 only : ucell
 
+
+   ! Other local variables
    integer :: i
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsSetFrac',0)
@@ -1545,7 +1504,10 @@ subroutine AtomsSetCartTemp()
 
    use cell,                 only : ucell
 
+
+   ! Other local variables
    integer :: i
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsSetCartTemp',0)
@@ -1570,7 +1532,10 @@ subroutine AtomsSetFracTemp()
 
    use cell,                 only : ucell
 
+
+   ! Other local variables
    integer :: i
+
 
 #ifdef DEBUG
    call MIO_Debug('AtomsSetFracTemp',0)
@@ -1697,14 +1662,21 @@ end subroutine AtomsSort
 
 subroutine AtomsPart(array1,array2,array3,array4,mrk)
 
-   integer, intent(inout) :: array1(:), array2(:), array4(:)
+
+   ! Arguments
+   integer, intent(inout) :: array1(:)
+   integer, intent(inout) :: array2(:)
    real(dp), intent(inout) :: array3(:,:)
+   integer, intent(inout) :: array4(:)
    integer, intent(out) :: mrk
 
-   integer :: i, j
-   integer :: temp
-   integer :: x      ! pivot point
+   ! Other local variables
+   integer :: i, j, temp
    real(dp) :: t(3)
+
+   ! Declarations with attributes, initial values or their own comments
+   integer :: x      ! pivot point
+
 
    x = array1(1)
    i= 0
