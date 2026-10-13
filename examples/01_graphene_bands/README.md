@@ -4,6 +4,13 @@ This is the smallest GRABNES band-structure calculation. It constructs a
 two-atom pristine graphene cell and evaluates its two pi bands along the
 `K - Gamma - M - K'` path.
 
+## Expected result
+
+![01: Pristine graphene bands](reference/graphene_bands.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `graphene_bands.png` in this folder from your own run; the two figures should look the same.
+
 ## Run
 
 Compile GRABNES from the repository root, then execute:

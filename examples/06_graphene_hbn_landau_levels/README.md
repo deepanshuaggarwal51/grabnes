@@ -5,6 +5,13 @@ field, for 33 fields from 0 to 26 T: the Landau-level fan of the Dirac point,
 the second fan that starts from the secondary Dirac point on the hole side,
 and the beginning of the Hofstadter pattern where the two meet.
 
+## Expected result
+
+![06: Aligned graphene on hBN, Landau levels against magnetic field](reference/landau_levels.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `landau_levels.png` in this folder from your own run; the two figures should look the same.
+
 ## Method
 
 - **Cell.** 8 x 8 moire cells (`Structure.SuperCell 8`), 387 200 atoms. The
