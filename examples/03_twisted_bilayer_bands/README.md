@@ -4,6 +4,13 @@ This example constructs the `(m,n) = (3,2)` commensurate twisted-bilayer
 graphene cell (76 atoms, approximately 13.17 degrees) and evaluates its bands
 along `K - Gamma - M - K'` with the Koshino interlayer hopping model.
 
+## Expected result
+
+![03: Twisted-bilayer graphene bands](reference/twisted_bilayer_bands.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `twisted_bilayer_bands.png` in this folder from your own run; the two figures should look the same.
+
 ## What the reference data represent
 
 This example is a regression test of one specific Hamiltonian; it is not

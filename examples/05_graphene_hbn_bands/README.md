@@ -7,6 +7,13 @@ is a potential with the period of the moire pattern, added to the
 nearest-neighbor tight-binding model of graphene. The example computes the
 bands of one valley along `Gamma - K - M - Gamma` of the moire Brillouin zone.
 
+## Expected result
+
+![05: Aligned graphene on hBN, moire bands](reference/graphene_hbn_bands.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `graphene_hbn_bands.png` in this folder from your own run; the two figures should look the same.
+
 ## The cell
 
 `Structure.CellSize 55` builds 55 x 55 graphene cells (6050 atoms), one moire

@@ -52,3 +52,45 @@ without writing into this directory, use:
 ```sh
 ./tests/regression/run_examples.sh
 ```
+
+## Expected figures
+
+The figure each example produces, drawn from its reference data (`<example>/reference/*.png`).
+Compare with the figure `plot.py` writes after your own run. `sh make_reference_figures.sh`
+draws all of them again from the reference data.
+
+### 01: Pristine graphene bands
+
+[![01: Pristine graphene bands](01_graphene_bands/reference/graphene_bands.png)](01_graphene_bands/)
+
+### 02: Pristine graphene density of states
+
+[![02: Pristine graphene density of states](02_graphene_dos/reference/graphene_dos.png)](02_graphene_dos/)
+
+### 03: Twisted-bilayer graphene bands
+
+[![03: Twisted-bilayer graphene bands](03_twisted_bilayer_bands/reference/twisted_bilayer_bands.png)](03_twisted_bilayer_bands/)
+
+### 04: Twisted-bilayer graphene density of states
+
+[![04: Twisted-bilayer graphene density of states](04_twisted_bilayer_dos/reference/twisted_bilayer_dos.png)](04_twisted_bilayer_dos/)
+
+### 05: Aligned graphene on hBN, moire bands
+
+[![05: Aligned graphene on hBN, moire bands](05_graphene_hbn_bands/reference/graphene_hbn_bands.png)](05_graphene_hbn_bands/)
+
+### 06: Aligned graphene on hBN, Landau levels against magnetic field
+
+[![06: Aligned graphene on hBN, Landau levels against magnetic field](06_graphene_hbn_landau_levels/reference/landau_levels.png)](06_graphene_hbn_landau_levels/)
+
+### 07: Graphene on hBN, a series of twist angles
+
+[![07: Graphene on hBN, a series of twist angles](07_graphene_hbn_twist_series/reference/twist_series_dos.png)](07_graphene_hbn_twist_series/)
+
+### 08: Twisted bilayer graphene near the magic angle
+
+[![08: Twisted bilayer graphene near the magic angle](08_magic_angle_twisted_bilayer/reference/magic_angle_bilayer_bands.png)](08_magic_angle_twisted_bilayer/)
+
+### 09: Alternating-twist trilayer graphene, structure read from files
+
+[![09: Alternating-twist trilayer graphene, structure read from files](09_alternating_twist_trilayer/reference/trilayer_bands.png)](09_alternating_twist_trilayer/)

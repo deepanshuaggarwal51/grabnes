@@ -6,6 +6,13 @@ of examples 05 and 06. The moire period shrinks from 13.5 nm to 6.6 nm, and
 the dip that the moire potential makes in the density of states on the hole
 side moves away from the Dirac point accordingly.
 
+## Expected result
+
+![07: Graphene on hBN, a series of twist angles](reference/twist_series_dos.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `twist_series_dos.png` in this folder from your own run; the two figures should look the same.
+
 ## Commensurate cells
 
 The effective model adds a moire potential to a graphene cell, so the moire

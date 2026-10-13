@@ -77,7 +77,7 @@ def main():
     axis.set_xlabel("Magnetic field (T)")
     axis.set_ylabel("Energy (eV)")
     axis.set_ylim(energies[0], energies[-1])
-    axis.set_title("Aligned graphene on hBN: Landau levels (dotted: pristine graphene)")
+    axis.set_title("Graphene on hBN, both valleys: Landau levels\n(dotted: pristine graphene)")
     figure.tight_layout()
     figure.savefig(OUTPUT, dpi=180)
     print(f"Read {source}")

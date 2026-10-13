@@ -5,6 +5,13 @@ Twisted bilayer graphene at 1.08 degrees: the commensurate cell
 one valley along `K - Gamma - M - K'` of the moire Brillouin zone. The two
 bands at charge neutrality are flat: they span 2.2 meV along the path.
 
+## Expected result
+
+![08: Twisted bilayer graphene near the magic angle](reference/magic_angle_bilayer_bands.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `magic_angle_bilayer_bands.png` in this folder from your own run; the two figures should look the same.
+
 ## The model
 
 - Intralayer: the F2G2 model of graphene with five neighbor shells

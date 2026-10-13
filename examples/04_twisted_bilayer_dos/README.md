@@ -7,6 +7,13 @@ The Hamiltonian is the one of example 03 (nearest-neighbor intralayer hopping,
 two-center interlayer hopping); see its README for what the reference data
 represent. They were regenerated together with those of example 03.
 
+## Expected result
+
+![04: Twisted-bilayer graphene density of states](reference/twisted_bilayer_dos.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `twisted_bilayer_dos.png` in this folder from your own run; the two figures should look the same.
+
 ## Run
 
 ```sh

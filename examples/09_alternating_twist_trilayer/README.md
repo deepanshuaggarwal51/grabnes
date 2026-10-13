@@ -6,6 +6,13 @@ solver: it is read from files (`Run.TypeOfSystem ReadXYZ`), which is how a
 relaxed structure from a molecular-dynamics code is used. Here a small script
 writes a rigid structure, so the example needs no other program.
 
+## Expected result
+
+![09: Alternating-twist trilayer graphene, structure read from files](reference/trilayer_bands.png)
+
+This is the figure `plot.py` draws from the reference data. After `./run.sh`, `python3 plot.py`
+writes `trilayer_bands.png` in this folder from your own run; the two figures should look the same.
+
 ## The structure files
 
 `make_structure.py` writes, for the commensurate cell `(m, n) = (22, 21)`:
