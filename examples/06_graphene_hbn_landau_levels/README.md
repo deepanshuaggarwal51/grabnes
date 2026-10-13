@@ -5,6 +5,12 @@ field, for 33 fields from 0 to 26 T: the Landau-level fan of the Dirac point,
 the second fan that starts from the secondary Dirac point on the hole side,
 and the beginning of the Hofstadter pattern where the two meet.
 
+The map contains **both valleys**: it is computed on the full tight-binding
+Hamiltonian in real space, without the one-valley plane-wave reduction of
+example 05. In a field the two valleys of this system have different levels
+(hBN breaks inversion symmetry), and the map is their sum, per atom and for one
+spin.
+
 ## Expected result
 
 ![06: Aligned graphene on hBN, Landau levels against magnetic field](reference/landau_levels.png)
