@@ -23,14 +23,14 @@ subroutine CalcSelect()
    use cell,                 only : ucell, aG
    use math,                 only : CrossProd
 
-   logical :: calcK, calcD, u, readDataFiles, calcT
-   logical :: Frank
-   integer :: mB, mS, mPhi, i, j, l, n
-   integer :: n1, n2
 
-   real(dp) :: hoppI(maxNeigh,nAt), hoppR(maxNeigh,nAt)
-   real(dp) :: d, flux, phase, v1(3), v2(3)
-   real(dp) :: diffx, diffy, mmphi
+   ! Switches and options read from the input
+   logical :: calcD, calcK, calcT, Frank, readDataFiles, u
+
+   ! Other local variables
+   integer :: i, j, mB, mPhi, mS
+   real(dp) :: flux, hoppI(maxNeigh,nAt), hoppR(maxNeigh,nAt), phase, v1(3), v2(3)
+
 
 #ifdef DEBUG
    call MIO_Debug('CalcSelect',0)
@@ -133,22 +133,23 @@ subroutine CalcKubo()
    use neigh,                only : rcvList, sndSz
 #endif /* MPI */
 
-   integer :: nRecurs, nT, nPol, nEn, nWr
-   real(dp) :: dT, eps, Emin, Emax, ac, bc
-   integer :: sz
-   logical :: pol, onlydos
-   real(dp) :: PDOSxmin, PDOSxmax, PDOSymin, PDOSymax, PDOSMoireSuperMoireLength
-   integer :: i, j, ii
-   logical :: PDOS, PDOSDist, PDOSMoireSC1, PDOSAtomList, PDOSByNumber, PDOSPNP, PDOSIgnoreLayer1and4
-   logical :: PDOSMoireSuperMoire, PDOSMoireSuperMoire2, PDOSMoireSuperMoire3
-   logical :: PDOSLayer, encapsulatedFourLayers, encapsulatedSixLayers, t3BG, PDOSLayerAndSpecies
-   integer :: PDOSNumberOfAtoms, PDOSNumber, PDOSMinValue
-   integer :: PDOSList(6)
+
+   ! Switches and options read from the input
+   logical :: encapsulatedFourLayers, encapsulatedSixLayers, onlydos, PDOS, PDOSAtomList, PDOSByNumber, &
+         PDOSDist, PDOSIgnoreLayer1and4, PDOSLayer, PDOSLayerAndSpecies, PDOSMoireSC1, PDOSMoireSuperMoire, &
+         PDOSMoireSuperMoire2, PDOSMoireSuperMoire3, PDOSPNP, pol, t3BG
+
+   ! Model parameters read from the input
+   integer :: cellSize, n, nEn, nPol, nRecurs, nT, numberOfBNAtoms1, numberOfBNAtoms2, numberOfCAtoms, &
+         numberOfLayers, nWr, PDOSList(6), PDOSMinValue, PDOSNumber
+   real(dp) :: delta, dT, Emax, Emin, eps, PDOSMoireSuperMoireLength, PDOSxmax, PDOSxmin, PDOSymax, PDOSymin
+
+   ! Other local variables
+   integer :: flag1, flag2, i, ii, j, maxSpecies, numberOfAtomsInLayer, sz, u
+   real(dp) :: ac, aCC, bc, limit1
    character(len=60) :: coordinates
    type(cl_file) :: file
-   integer u, numberOfLayers
-   integer flag1, flag2, n, cellSize, numberOfBNAtoms1, numberOfBNAtoms2, numberOfCAtoms, numberOfAtomsInLayer, maxSpecies
-   real(dp) :: delta, limit1, aCC
+
 
 #ifdef DEBUG
    call MIO_Debug('CalcKubo',0)
@@ -525,11 +526,17 @@ subroutine CalcTunn()
    use ham,                  only : hopp
    use name,                 only : prefix
 
-   integer :: i, jj, j, u1, u2, u3, u4, numberOfMoires
-   real(dp) :: TAAR, TAAI, TABR, TABI
-   real(dp) :: dx,dy,bigKVec(3),bigKVecX,bigKVecY,bigKVecZ, dVec(3)
+
+   ! Model parameters read from the input
+   integer :: numberOfMoires
+   real(dp) :: bigKVecX, bigKVecY, bigKVecZ
+
+   ! Other local variables
+   integer :: i, j, jj, u1, u2, u3, u4
+   real(dp) :: bigKVec(3), TAAI, TAAR, TABI, TABR
    complex(dp) :: TAA, TAB
    type(cl_file) :: file1, file2, file3, file4
+
 
 #ifdef DEBUG
    call MIO_Debug('CalcTunn',0)
@@ -615,8 +622,11 @@ subroutine CalcDiag()
 #undef SEMICL_SECTION
 #endif
 
-   logical :: dos, bands, bands3D, spectral, grapheneUnitCell, aroundGrapheneK, spectralEnergyCut, RashbaCalculation, PDOS
-   logical :: spectralEnergyCutNickDale, DirectBandVal, chern, enableSCF
+
+   ! Switches and options read from the input
+   logical :: aroundGrapheneK, bands, bands3D, chern, DirectBandVal, dos, enableSCF, grapheneUnitCell, PDOS, &
+         RashbaCalculation, spectral, spectralEnergyCut, spectralEnergyCutNickDale
+
 #ifdef SEMICL
 #define SEMICL_SECTION 2
 #include "calc_semicl.inc"

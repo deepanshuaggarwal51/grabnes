@@ -20,7 +20,7 @@ def read_table(path):
     try:
         with open(path, "r") as handle:
             for number, line in enumerate(handle, start=1):
-                if not line.strip():
+                if not line.strip() or line.lstrip().startswith("#"):     # empty or comment line
                     continue
                 try:
                     rows.append([float(token) for token in line.split()])

@@ -13,7 +13,7 @@ Both scripts can be started from any directory.
 
 ```sh
 ./tests/regression/smoke_test.sh      # build + pristine graphene bands (about 1.5 minutes)
-./tests/regression/run_examples.sh    # build + all four public examples + solver checks
+./tests/regression/run_examples.sh    # build + public examples 01 to 05 + solver checks
 ```
 
 The exit status is `0` when every check passes, `1` when the build, a run, or
@@ -38,6 +38,19 @@ GRABNES_BIN=/path/to/grabnes ./tests/regression/run_examples.sh
 # Start the executable through an MPI launcher or the batch system
 GRABNES_LAUNCHER="mpirun -np 1" ./tests/regression/run_examples.sh
 ```
+
+The longer public examples (06 to 09: minutes each, example 07 needs 1.5 GB of
+memory) have their own script, which is not part of the suite above:
+
+```sh
+GRABNES_BIN=/path/to/grabnes OMP_NUM_THREADS=4 sh tests/regression/run_long_examples.sh
+```
+
+It copies each example to a work directory, runs its `run.sh` there and
+compares the result with the reference data (bands to 5e-6 eV; densities of
+states to 1e-5 states per eV per atom, since the recursion method depends on
+the number of threads at the level of 1e-6).
+
 
 Run `./tests/regression/smoke_test.sh --help` for the complete list.
 
@@ -93,6 +106,8 @@ against results that are known independently:
 | `sparse_dense` | The levels of the sparse solver are the levels of the dense diagonalization nearest to zero, in both directions |
 | `tapw_two_way` | Plane-wave reduction on a twisted bilayer: the levels of the two valleys together are the exact levels within 1 eV of neutrality, one to one; a run with a wrong moire angle must fail the same comparison |
 | `input_messages` | A repeated key is reported and its first value used; a misspelt key is listed as not read |
+| `twist_measure` | `Stack.MeasureTwist` on a generated twisted bilayer: the measured twist is the angle of the cell generator |
+| `model_alignment` | `Stack.ModelFromTwist` with and without `Stack.AlignModelEnergies` on a decoupled single layer + AB pair: the levels at the folded K points are site energy - 3 t2 + 6 t5 of each parameter set; with the alignment the single layer and the pair coincide |
 
 ```sh
 python3 tests/regression/check_physics.py --bin /path/to/grabnes

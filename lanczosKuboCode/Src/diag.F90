@@ -236,6 +236,7 @@ subroutine DiagDOS()
       else
          call MIO_Print('Diagonalizing: Processing '//trim(num2str(ptot))//' k-points','diag')
       end if
+      call DiagCheckThreads('DiagDOS')
       !$OMP PARALLEL DO PRIVATE(ELoc, KptsLoc, ik, HLoc), REDUCTION(min:Emin), REDUCTION(max:Emax), &
       !$OMP& SHARED(E, nAt, nspin, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, ptot)
       do ik=1,ptot
@@ -394,6 +395,7 @@ subroutine DiagPDOS()
         E(i2) = E1 + (E2-E1)*(i2-1)/(Epts-1)
    end do
    do is=1,nspin
+      call DiagCheckThreads('DiagPDOS')
       !$OMP PARALLEL DO PRIVATE(ELoc, KptsLoc, ik, HLoc), REDUCTION(min:Emin), REDUCTION(max:Emax), &
       !$OMP& SHARED(E, nAt, nspin, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell)
       do ik=1,ptot
@@ -584,6 +586,32 @@ subroutine Diag3DBands()
    !
 
 end subroutine Diag3DBands
+
+!> Stops the run when a parallel loop over k points would diagonalize with a threaded linear-algebra library
+!! inside every OpenMP thread.
+!!
+!! With more than one OpenMP thread and MKL threads forced on inside parallel regions (MKL_DYNAMIC=FALSE and more
+!! than one MKL thread) the dense diagonalization inside the k loop returns wrong eigenvalues without any
+!! message (measured in October 2026 on a 364-atom cell: levels wrong by several eV). One level of threads is
+!! safe: OpenMP threads over k points with a sequential library call each (MKL_DYNAMIC unset, the default, or
+!! MKL_NUM_THREADS=1), or OMP_NUM_THREADS=1 with a threaded library.
+subroutine DiagCheckThreads(routine)
+
+   character(len=*), intent(in) :: routine
+
+#if defined(_OPENMP) && !defined(NO_MKL)
+   integer, external :: omp_get_max_threads, mkl_get_max_threads, mkl_get_dynamic
+
+   if (omp_get_max_threads() > 1 .and. mkl_get_max_threads() > 1 .and. mkl_get_dynamic() == 0) then
+      call MIO_Kill('The loop over k points runs on '//trim(num2str(omp_get_max_threads()))//' OpenMP threads '// &
+        'and MKL is set to use '//trim(num2str(mkl_get_max_threads()))//' threads inside each of them '// &
+        '(MKL_DYNAMIC=FALSE): this combination gives wrong eigenvalues. Use one level of threads: either '// &
+        'OMP_NUM_THREADS=1 (MKL threads do the work), or MKL_NUM_THREADS=1, or leave MKL_DYNAMIC unset.', &
+        'diag',routine)
+   end if
+#endif
+
+end subroutine DiagCheckThreads
 
 subroutine DiagBands()
 
@@ -1184,6 +1212,7 @@ subroutine DiagBands()
                               hopp, NList, Nneigh, neighCell, neig, ucell)
 #endif
 
+         call DiagCheckThreads('DiagBands')
          !$OMP PARALLEL DO PRIVATE(ELoc, KptsLoc, is, ip, HLoc, i, j, HBlock, ELocBlock, i_eig, useTAPW_str, forceBlockTAPW_str), &
          !$OMP& SHARED(E, nAt, nspin, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, Kpts, neig, &
          !$OMP& sparseDiagSolver, keepWaveFunction, useTAPW, uu, uuu, uuuu, ptsTot, RashbaSOCterm, forceBlockTAPW, socDebug, M_tapw)
@@ -1528,6 +1557,7 @@ subroutine DiagChern()
       call MIO_Print('Path with '//trim(num2str(nPath))//' points:','diag')
       nPath = 1
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
+      call DiagCheckThreads('DiagChern')
       !$OMP PARALLEL DO PRIVATE(ChernLoc, KptsLoc, is, ip, HLoc), &
       !$OMP& SHARED(Chern, nAt, nspin, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, Kgrid)
       do ip=1,ptsTot
@@ -1667,6 +1697,7 @@ subroutine DiagBandsRashba()
       call MIO_Print('Path with '//trim(num2str(nPath))//' points:','diag')
       nPath = 1
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
+      call DiagCheckThreads('DiagBandsRashba')
       !$OMP PARALLEL DO PRIVATE(ELoc, KptsLoc, is, ip, HLoc), &
       !$OMP& SHARED(E, nAt, nspin, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, Kpts)
       do ip=1,ptsTot + 1

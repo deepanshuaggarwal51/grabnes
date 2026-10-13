@@ -168,6 +168,7 @@ def stack(layers, mn=(3, 2), cell_height=None, relax=False):
 
 
 C, CT, CB, BN, BNT = ("C", False, 0), ("C", True, 0), ("C", False, 1), ("BN", False, 0), ("BN", True, 0)
+CTB = ("C", True, 1)
 STRUCTURES.update({
     "x1": stack([C]),
     "x2": stack([C, CT]),
@@ -177,6 +178,8 @@ STRUCTURES.update({
     "x3enc": stack([BNT, C, BNT]),
     "x4": stack([C, CT, CT, C]),
     "x4b": stack([C, CB, CT, CT]),
+    "x4dbl": stack([C, CB, CT, CTB]),       # AB pair / twist / AB pair (twisted double bilayer)
+    "x3aab": stack([C, C, CB]),             # single layer (AA on the next one) / AB pair
     "x4enc": stack([BNT, C, CB, BNT]),
     "x5": stack([C, CT, C, CT, C]),
     "x6": stack([C, CT] * 3),
@@ -237,6 +240,19 @@ xyz_case("xyz3_enc", "x3enc", encapsulatedThreeLayers=T)
 toggles("xyz3_enc", ["GBNOffDiag", "removeTopMoireInL2"], "x3enc")
 xyz_case("xyz4", "x4", fourLayers=T, forceBilayerF2G2Intralayer=T)
 case("xyz4+forceBilayerF2G2Intralayer=F", "xyz4", "x4", forceBilayerF2G2Intralayer=F)
+# Twisted double bilayer: the explicit switches (fourLayers: layers 1-2 and 3-4 are Bernal pairs with the bilayer
+# F2G2 model) and the choice of the model from the structure (Stack.ModelFromTwist) must build the same
+# Hamiltonian: xyz4_tdbg and xyz4_tdbg_from_structure must have the same fingerprint. All four layers belong to
+# an AB pair here, so the site energy of the single-layer model (TB.OnSiteC) plays no role.
+TDBG = {"TB.OnSiteC1": "0.4295", "TB.OnSiteC2": "0.4506"}
+xyz_case("xyz4_tdbg", "x4dbl", fourLayers=T, forceBilayerF2G2Intralayer=T, **TDBG)
+xyz_case("xyz4_tdbg_from_structure", "x4dbl", fourLayersSandwiched=T, middleTwist=T, **dict(TDBG, **{"Stack.ModelFromTwist": T}))
+case("xyz4_tdbg_from_structure+ModelFromTwist=F", "xyz4_tdbg_from_structure", "x4dbl", **{"Stack.ModelFromTwist": F})
+# Stack.AlignModelEnergies (opt-in): the site energies of the AB pairs follow TB.OnSiteC. With TB.OnSiteC =
+# 0.32636 eV the aligned energies are the ones of the paper (0.4295, 0.4506): check_physics.py tests the levels.
+case("xyz4_tdbg_from_structure+AlignModelEnergies", "xyz4_tdbg_from_structure", "x4dbl", **{"Stack.AlignModelEnergies": T})
+xyz_case("xyz3_mixed_from_structure", "x3aab", threeLayers=T, middleTwist=T, **dict(TDBG, **{"Stack.ModelFromTwist": T}))
+case("xyz3_mixed_from_structure+AlignModelEnergies", "xyz3_mixed_from_structure", "x3aab", **{"Stack.AlignModelEnergies": T})
 xyz_case("xyz4_sandwiched", "x4", fourLayersSandwiched=T, middleTwist=T)
 case("xyz4_sandwiched+middleTwist=F", "xyz4_sandwiched", "x4", middleTwist=F)
 case("xyz4_sandwiched+bilayerF2G2", "xyz4_sandwiched", "x4", middleTwist=F, forceBilayerF2G2Intralayer=T)
@@ -519,37 +535,16 @@ COMPILER_DEPENDENT = {
     'sys_MoireEncapsulatedBilayer+removeF2G2Flag',
     'sys_Trilayer',
     'sys_Trilayer+TrilayerAddShift',
-    'tbg+BLKaxiras+BilayerOneParameter',
-    'tbg+BLKaxiras+BilayerThreeParameters',
-    'tbg+BLKaxiras+addExponentialDecayForDihedral',
-    'tbg+BLKaxiras+addPressureDependence=F',
-    'tbg+BLKaxiras+changeLatticeParameterForSrivaniModel',
-    'tbg+BLKaxiras+deactivateV3',
-    'tbg+BLKaxiras+deactivateV6',
-    'tbg+BLKaxiras+findThetasGeometrically',
-    'tbg+BLKaxiras+newFittingFunctions',
-    'tbg+BLKaxiras+oldParameterSet',
-    'tbg+BLKaxiras+onlyV0',
-    'tbg+BLKaxiras+oppositedxdy',
-    'tbg+BLKaxiras+sublatticeDependent',
-    'tbg+BLKaxiras+sublatticeIndependent',
-    'tbg+BLKaxiras+switchV3Sign',
-    'tbg+BLKaxiras+useBNGKaxiras',
-    'tbg+BLKaxiras+useBNGSrivani',
-    'tbg+BLKaxiras+useOnlyVAB',
-    'tbg+BLKaxiras+useTheta',
-    'tbg+BLKaxiras+useThetaIJ',
-    'tbg+TypeOfBL_BLKaxiras',
-    'tbg+TypeOfBL_BLKaxiras+NeighLevels1',
     'tbg+twistedBLAddShift',
 }
 
 # The on-site potentials that differ with Intel only (sinusModulation, SquareFunction*, SquareChecker2219, PNP,
 # Zterm1D) are functions of the Cartesian x or y of an atom that are not periodic in the hexagonal cell: atoms on
 # the cell boundary are placed on one side or the other depending on rounding, which changes their value.
-# The BLKaxiras interlayer model on the generated twisted bilayer uses values that are not set: the GNU
-# builds refuse it (non-finite hoppings); with Intel the outcome changes from build to build.
-COMPILER_DEPENDENT |= {c for c in CASES if c.startswith("tbg+") and "BLKaxiras" in c}
+# The BLKaxiras interlayer model on the generated twisted bilayer was in this list until the switches of the
+# Srivani model, which its branch of the loop tests, were read for it as well (October 2026): they were
+# undefined and the leftover memory decided the outcome. Now every compiler refuses these cases in the same
+# way (the model lacks parameters for this configuration).
 # TrilayerBasedOnMoireCell: non-finite hoppings with the optimised GNU build only, and not in every build.
 COMPILER_DEPENDENT |= {c for c in CASES if c.startswith("sys_Trilayer")}
 # realisticBubbles: the number of bubbles is drawn at random. With none the switch does nothing; with one or
