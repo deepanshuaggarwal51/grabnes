@@ -713,83 +713,83 @@
  },
  "tbg+BLKaxiras+BilayerOneParameter": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+BilayerThreeParameters": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+addExponentialDecayForDihedral": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+addPressureDependence=F": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+changeLatticeParameterForSrivaniModel": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+deactivateV3": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+deactivateV6": {
-  "fingerprint": "",
-  "status": "UNDEFINED"
+  "fingerprint": "8cf33a52cbf353bd",
+  "status": "ok"
  },
  "tbg+BLKaxiras+findThetasGeometrically": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+newFittingFunctions": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+oldParameterSet": {
-  "fingerprint": "",
-  "status": "UNDEFINED"
+  "fingerprint": "92667d8f322c972d",
+  "status": "ok"
  },
  "tbg+BLKaxiras+onlyV0": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+oppositedxdy": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+sublatticeDependent": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+sublatticeIndependent": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+switchV3Sign": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+useBNGKaxiras": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+useBNGSrivani": {
-  "fingerprint": "",
-  "status": "UNDEFINED"
+  "fingerprint": "2980973abce42fa7",
+  "status": "ok"
  },
  "tbg+BLKaxiras+useOnlyVAB": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+useTheta": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLKaxiras+useThetaIJ": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+BLSrivani+BilayerOneParameter": {
   "fingerprint": "13eeec627497171f",
@@ -1005,11 +1005,11 @@
  },
  "tbg+TypeOfBL_BLKaxiras": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+TypeOfBL_BLKaxiras+NeighLevels1": {
   "fingerprint": "",
-  "status": "UNDEFINED"
+  "status": "REFUSED"
  },
  "tbg+TypeOfBL_BLSrivani": {
   "fingerprint": "13eeec627497171f",
@@ -1535,6 +1535,14 @@
   "fingerprint": "e7d21f5952c926d3",
   "status": "NONHERM"
  },
+ "xyz3_mixed_from_structure": {
+  "fingerprint": "b4be3bdb6237fde5",
+  "status": "ok"
+ },
+ "xyz3_mixed_from_structure+AlignModelEnergies": {
+  "fingerprint": "d9bfaeb85c5776e3",
+  "status": "ok"
+ },
  "xyz3_t2BG": {
   "fingerprint": "",
   "status": "REFUSED"
@@ -1544,7 +1552,7 @@
   "status": "REFUSED"
  },
  "xyz4": {
-  "fingerprint": "07b5c795d3bdbb52",
+  "fingerprint": "82e7eb38c9d50e53",
   "status": "ok"
  },
  "xyz4+forceBilayerF2G2Intralayer=F": {
@@ -1649,6 +1657,30 @@
  },
  "xyz4_t3GwithBN": {
   "fingerprint": "5626214dc3277d3b",
+  "status": "ok"
+ },
+ "xyz4_tdbg": {
+  "fingerprint": "6b40c8ddbf48304d",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure": {
+  "fingerprint": "6b40c8ddbf48304d",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure+AlignModelEnergies": {
+  "fingerprint": "75fc7bbdcd1a0f0b",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure+ModelFromTwist=F": {
+  "fingerprint": "020ee8cb2a451d7b",
+  "status": "ok"
+ },
+ "xyz4_tdbg_from_structure_t5zero": {
+  "fingerprint": "fb81833e03eb15ea",
+  "status": "ok"
+ },
+ "xyz4_tdbg_t5zero": {
+  "fingerprint": "fb81833e03eb15ea",
   "status": "ok"
  },
  "xyz5": {

@@ -85,6 +85,19 @@ During the run:
 - With the plane-wave reduction (`TAPW.Use .true.`), `Diag.N_G` must be set:
   its default gives a very large basis.
 
+## Threads
+
+Use one level of threads in band calculations:
+
+- plane-wave reduction (`TAPW.Use`): `OMP_NUM_THREADS=1` and the cores given to the linear-algebra library
+  (`MKL_NUM_THREADS` or `OPENBLAS_NUM_THREADS`); the run stops otherwise;
+- dense diagonalization on several k points: either the same setting, or OpenMP threads over the k points with a
+  sequential library call in each (`MKL_NUM_THREADS=1`, or `MKL_DYNAMIC` left unset).
+
+OpenMP threads over the k points together with MKL threads inside each of them (`MKL_DYNAMIC=FALSE` and more
+than one MKL thread) gave wrong eigenvalues without any message; a run with this combination now stops with an
+explanation.
+
 ## Execution trace
 
 A solver built with `-DDEBUG` (add it to `FCFLAGS` in `make.sys`) writes
