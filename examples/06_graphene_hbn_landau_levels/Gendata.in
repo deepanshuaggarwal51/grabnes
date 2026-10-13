@@ -1,0 +1,43 @@
+Run.Description Aligned graphene on hBN, effective moire model: density of states in a magnetic field
+Run.Prefix generate
+
+# 8 x 8 moire cells of 55 x 55 graphene cells each: 387200 atoms
+Run.TypeOfSystem Graphene
+Structure.CellSize 55
+Structure.SuperCell 8
+Moire.LatticePercent 0-0.018181818181818
+
+Moire.Potential .true.
+Moire.Jeil .true.
+Moire.H0AndHZ .true.
+Moire.OffDiag .true.
+Moire.OffDiagMidpoint .true.   # Hermitian bond term: required for the recursion method
+Moire.PotC0   0-0.01013
+Moire.PotCz   0-0.00901
+Moire.PotCab  0.01134
+Moire.PotPhi0  1.510233401750693
+Moire.PotPhiz  0.147131255943122
+Moire.PotPhiab 0.342084533390889
+
+Kubo.Calc .true.
+Diag.Calc .false.
+Calculate.OnlyDOS .true.
+Kubo.PDOS .false.
+
+# Magnetic field: m flux quanta through the whole supercell, B = m x 0.4076 T.
+# m = 64 is one flux quantum per moire cell (26.09 T). This is a SWEEP: one calculation per m.
+MagField.InitialInteger 0
+MagField.FinalInteger 64
+MagField.IntegerStep 2
+
+# Density of states by the recursion (Lanczos) method from one random vector
+Kubo.RecursionNumber 3000
+Kubo.NumberofEnergyPoints 601
+Kubo.Epsilon 0.004            # broadening [eV]
+Kubo.EnergyMin 0-0.3
+Kubo.EnergyMax 0.3
+Kubo.SetSeed .true.
+Kubo.SeedValue 123456
+
+Neigh.fastNNnotsquare .true.
+Output.WriteDataFiles .false.

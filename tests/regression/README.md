@@ -13,7 +13,7 @@ Both scripts can be started from any directory.
 
 ```sh
 ./tests/regression/smoke_test.sh      # build + pristine graphene bands (about 1.5 minutes)
-./tests/regression/run_examples.sh    # build + all four public examples + solver checks
+./tests/regression/run_examples.sh    # build + public examples 01 to 05 + solver checks
 ```
 
 The exit status is `0` when every check passes, `1` when the build, a run, or
@@ -38,6 +38,19 @@ GRABNES_BIN=/path/to/grabnes ./tests/regression/run_examples.sh
 # Start the executable through an MPI launcher or the batch system
 GRABNES_LAUNCHER="mpirun -np 1" ./tests/regression/run_examples.sh
 ```
+
+The longer public examples (06 to 09: minutes each, example 07 needs 1.5 GB of
+memory) have their own script, which is not part of the suite above:
+
+```sh
+GRABNES_BIN=/path/to/grabnes OMP_NUM_THREADS=4 sh tests/regression/run_long_examples.sh
+```
+
+It copies each example to a work directory, runs its `run.sh` there and
+compares the result with the reference data (bands to 5e-6 eV; densities of
+states to 1e-5 states per eV per atom, since the recursion method depends on
+the number of threads at the level of 1e-6).
+
 
 Run `./tests/regression/smoke_test.sh --help` for the complete list.
 
