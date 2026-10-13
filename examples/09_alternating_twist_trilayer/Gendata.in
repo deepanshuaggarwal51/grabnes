@@ -1,0 +1,47 @@
+Run.Description Alternating-twist trilayer graphene (1.538 degrees), structure read from files
+Run.Prefix generate
+
+Run.TypeOfSystem ReadXYZ
+Structure.ReadLayerIndex .true.
+Structure.InterlayerDistance 3.35
+Structure.SuperCell 1
+Stack.ThreeLayers .true.
+Stack.MiddleTwist .true.
+
+# Intralayer: single-layer F2G2 model, five neighbor shells
+Intralayer.F2G2Model .true.
+TB.NeighLevels 5
+TB.Hopping 3.5
+TB.OnSiteC 0.4914
+
+# Interlayer: two-center model with distance-dependent decay, scaled by one factor
+Interlayer.TypeOfBL Koshino
+Interlayer.KoshinoSR .true.
+Interlayer.RenormalizeCoupling .true.
+Interlayer.CouplingFactor 1.008     # rigid lattice; 0.895 is the value used with relaxed structures
+
+Kubo.Calc .false.
+Diag.Calc .true.
+Calculate.Bands .true.
+MagField.Integer 0
+
+# Plane-wave reduction around one graphene valley (Diag.N_G = number of shells of moire
+# reciprocal vectors). Diag.MoireAngle = orientation of the first layer in the frame of the cell.
+TAPW.Use .true.
+TAPW.aG 2.46
+Diag.MoireAngle 0.0
+Diag.N_G 8
+Diag.UseKprimeValley .false.
+
+Bands.NumPoints 20
+&begin Bands.Path 4
+2/3  1/3  0.0   # K
+0.0  0.0  0.0   # Gamma
+1/2  1/2  0.0   # M
+1/3  2/3  0.0   # K': the other corner of the moire zone
+&end Bands.Path
+
+Neigh.fastNNnotsquare .true.
+Neigh.LayerNeighbors 400
+Neigh.LayerDistFactor 4.0
+Output.WriteDataFiles .false.

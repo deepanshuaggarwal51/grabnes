@@ -1,0 +1,42 @@
+Run.Description Graphene on hBN, effective moire model: density of states at one twist angle
+Run.Prefix generate
+
+Run.TypeOfSystem Graphene
+Structure.CellSize @CELLSIZE@
+Structure.SuperCell @SUPERCELL@
+
+# hBN layer: lattice mismatch and twist angle [degrees], commensurate with the cell (make_inputs.py)
+Moire.LatticePercent @EPS@
+Moire.Twisted @TWISTED@
+Moire.TwistAngle @THETA@
+
+# Effective moire model of Jung et al., Phys. Rev. B 89, 205414 (2014)
+Moire.Potential .true.
+Moire.Jeil .true.
+Moire.H0AndHZ .true.
+Moire.OffDiag .true.
+Moire.OffDiagMidpoint .true.   # Hermitian bond term: required for the recursion method
+Moire.PotC0   0-0.01013
+Moire.PotCz   0-0.00901
+Moire.PotCab  0.01134
+Moire.PotPhi0  1.510233401750693
+Moire.PotPhiz  0.147131255943122
+Moire.PotPhiab 0.342084533390889
+
+Kubo.Calc .true.
+Diag.Calc .false.
+Calculate.OnlyDOS .true.
+Kubo.PDOS .false.
+MagField.Integer 0
+
+# Density of states by the recursion (Lanczos) method from one random vector
+Kubo.RecursionNumber 3000
+Kubo.NumberofEnergyPoints 1201
+Kubo.Epsilon 0.005            # broadening [eV]
+Kubo.EnergyMin 0-0.6
+Kubo.EnergyMax 0.6
+Kubo.SetSeed .true.
+Kubo.SeedValue 123456
+
+Neigh.fastNNnotsquare .true.
+Output.WriteDataFiles .false.
