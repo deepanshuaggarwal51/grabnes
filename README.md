@@ -98,11 +98,31 @@ Each directory holds the input, a launcher, a plotting script, reference data,
 and a README that states the Hamiltonian and its parameters. Each runs in a few
 seconds on one core. See the [examples guide](examples/README.md).
 
+### Moire examples
+
+Five larger examples on rigid lattices. They take from 20 seconds to 5 minutes on
+4 cores and have the same layout as the four above.
+
+| Example | Calculation | Size |
+| --- | --- | --- |
+| [`05_graphene_hbn_bands`](examples/05_graphene_hbn_bands/) | Bands of graphene aligned with hBN (effective moire model), one valley | 6050 atoms |
+| [`06_graphene_hbn_landau_levels`](examples/06_graphene_hbn_landau_levels/) | DOS of the same system at 33 magnetic fields up to 26 T (recursion method) | 387,200 atoms |
+| [`07_graphene_hbn_twist_series`](examples/07_graphene_hbn_twist_series/) | DOS of graphene on hBN at twist angles 0, 0.61, 0.92 and 1.87 degrees | about 3.5 million atoms |
+| [`08_magic_angle_twisted_bilayer`](examples/08_magic_angle_twisted_bilayer/) | Flat bands of twisted-bilayer graphene at 1.08 degrees | 11,164 atoms |
+| [`09_alternating_twist_trilayer`](examples/09_alternating_twist_trilayer/) | Bands of alternating-twist trilayer graphene at 1.54 degrees, structure read from a file | 8322 atoms |
+
+The band examples (05, 08, 09) use the plane-wave reduction (TAPW) for one
+valley; for these three inputs it was compared with exact diagonalization in
+both directions (every level of either calculation has a partner in the other
+within 0.2 meV, in a window of 0.3 eV). Example 05 is part of the standard test
+suite; `tests/regression/run_long_examples.sh` reruns 06 to 09 against their
+reference data.
+
 ## Testing and reproducibility
 
 ```sh
 ./tests/regression/smoke_test.sh      # build + example 01
-./tests/regression/run_examples.sh    # build + the four examples + further checks
+./tests/regression/run_examples.sh    # build + examples 01 to 05 + further checks
 python3 -m pytest tests/tapw         # TAPW linear-algebra conventions (Python only)
 ```
 
@@ -121,7 +141,7 @@ describes every check; measured results for both compilers are in
 
 | Level | Meaning | Applies to |
 | --- | --- | --- |
-| Supported | Runs, is documented, and is reproduced by the test suite | The four examples above |
+| Supported | Runs, is documented, and is reproduced by the test suite | The nine examples above (06 to 09 by `run_long_examples.sh`) |
 | Independently validated | Additionally checked against an analytic result or a second implementation | Hamiltonian assembly and bands of graphene, hBN monolayer, and twisted bilayers; Kubo DOS of graphene |
 | Research / experimental | Present in the source without sufficient validation for general use | Everything else, including transport, TAPW, spin-orbit, Berry curvature, graphene/hBN and multilayer models |
 
