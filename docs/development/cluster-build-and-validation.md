@@ -764,7 +764,7 @@ was done:
 | TAPW with several OpenMP threads aborted with an unrelated message | | refused with instructions |
 | Disorder seeded from the clock only | `Anderson`, `Bubbles`, `GaussDisorder`, `deltaDisorder`, `SublatticeDisorder` | `setSeed` now applies (`RandSeedFromInput`) |
 | Legacy search `NeighList` without `Neigh.CompareAll` gives bands several eV off | graphene cells of 72 to 3200 atoms | warning |
-| Non-Hermitian table without notice | `HaldaneNNN` with `HaldaneSpecifyPhase` | warning |
+| Non-Hermitian table without notice | `HaldaneNNN` with `HaldaneSpecifyPhase` | warning; since 2026-10-22 both Haldane branches take the chirality from one orientation-independent rule (`HamHaldaneChirality`) and the table is Hermitian |
 | A key given twice: the first value was used silently | | warning |
 
 **Variables used without being set.** 51 cases gave a different Hamiltonian

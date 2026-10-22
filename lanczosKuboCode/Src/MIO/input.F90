@@ -13,7 +13,7 @@
 module input
 
    use file,                 only : cl_file
-   use io,                   only : maxlinel, maxfnlen
+   use io,                   only : maxfnlen, maxinputl
 #ifdef _OPENMP
    use omp_lib,              only : omp_in_parallel, omp_get_thread_num
 #endif
@@ -143,8 +143,8 @@ subroutine InputInit(success)
       call SysWarning('No input file specified','input','InputInit')
       return
    end if
-   call InFl%Open(name=inputfile,action='READ',status='OLD',serial=.true.)
-   call InFile%Open(action='WRITE',status='REPLACE',serial=.true.)
+   call InFl%Open(name=inputfile,action='READ',status='OLD',recl=maxinputl,serial=.true.)
+   call InFile%Open(action='WRITE',status='REPLACE',recl=maxinputl,serial=.true.)
    call InLns%Open(action='WRITE',status='REPLACE',form='UNFORMATTED', &
      recl=maxfnlen*Ssz+Isz,serial=.true.)
    uif = InFl%GetUnit()
@@ -161,7 +161,7 @@ subroutine InputInit(success)
    call InLns%Close(.false.)
    call InFile%SetDelete(.true.)
    call InLns%SetDelete(.true.)
-   call InFile%Open(action='READ',status='OLD',serial=.false.)
+   call InFile%Open(action='READ',status='OLD',recl=maxinputl,serial=.false.)
    call InLns%Open(action='READ',status='OLD',form='UNFORMATTED',serial=.true.)
 #ifdef MPI
    maxrecl = maxrecl+1
@@ -1817,7 +1817,7 @@ end function InputSearchLabelRaw
 recursive subroutine InputProcess(u,uw,ul,fname,maxl,numlines,wr)
 
    use file,                 only : cl_file
-   use sys,                  only : SysIOErr
+   use sys,                  only : SysIOErr, SysKill
 
    implicit none
 
@@ -1826,11 +1826,12 @@ recursive subroutine InputProcess(u,uw,ul,fname,maxl,numlines,wr)
    integer, intent(inout) :: maxl, numlines
    logical, intent(in), optional :: wr
 
-   integer ::  nl, l, il
+   integer ::  nl, l, il, lc
    integer :: pos1, pos2
    integer :: nlinep, un
    logical :: hold, wrline, wrflag
-   character(len=maxlinel) :: line, line0
+   character(len=maxinputl) :: line, line0
+   character(len=12) :: nlstr
    type(cl_file) :: newFile
 
    if (present(wr)) then
@@ -1855,6 +1856,14 @@ recursive subroutine InputProcess(u,uw,ul,fname,maxl,numlines,wr)
          line0 = adjustl(line0)
          if(line0(1:1)/='!'  .and. line0(1:1)/='#' .and. line0(1:1)/='*') then
             if(len_trim(line0) > 0 ) then
+               ! A line (continuations joined, comments not counted) must fit in the buffer: refuse, never truncate
+               lc = scan(line0,'!#') - 1
+               if (lc < 0) lc = len_trim(line0)
+               if (len_trim(line)+1+lc >= maxinputl) then
+                  write(nlstr,'(i0)') nl
+                  call SysKill('Line '//trim(nlstr)//' of '//trim(fname)//' (with its continuation lines) is'// &
+                    ' longer than the input line limit (maxinputl in Src/MIO/io.f90)','input','InputProcess')
+               end if
                line = trim(line)//' '//line0
                line = adjustl(line)
                pos1 = index(line,'!')
@@ -1880,7 +1889,7 @@ recursive subroutine InputProcess(u,uw,ul,fname,maxl,numlines,wr)
                   if (line(1:9)=='$INCLUDE ') then
                      pos1 = index(line,' ') + 1
                      pos2 = index(line(pos1:),' ') + pos1 - 2
-                     call newFile%Open(name=line(pos1:pos2),status='OLD', &
+                     call newFile%Open(name=line(pos1:pos2),status='OLD',recl=maxinputl, &
                        action='READ',serial=.true.)
                      un = newFile%GetUnit()
                      call InputProcess(un,uw,ul,line(pos1:pos2),maxl,numlines,wrflag)

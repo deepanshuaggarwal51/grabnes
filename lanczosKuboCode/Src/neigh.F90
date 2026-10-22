@@ -1458,7 +1458,7 @@ subroutine fastNNnotsquare(natoms,x,y,z,cutoff2,cutoff2bis,A1,A2)
    real(dp), intent(in) :: A2(3)
 
    ! Switches and options read from the input
-   logical :: readDataFiles
+   logical :: addSecondLayerInteractions, readDataFiles
 
 
 #ifdef DEBUG
@@ -1469,7 +1469,9 @@ subroutine fastNNnotsquare(natoms,x,y,z,cutoff2,cutoff2bis,A1,A2)
    if (readDataFiles) then
       call NeighReadDataFiles()
    else
-      call NeighSearchLayered(natoms,x,y,z,A1,A2,cutoff2,cutoff2bis,.false.,0.0_dp,.false.)
+      ! pairs two layers apart (4.5 < |dz| < 7.5 A), as in the z-periodic search; the key was ignored here before
+      call MIO_InputParameter('Interlayer.AddSecondLayerInteractions',addSecondLayerInteractions,.false.)
+      call NeighSearchLayered(natoms,x,y,z,A1,A2,cutoff2,cutoff2bis,.false.,0.0_dp,addSecondLayerInteractions)
       call NeighFinishSearch()
    end if
 

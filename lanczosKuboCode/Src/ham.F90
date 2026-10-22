@@ -49,13 +49,20 @@ module ham
    public :: HamInit, HamOnSite, HamHopping
 
    ! Public functions
-   public :: SOCEnabledForLayer, HaldaneEnabledForLayer
+   public :: SOCEnabledForLayer, HaldaneEnabledForLayer, ZeemanEnabledForLayer
 
    ! System configuration flags (module-level state)
    logical, save :: moireStrain    ! Enable moiré pattern strain effects
    logical, save, public :: Zterm          ! Enable Zeeman term (magnetic field)
    logical, save :: PZterm         ! Enable pseudo-Zeeman term
    logical, save :: randomStrain   ! Enable random strain effects
+
+   ! Moire.Fourier (opt-in): general moire term given by its Fourier amplitudes, read once by HamMoireFourierSetup
+   logical, save :: mfReady = .false.
+   integer, save :: mfN = 0
+   real(dp), save, allocatable :: mfQ(:,:)       ! (2,mfN) Cartesian wave vectors [1/Ang]
+   complex(dp), save, allocatable :: mfAmp(:,:)  ! (3,mfN) amplitudes of V_A, V_B, U [g0]
+   real(dp), save :: mfK(2)                      ! graphene valley momentum of U [1/Ang]
 
    ! SOC terms flags
    logical, save, public :: IntrinsicSOCterm   ! Enable intrinsic SOC (λI)
@@ -97,6 +104,30 @@ module ham
    real(dp), save, public :: lambdaIsing   ! Ising SOC parameter (λIsing) - spin-dependent
    real(dp), save, public :: lambdaR       ! Rashba SOC parameter (λR)
    real(dp), save, public :: lambdaPIA     ! Pseudo-inversion asymmetry parameter (λPIA)
+
+   ! Spinful bond terms of the block (2N x 2N) Hamiltonian, opt-in (2026-10-16).  All need SOC.RashbaConsistentPhase,
+   ! which puts every spin-flip and spin-dependent bond term on the Bloch phase of the spin-diagonal hopping.
+   ! SOC.RashbaConsistentPhase: Rashba in the Kane-Mele form 2i/3 lamR' (s x d)_z with lamR' = 3/2 SOC.LambdaR
+   !    (the grabnes normalisation is kept: the K-point splitting is 3 SOC.LambdaR), Bloch phase of the hopping.
+   !    Off: the former term, whose phase carries the opposite sign of k.d (exact only at K and Gamma).
+   ! SOC.RashbaAngle [deg]: spin rotation exp(-i phi s_z/2) of the Rashba term; 0 = tangential, 90 = radial texture.
+   ! SOC.KaneMele + SOC.LambdaKM [eV]: i lamKM/(3 sqrt3) nu_ij s_z on the second-neighbour graphene bonds, nu_ij from
+   !    HamHaldaneChirality; gap 2 lamKM in a single layer.  (IntrinsicSOCterm is a spin-independent sublattice mass.)
+   ! SOC.Interlayer + SOC.LambdaInterlayer [eV]: the interlayer spin-flip term lambda_4 of Parra-Martinez et al.,
+   !    arXiv:2610.05905, between same-sublattice sites of adjacent UNTWISTED graphene layers at in-plane distance aCC:
+   !    i lam4/3 c_ij sgn(z_j - z_i) (d_ij x s)_z, c_ij = +1 if d_ij is parallel to a first-neighbour bond of i, -1 if
+   !    antiparallel (inversion fixes this sublattice sign); at K its matrix element is lam4 sigma_z s_+/- .
+   logical, save, public :: RashbaConsistentPhase = .false.
+   ! Zeeman.FollowSOCLayers (default .true., 2026-10-16): with SOC.LayerControl the Zeeman term acts on the SOC layers
+   ! only, like every other proximity term; .false. = on every layer, the behaviour before 2026-10-16
+   logical, save :: zeemanFollowSOC = .true.
+   logical, save, public :: KaneMeleSOCterm = .false.
+   logical, save, public :: InterlayerSOCterm = .false.
+   real(dp), save, public :: rashbaAngle = 0.0_dp      ! [rad]
+   real(dp), save, public :: lambdaKM = 0.0_dp, lambdaIL = 0.0_dp   ! [g0]
+   ! per bond (j,i), filled by HamSOCBondTables: socBond(s,s',j,i) = <i s|H|NList(j,i) s'> without the Bloch phase
+   complex(dp), save, allocatable, public :: socBond(:,:,:,:)
+   logical, save, allocatable, public :: socBondOn(:,:)
 
    ! Spin and system parameters
    integer, save :: spin           ! Spin index (1 or -1)
@@ -297,6 +328,49 @@ subroutine HamInit()
       call MIO_Print('Pseudo-inversion asymmetry enabled with λPIA = '//trim(num2str(lambdaPIA)),'ham')
    end if
 
+   ! Spinful bond terms of the block Hamiltonian (see the declarations); every default leaves the run unchanged
+   ! Default .true. since 2026-10-16 (NL): the former Rashba term has the wrong Bloch phase away from K/Gamma.
+   ! It only matters when a spinful bond term is on (Rashba, Kane-Mele, interlayer); see below.
+   call MIO_InputParameter('SOC.RashbaConsistentPhase',RashbaConsistentPhase,.true.)
+   call MIO_InputParameter('SOC.RashbaAngle',rashbaAngle,0.0_dp)
+   rashbaAngle = rashbaAngle*acos(-1.0_dp)/180.0_dp
+   call MIO_InputParameter('SOC.KaneMele',KaneMeleSOCterm,.false.)
+   if (KaneMeleSOCterm) then
+      call MIO_InputParameter('SOC.LambdaKM',lambdaKM,0.0_dp)
+      lambdaKM = lambdaKM/g0
+   end if
+   call MIO_InputParameter('SOC.Interlayer',InterlayerSOCterm,.false.)
+   if (InterlayerSOCterm) then
+      call MIO_InputParameter('SOC.LambdaInterlayer',lambdaIL,0.0_dp)
+      lambdaIL = lambdaIL/g0
+   end if
+   if ((KaneMeleSOCterm .or. InterlayerSOCterm .or. rashbaAngle /= 0.0_dp) .and. .not. RashbaConsistentPhase) then
+      call MIO_Kill('SOC.KaneMele, SOC.Interlayer and SOC.RashbaAngle are written in the spin convention and Bloch '// &
+        'phase of SOC.RashbaConsistentPhase: set SOC.RashbaConsistentPhase .true.','ham','HamInit')
+   end if
+   if (.not. (RashbaSOCterm .or. KaneMeleSOCterm .or. InterlayerSOCterm)) RashbaConsistentPhase = .false.
+   if (RashbaSOCterm .and. .not. RashbaConsistentPhase) call MIO_Print('WARNING: SOC.RashbaConsistentPhase .false.: '// &
+     'the former Rashba term, whose Bloch phase has the wrong sign of k.d (exact only at K and Gamma) - use it only to '// &
+     'reproduce results made before 2026-10-16','ham')
+   if (RashbaConsistentPhase) then
+      if (nspin /= 2) call MIO_Kill('The Rashba, Kane-Mele and interlayer SOC terms need a spinful run '// &
+        '(SpinPolarized .true.)','ham','HamInit')
+      if ((KaneMeleSOCterm .or. InterlayerSOCterm) .and. .not. RashbaSOCterm) then
+         ! the spinful bond terms live in the block (2N x 2N) Hamiltonian, which the Rashba switch selects
+         RashbaSOCterm = .true.
+         lambdaR = 0.0_dp
+         call MIO_Print('SOC: RashbaSOCterm switched on with LambdaR = 0 to use the spinful block Hamiltonian','ham')
+      end if
+      call MIO_Print('SOC: bond terms with the Bloch phase of the hopping (SOC.RashbaConsistentPhase); Rashba angle '// &
+        trim(num2str(rashbaAngle*180.0_dp/acos(-1.0_dp),4))//' deg','ham')
+      if (KaneMeleSOCterm) call MIO_Print('SOC: Kane-Mele term, lambda_KM = '//trim(num2str(lambdaKM*g0*1000.0_dp,6))// &
+        ' meV (gap 2 lambda_KM in a single layer)','ham')
+      if (InterlayerSOCterm) call MIO_Print('SOC: interlayer spin-flip term (arXiv:2610.05905), lambda_4 = '// &
+        trim(num2str(lambdaIL*g0*1000.0_dp,6))//' meV, untwisted adjacent graphene layers only','ham')
+   end if
+
+   call MIO_InputParameter('Zeeman.FollowSOCLayers',zeemanFollowSOC,.true.)
+
    ! Layer-specific SOC control
    call MIO_InputParameter('SOC.LayerControl',SOCLayerControl,.false.)
    if (SOCLayerControl) then
@@ -331,6 +405,14 @@ subroutine HamInit()
       allocate(SOCLayersArray(0))
       if (IntrinsicSOCterm .or. IsingSOCterm .or. RashbaSOCterm .or. PIASOCterm) &
          call MIO_Print('SOC layer control disabled. SOC will be applied to all layers.','ham')
+   end if
+
+   if (Zterm .and. SOCLayerControl) then
+      if (zeemanFollowSOC) then
+         call MIO_Print('Zeeman term on the SOC layers only (Zeeman.FollowSOCLayers .true.)','ham')
+      else
+         call MIO_Print('Zeeman term on every layer (Zeeman.FollowSOCLayers .false., the behaviour before 2026-10-16)','ham')
+      end if
    end if
 
    ! Layer-specific Haldane control
@@ -763,7 +845,7 @@ subroutine HamOnSite()
 
    call MIO_InputParameter('Strain.Bubbles',l,.false.)
    if (l) then
-      call MIO_InputParameter('Disorder.OnsiteShift',onsiteShift,0.1_dp)
+      call HamInputEnergyEV('Disorder.OnsiteShift',onsiteShift,0.1_dp)
       call MIO_InputParameter('Disorder.CheckerDivider',checkerDivider,10)
       call MIO_InputParameter('Disorder.CheckerDensity',checkerDensity,0.1_dp)
       allocate(checkerActivate(checkerDivider,checkerDivider))
@@ -823,8 +905,8 @@ subroutine HamOnSite()
    if (sinusModulationUsingPeriod) then
       call MIO_InputParameter('Potential.SinusModulationPeriod',sinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.SinusModulationAddMassTerm',sinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.SinusFactor',sinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusFactor',sinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -844,8 +926,8 @@ subroutine HamOnSite()
    if (sinusModulationUsingPeriodY) then
       call MIO_InputParameter('Potential.SinusModulationPeriod',sinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.SinusModulationAddMassTerm',sinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.SinusFactor',sinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusFactor',sinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -865,8 +947,8 @@ subroutine HamOnSite()
    if (cosinusModulationUsingPeriod) then
       call MIO_InputParameter('Potential.CosinusModulationPeriod',cosinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.CosinusModulationAddMassTerm',cosinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.CosinusFactor',cosinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusFactor',cosinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -886,8 +968,8 @@ subroutine HamOnSite()
    if (cosinusModulationUsingPeriodY) then
       call MIO_InputParameter('Potential.CosinusModulationPeriod',cosinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.CosinusModulationAddMassTerm',cosinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.CosinusFactor',cosinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusFactor',cosinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -1033,6 +1115,10 @@ subroutine HamOnSite()
    ! ------------------------------------------------------------------------
    call MIO_InputParameter('Moire.CDW',moireCDW,.false.)
    if (moireCDW) call HamOnSiteMoireCDW()
+
+   ! Moire.Fourier (opt-in): on-site part of the general moire term (bond part in HamHopping)
+   call MIO_InputParameter('Moire.Fourier',l,.false.)
+   if (l) call HamOnSiteMoireFourier()
 
 #ifdef DEBUG
    call MIO_Debug('HamOnSite',1)
@@ -1181,7 +1267,7 @@ subroutine HamOnSiteDeltaDisorder()
 #endif /* DEBUG */
 
       call RandSeedFromInput()
-      call MIO_InputParameter('Disorder.DeltaAmp',A,1.0_dp)
+      call HamInputEnergyEV('Disorder.DeltaAmp',A,1.0_dp)
       call MIO_Print('delta disorder','ham')
       call MIO_Print('  w: '//trim(num2str(A,4)),'ham')
       call MIO_Print('')
@@ -1231,7 +1317,7 @@ subroutine HamOnSiteSquareChecker()
 
 
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare',A,1.0_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare',A,1.0_dp)
       if (frac) call AtomsSetCart()
 
       !$OMP PARALLEL DO PRIVATE(i,H)
@@ -1273,7 +1359,7 @@ subroutine HamOnSiteZterm1DKink()
 
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.Zterm1DAmp',Amp3,0.01_dp)
+      call HamInputEnergyEV('Potential.Zterm1DAmp',Amp3,0.01_dp)
       call MIO_InputParameter('Potential.Zterm1DDelta',delta,10.0_dp)
       limit0 = 0.0_dp
       limit1 = (n*sCell*aG)*1.0_dp/4.0_dp
@@ -1285,11 +1371,12 @@ subroutine HamOnSiteZterm1DKink()
         ! >>> unset markers
         h = hamUnset
         ! <<< unset markers
+        ! atoms exactly at x = L/2 or L were left unset before 2026-10-14 (the pieces are continuous there)
         if (Rat(1,i).lt.limit2) then
           H = Amp3 * tanh((Rat(1,i)-limit1)/delta)
-        else if ((Rat(1,i).gt.limit2).and.(Rat(1,i).lt.limit4)) then
+        else if ((Rat(1,i).ge.limit2).and.(Rat(1,i).lt.limit4)) then
           H = - Amp3 * tanh((Rat(1,i)-limit3)/delta)
-        else if ((Rat(1,i).gt.limit4)) then
+        else if ((Rat(1,i).ge.limit4)) then
           H = Amp3 * tanh((Rat(1,i)-(limit4+limit1))/delta)
         end if
         H0(i) = H0(i) + (-1.0_dp)**Species(i)*H
@@ -1312,7 +1399,7 @@ subroutine HamOnSiteZterm1D()
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Potential.SinusNumberOfPeriod',sinusNumberOfPeriod,1)
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare3',Amp3,0.01_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare3',Amp3,0.01_dp)
 
       !$OMP PARALLEL DO PRIVATE(i,H)
       do i = in1,in2
@@ -1343,7 +1430,7 @@ subroutine HamOnSiteSquareFunction2()
 
       call MIO_InputParameter('Potential.NumberOfWidthHoneycomb',NOWH,1)
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare2',Amp2,0.01_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare2',Amp2,0.01_dp)
       call MIO_InputParameter('Potential.PhaseOfSquareX',P1,0.0_dp)
       call MIO_InputParameter('Potential.PhaseOfSquareY',P2,0.0_dp)
       if (frac) call AtomsSetCart()
@@ -1432,7 +1519,7 @@ subroutine HamOnSiteSquareFunction()
 
       call MIO_InputParameter('Potential.SinusNumberOfPeriod',sinusNumberOfPeriod,1)
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare',A,1.0_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare',A,1.0_dp)
       if (frac) call AtomsSetCart()
 
       call MIO_InputParameter('Potential.TwoDimensional',l,.false.)
@@ -1503,7 +1590,7 @@ subroutine HamOnSitePNPKink()
 
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.PNPAmp',PNPAmp,0.01_dp)
+      call HamInputEnergyEV('Potential.PNPAmp',PNPAmp,0.01_dp)
       call MIO_InputParameter('Potential.PNPDelta',delta,10.0_dp)
       limit0 = 0.0_dp
       limit1 = (n*sCell*aG)*1.0_dp/4.0_dp
@@ -1515,11 +1602,12 @@ subroutine HamOnSitePNPKink()
         ! >>> unset markers
         h = hamUnset
         ! <<< unset markers
+        ! atoms exactly at x = L/2 or L were left unset before 2026-10-14 (the pieces are continuous there)
         if (Rat(1,i).lt.limit2) then
           H = PNPAmp * tanh((Rat(1,i)-limit1)/delta)
-        else if ((Rat(1,i).gt.limit2).and.(Rat(1,i).lt.limit4)) then
+        else if ((Rat(1,i).ge.limit2).and.(Rat(1,i).lt.limit4)) then
           H = - PNPAmp * tanh((Rat(1,i)-limit3)/delta)
-        else if ((Rat(1,i).gt.limit4)) then
+        else if ((Rat(1,i).ge.limit4)) then
           H = PNPAmp * tanh((Rat(1,i)-(limit4+limit1))/delta)
         end if
         H0(i) = H0(i) + H
@@ -1541,7 +1629,7 @@ subroutine HamOnSitePNP()
 
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.PNPAmp',PNPAmp,0.01_dp)
+      call HamInputEnergyEV('Potential.PNPAmp',PNPAmp,0.01_dp)
       PNPLeft = (n*sCell*aG)/6.0_dp * 2.0_dp
       PNPRight = (n*sCell*aG)/6.0_dp * 4.0_dp
       !$OMP PARALLEL DO PRIVATE(i,H)
@@ -3663,25 +3751,12 @@ subroutine HamMeasureLayerTwist()
          else
             nBN(L) = nBN(L) + 1
          end if
-         rcut = Nradii(1,nlay)
-         do j = 1, Nneigh(i)
-            if (layerIndex(NList(j,i)) /= L) cycle
-            dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
-            if (dxy >= rcut .or. dxy < 1.0e-6_dp) cycle
-            z(L) = z(L) + exp(6.0_dp*cmplx_i*atan2(NeighD(2,j,i),NeighD(1,j,i)))
-            nBond(L) = nBond(L) + 1
-         end do
       end do
+      call HamLayerOrientation(nL, phi, coh, nBond)
       call MIO_Print('')
       call MIO_Print('Layer orientations measured from the structure (Stack.MeasureTwist):','ham')
       call MIO_Print('  layer   atoms  kind      orientation [deg]   coherence','ham')
       do L = 1, nL
-         phi(L) = 0.0_dp
-         coh(L) = 0.0_dp
-         if (nBond(L) > 0) then
-            phi(L) = atan2(aimag(z(L)),real(z(L)))/6.0_dp*180.0_dp/pi
-            coh(L) = abs(z(L))/nBond(L)
-         end if
          what = 'mixed'
          if (nBN(L) == 0) what = 'graphene'
          if (nC(L) == 0) what = 'hBN'
@@ -3934,17 +4009,19 @@ end subroutine HamPrintNormalStats
 subroutine HamCheckFinite()
 
    use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
-   use atoms,  only : inode1, inode2
-   use neigh,  only : Nneigh
+   use atoms,  only : inode1, inode2, layerIndex, Species
+   use neigh,  only : Nneigh, NList, NeighD
 
 
    ! Other local variables
-   integer :: i, ifirst, j, nhop, nons
+   integer :: i, ifirst, j, jfirst, nhop, nons
+   character(len=200) :: bond
 
 
    nhop = 0
    nons = 0
    ifirst = 0
+   jfirst = 0
    do i=inode1,inode2
       if (.not. ieee_is_finite(H0(i))) then
          nons = nons + 1
@@ -3953,11 +4030,21 @@ subroutine HamCheckFinite()
       do j=1,Nneigh(i)
          if (.not. (ieee_is_finite(real(hopp(j,i),dp)) .and. ieee_is_finite(aimag(hopp(j,i))))) then
             nhop = nhop + 1
-            if (ifirst==0) ifirst = i
+            if (ifirst==0) then
+               ifirst = i
+               jfirst = j
+            end if
          end if
       end do
    end do
    if (nhop + nons > 0) then
+      if (jfirst > 0) then
+         write(bond,'(a,i0,a,i0,a,i0,a,i0,a,i0,a,i0,a,f8.4,a,f8.4,a)') 'First non-finite hopping: atom ', ifirst, &
+           ' (layer ', layerIndex(ifirst), ', Species ', Species(ifirst), ') -> neighbour ', NList(jfirst,ifirst), &
+           ' (layer ', layerIndex(NList(jfirst,ifirst)), ', Species ', Species(NList(jfirst,ifirst)), '), in-plane ', &
+           sqrt(NeighD(1,jfirst,ifirst)**2 + NeighD(2,jfirst,ifirst)**2), ' Ang, dz ', NeighD(3,jfirst,ifirst), ' Ang'
+         call MIO_Print(trim(bond),'ham')
+      end if
       call MIO_Kill('The Hamiltonian contains non-finite values: '//trim(num2str(nhop))//' hopping and '// &
         trim(num2str(nons))//' on-site entries (first at atom '//trim(num2str(ifirst))//'). The selected '// &
         'combination of model switches is not valid for this structure. One known cause: a model that uses '// &
@@ -4357,6 +4444,212 @@ subroutine MoireBondDeltaMidpoint(ri, bond, spec, epsM, thM, preShiftY, flipD, p
       end if
    end if
 end subroutine MoireBondDeltaMidpoint
+
+!> @brief Read the general moire term of Moire.Fourier once (shared by its on-site and bond parts).
+!! Block Moire.FourierHarmonics N, one row per wave vector:  h k  ReA ImA  ReB ImB  ReU ImU   [amplitudes in eV]
+!!   Q = h b1 + k b2, b1, b2 = reciprocal vectors of the INPUT cell (before SuperCell), as moireCDW;
+!!   V_s(r) = Re sum_Q s(Q) exp(iQ.r)   added to the on-site energy of Species s = 1 (A), 2 (B);
+!!   U(r)   =    sum_Q U(Q) exp(iQ.r)   AB coupling of valley K_v: every A-B nearest-neighbour bond, d = r_B - r_A,
+!!   gets the physical hopping  dt = (2/3) Re[ U(r_mid) exp(-i K_v.d) ],  so that sum_bonds dt exp(i K_v.d) = U
+!!   (its isotropic part is zero) and the other valley sees conj(U) (real hoppings: time reversal kept).
+!! K_v = graphene K (2/3,1/3) or K' (1/3,2/3) (Moire.FourierKprime) of the canonical lattice a1 = (a,0), a2 at 60 deg,
+!! rotated by Moire.FourierGrapheneAngle [deg] (the TAPW construction of Diag.UseKprimeValley / Diag.MoireAngle).
+subroutine HamMoireFourierSetup()
+   use cell,                 only : rcell, sCell, aG
+   use tbpar,                only : g0
+   use constants,            only : pi
+   use atoms,                only : nAt, Species, layerIndex
+
+   ! Other local variables
+   real(dp), allocatable :: rows(:,:)
+   real(dp) :: ang, aL, sG(2,2), rG(2,2), det, refF(2)
+   integer :: iq, scX, scY, h, k
+   logical :: kp
+
+
+   if (mfReady) return
+   if (any(Species(1:nAt) /= 1 .and. Species(1:nAt) /= 2)) then
+      call MIO_Kill('Moire.Fourier supports a single graphene layer (Species 1 and 2) only','ham','HamMoireFourierSetup')
+   end if
+   if (associated(layerIndex)) then
+      if (any(layerIndex(1:nAt) /= layerIndex(1))) then
+         call MIO_Kill('Moire.Fourier supports a single graphene layer (Species 1 and 2) only','ham','HamMoireFourierSetup')
+      end if
+   end if
+   if (.not. MIO_InputFindBlock('Moire.FourierHarmonics',mfN)) then
+      call MIO_Kill('Moire.Fourier requires a Moire.FourierHarmonics block','ham','HamMoireFourierSetup')
+   end if
+   allocate(rows(8,mfN), mfQ(2,mfN), mfAmp(3,mfN))
+   call MIO_InputBlock('Moire.FourierHarmonics',rows)
+
+   ! input cell = simulation cell / SuperCell (same logic as moireCDW)
+   call MIO_InputParameter('Structure.SuperCellX',scX,1)
+   call MIO_InputParameter('Structure.SuperCellY',scY,1)
+   if (scX == scY) then
+      scX = sCell
+      scY = sCell
+   end if
+   do iq=1,mfN
+      h = nint(rows(1,iq))
+      k = nint(rows(2,iq))
+      if (abs(rows(1,iq)-h) > 1.0e-6_dp .or. abs(rows(2,iq)-k) > 1.0e-6_dp) then
+         call MIO_Kill('Moire.FourierHarmonics: h and k must be integers','ham','HamMoireFourierSetup')
+      end if
+      mfQ(:,iq) = h*scX*rcell(1:2,1) + k*scY*rcell(1:2,2)
+      mfAmp(1,iq) = cmplx(rows(3,iq), rows(4,iq), dp)/g0
+      mfAmp(2,iq) = cmplx(rows(5,iq), rows(6,iq), dp)/g0
+      mfAmp(3,iq) = cmplx(rows(7,iq), rows(8,iq), dp)/g0
+   end do
+   deallocate(rows)
+
+   ! valley of U
+   call MIO_InputParameter('Moire.FourierKprime',kp,.false.)
+   call MIO_InputParameter('Moire.FourierGrapheneAngle',ang,0.0_dp)
+   call MIO_InputParameter('Moire.FourierLatticeConstant',aL,aG)
+   if (kp) then
+      refF = [1.0_dp/3.0_dp, 2.0_dp/3.0_dp]
+   else
+      refF = [2.0_dp/3.0_dp, 1.0_dp/3.0_dp]
+   end if
+   ang = ang*pi/180.0_dp
+   sG(:,1) = aL*[cos(ang), sin(ang)]
+   sG(:,2) = aL*[cos(ang + pi/3.0_dp), sin(ang + pi/3.0_dp)]
+   det = sG(1,1)*sG(2,2) - sG(1,2)*sG(2,1)
+   rG(:,1) = 2.0_dp*pi*[ sG(2,2), -sG(1,2)]/det
+   rG(:,2) = 2.0_dp*pi*[-sG(2,1),  sG(1,1)]/det
+   mfK = refF(1)*rG(:,1) + refF(2)*rG(:,2)
+
+   call MIO_Print('Moire.Fourier: general moire term, '//trim(num2str(real(mfN,dp),0))// &
+        ' wave vectors (units of the input-cell reciprocal lattice)','ham')
+   call MIO_Print('  U belongs to valley '//trim(merge('K'' (1/3,2/3)','K (2/3,1/3) ',kp))//' of the graphene lattice a = '// &
+        trim(num2str(aL,5))//' Ang at '//trim(num2str(ang*180.0_dp/pi,4))//' deg','ham')
+   do iq=1,mfN
+      call MIO_Print('  |Q| '//trim(num2str(sqrt(sum(mfQ(:,iq)**2)),5))//' 1/Ang   |A| '// &
+           trim(num2str(1.0e3_dp*g0*abs(mfAmp(1,iq)),3))//'  |B| '//trim(num2str(1.0e3_dp*g0*abs(mfAmp(2,iq)),3))// &
+           '  |U| '//trim(num2str(1.0e3_dp*g0*abs(mfAmp(3,iq)),3))//' meV','ham')
+   end do
+   mfReady = .true.
+
+end subroutine HamMoireFourierSetup
+
+!> @brief On-site part of Moire.Fourier: H0(i) += Re sum_Q s(Q) exp(iQ.r_i), s = A or B by Species (see HamMoireFourierSetup).
+subroutine HamOnSiteMoireFourier()
+   use atoms,                only : nAt, Rat, Species, frac, AtomsSetCart
+   use tbpar,                only : g0
+
+   ! Other local variables
+   complex(dp) :: v
+   real(dp) :: imMax, vMax
+   integer :: i, iq
+
+
+   call HamMoireFourierSetup()
+   if (frac) call AtomsSetCart()
+   imMax = 0.0_dp
+   vMax = 0.0_dp
+   do i=1,nAt
+      v = (0.0_dp, 0.0_dp)
+      do iq=1,mfN
+         v = v + mfAmp(Species(i),iq)*exp(cmplx(0.0_dp, dot_product(mfQ(:,iq),Rat(1:2,i)), dp))
+      end do
+      H0(i) = H0(i) + real(v)
+      imMax = max(imMax, abs(aimag(v)))
+      vMax = max(vMax, abs(real(v)))
+   end do
+   call MIO_Print('Moire.Fourier: on-site part added to '//trim(num2str(real(nAt,dp),0))//' atoms, max |V| '// &
+        trim(num2str(1.0e3_dp*g0*vMax,4))//' meV; imaginary part dropped '//trim(num2str(1.0e3_dp*g0*imMax,6))// &
+        ' meV (0 when s(-Q) = conj s(Q))','ham')
+
+end subroutine HamOnSiteMoireFourier
+
+!> @brief Bond part of Moire.Fourier: every A-B nearest-neighbour bond gets dt = (2/3) Re[U(r_mid) exp(-i K_v.d)],
+!! d = r_B - r_A, r_mid = bond midpoint (the same for both directions: H stays Hermitian). hopp is MINUS the hopping.
+subroutine HamHopMoireFourier()
+   use atoms,                only : nAt, Rat, Species, frac, AtomsSetCart
+   use neigh,                only : NeighD, Nneigh, NList
+   use tbpar,                only : g0
+
+   ! Other local variables
+   complex(dp) :: u, s
+   real(dp) :: d(2), rm(2), dt, dtMax
+   integer :: i, j, iq, nb, i1
+
+
+   call HamMoireFourierSetup()
+   if (frac) call AtomsSetCart()
+   nb = 0
+   dtMax = 0.0_dp
+   i1 = 0
+   do i=1,nAt
+      s = (0.0_dp, 0.0_dp)
+      do j=1,Nneigh(i)
+         if (Species(i) + Species(NList(j,i)) /= 3) cycle
+         if (sum(NeighD(1:2,j,i)**2) > 1.7_dp**2) cycle
+         d = NeighD(1:2,j,i)
+         rm = Rat(1:2,i) + 0.5_dp*d
+         if (Species(i) == 2) d = -d
+         u = (0.0_dp, 0.0_dp)
+         do iq=1,mfN
+            u = u + mfAmp(3,iq)*exp(cmplx(0.0_dp, dot_product(mfQ(:,iq),rm), dp))
+         end do
+         dt = 2.0_dp/3.0_dp*real(u*exp(cmplx(0.0_dp, -dot_product(mfK,d), dp)))
+         hopp(j,i) = hopp(j,i) - dt
+         nb = nb + 1
+         dtMax = max(dtMax, abs(dt))
+         if (Species(i) == 1) s = s + exp(cmplx(0.0_dp, dot_product(mfK,d), dp))
+      end do
+      ! the valley must be a corner of THIS lattice: the three bond phases of an A site sum to zero
+      if (i1 == 0 .and. Species(i) == 1) then
+         i1 = i
+         if (abs(s) > 1.0e-6_dp) call MIO_Kill('Moire.Fourier: K_v is not a valley of this graphene lattice ('// &
+              'check Moire.FourierGrapheneAngle and Moire.FourierLatticeConstant)','ham','HamHopMoireFourier')
+      end if
+   end do
+   call MIO_Print('Moire.Fourier: bond part added to '//trim(num2str(real(nb,dp),0))//' hoppings (both directions), max |dt| '// &
+        trim(num2str(1.0e3_dp*g0*dtMax,4))//' meV','ham')
+
+end subroutine HamHopMoireFourier
+
+!> Valley Zeeman term lambda*V (opt-in, Valley.Zeeman = lambda [eV], 0 = off). V is the valley operator of
+!> A. Ramires and J. L. Lado, PRL 121, 146801 (2018): V = i/(3 sqrt 3) sum_<<ij>> nu_ij s_i c_i^+ c_j over the
+!> second-neighbour bonds of each graphene layer, nu_ij = HamHaldaneChirality (as Kane-Mele), s_i = +1 on Species 1,
+!> -1 on Species 2. It is the Haldane pattern times the sublattice sign: tau_z instead of the tau_z sigma_z mass, so it
+!> shifts one valley by +lambda and the other by -lambda at the Dirac points (and vanishes away from them like the
+!> Haldane mass). Hermitian bond by bond (nu_ji = -nu_ij, same sublattice). Added before the Peierls phases.
+subroutine HamHopValleyZeeman()
+   use atoms,                only : nAt, Species, layerIndex
+   use neigh,                only : NeighD, Nneigh, NList
+   use tbpar,                only : g0
+   use cell,                 only : aG
+
+   real(dp) :: lam, tV, dxy
+   integer :: i, j, in, nu, nb
+
+   call MIO_InputParameter('Valley.Zeeman',lam,0.0_dp)
+   if (lam == 0.0_dp) return
+   tV = lam/g0/(3.0_dp*sqrt(3.0_dp))
+   nb = 0
+   do i=1,nAt
+      if (Species(i) > 2) cycle
+      do j=1,Nneigh(i)
+         in = NList(j,i)
+         if (in == i .or. Species(in) /= Species(i) .or. layerIndex(in) /= layerIndex(i)) cycle
+         dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+         if (abs(dxy - aG) > 0.1_dp) cycle
+         nu = HamHaldaneChirality(i,j)
+         if (nu == 0) call MIO_Kill('Valley.Zeeman: a second-neighbour bond has no common nearest neighbour','ham', &
+           'HamHopValleyZeeman')
+         ! hopp is MINUS the hopping: H(i,in) += i tV nu s_i
+         hopp(j,i) = hopp(j,i) - cmplx(0.0_dp, tV*nu*merge(1.0_dp,-1.0_dp,Species(i) == 1), dp)
+         nb = nb + 1
+      end do
+   end do
+   if (nb == 0) call MIO_Kill('Valley.Zeeman: no graphene second-neighbour bond found (does the neighbour list reach '// &
+     'aG?)','ham','HamHopValleyZeeman')
+   call MIO_Print('Valley.Zeeman: lambda = '//trim(num2str(lam,6))//' eV on '//trim(num2str(real(nb,dp),0))// &
+     ' graphene second-neighbour hoppings (both directions)','ham')
+
+end subroutine HamHopValleyZeeman
 
 !> @brief Compute off-diagonal hopping for GBN systems.
 !! @param[out] Hodjj  Off-diagonal hopping element
@@ -5876,10 +6169,24 @@ subroutine HamHopping
       call MIO_Deallocate(onsiteShift,'onsiteShift','ham')
    end if
 
+   ! Moire.Fourier (opt-in): bond part of the general moire term, before the Peierls phase multiplies every hopping
+   call MIO_InputParameter('Moire.Fourier',l,.false.)
+   if (l) call HamHopMoireFourier()
+
+   ! Valley.Zeeman (opt-in): valley operator term, also before the Peierls phase
+   call HamHopValleyZeeman()
+
    if (magfield) call HamHopMagneticField()
 
    call MIO_InputParameter('Haldane.NNN',l,.false.)
    if (l) call HamHopHaldane()
+
+   ! spinful bond terms of the block Hamiltonian (SOC.RashbaConsistentPhase; no Peierls phase on them yet)
+   if (RashbaConsistentPhase) then
+      if (magfield) call MIO_Kill('SOC.RashbaConsistentPhase: the spinful bond terms carry no Peierls phase - '// &
+        'not available with a magnetic field','ham','HamHopping')
+      call HamSOCBondTables()
+   end if
 
    call HamCheckFinite()
    call HamCheckHermiticity()
@@ -5984,6 +6291,8 @@ end subroutine HamHopWriteTables
 !> Haldane term: complex second-neighbor hopping (internal procedure of HamHopping: it uses the variables of that routine)
 subroutine HamHopHaldane()
 
+   integer :: nu, nMissing
+
 #ifdef DEBUG
    call MIO_Debug('HamHopHaldane',0)
 #endif /* DEBUG */
@@ -5994,7 +6303,7 @@ subroutine HamHopHaldane()
       call MIO_InputParameter('Haldane.SpecifyRange',lll,.false.)
       call MIO_InputParameter('Haldane.PaperOrientation',paperOrientation,.false.)
       call MIO_InputParameter('Haldane.T2Complex',t2Complex,0.0_dp)
-      call MIO_InputParameter('Haldane.T2',t2, 0.0_dp)
+      call HamInputEnergyEV('Haldane.T2',t2,0.0_dp)
       call MIO_InputParameter('Haldane.OppositePhase',HaldaneOppositePhase,.false.)
       ! Note: HaldaneBothLayers is deprecated. Use HaldaneLayerControl and HaldaneLayers instead.
       ! For backward compatibility, we still check if it's set, but it's ignored if HaldaneLayerControl is enabled.
@@ -6019,10 +6328,19 @@ subroutine HamHopHaldane()
       if (HaldaneOppositePhase) then
         HaldanePhase = -HaldanePhase
       end if
-      call MIO_Print('Haldane phase = '//trim(num2str(HaldanePhase,6))//' rad, T2 = '//trim(num2str(t2,6))// &
-        ' eV, expected gap = '//trim(num2str(2.0_dp*sqrt(3.0_dp)*3.0_dp*t2*sin(HaldanePhase),6))// &
-        ' eV (PRL 106, 236804)','ham')
-      !$OMP PARALLEL DO PRIVATE(d)
+      if (paperOrientation) then
+         call MIO_Print('Haldane phase = '//trim(num2str(HaldanePhase,6))//' rad on the second-neighbour '// &
+           'hoppings of the model (TB.Hoppings.2); Haldane.T2 is not used','ham')
+      else
+         call MIO_Print('Haldane phase = '//trim(num2str(HaldanePhase,6))//' rad, T2 = '//trim(num2str(t2*g0,6))// &
+           ' eV added to the hopping table, expected gap 6 sqrt(3) T2 |sin phi| = '// &
+           trim(num2str(6.0_dp*sqrt(3.0_dp)*t2*g0*abs(sin(HaldanePhase)),6))//' eV','ham')
+      end if
+      ! Phase +HaldanePhase on a second-neighbour hop whose path through the common nearest neighbour turns
+      ! clockwise, -HaldanePhase if it turns anticlockwise (HamHaldaneChirality): the convention of the
+      ! paperOrientation branch, now for any orientation of the lattice and for both branches.
+      nMissing = 0
+      !$OMP PARALLEL DO PRIVATE(d,nu) REDUCTION(+:nMissing)
       do i=1,nAt
          ! >>> unset markers
          d = hamUnset
@@ -6034,43 +6352,15 @@ subroutine HamHopHaldane()
             do j=1,Nneigh(i)
                if (layerIndex(NList(j,i)).eq.layerIndex(i)) then
                   d = sqrt(dot_product(NeighD(1:2,j,i),NeighD(1:2,j,i)))
-                  if ((d-0.1).lt.aG .and. (d+0.1).gt.aG) then
-                    if (paperOrientation) then
-                         if (Species(i).eq.1) then   ! ---  B sublattice (see convention in my notes)
-                            if ((NeighD(1,j,i) .gt. 0.1_dp .and. abs(NeighD(2,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(2,j,i) .lt. -0.1_dp .and. NeighD(1,j,i) .lt. -0.1_dp) .or. &
-                                (NeighD(2,j,i) .gt. 0.1_dp .and. NeighD(1,j,i) .lt. 0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i)*exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i)*exp(-cmplx_i*HaldanePhase)
-                            end if
-                         else if (Species(i).eq.2) then   ! ---  A sublattice
-                            if ((NeighD(1,j,i) .lt. -0.1_dp .and. abs(NeighD(2,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(2,j,i) .gt. 0.1_dp .and. NeighD(1,j,i) .gt. 0.1_dp) .or. &
-                                (NeighD(2,j,i) .lt. -0.1_dp .and. NeighD(1,j,i) .gt. -0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i)*exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i)*exp(-cmplx_i*HaldanePhase)
-                            end if
-                         end if
-                     else ! when 60 degree rotaton compared to PRL paper
-                         if (Species(i).eq.2) then   ! ---  B sublattice (see convention in my notes)
-                            if ((NeighD(2,j,i) .gt. 0.1_dp .and. abs(NeighD(1,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(1,j,i) .lt. -0.1_dp .and. NeighD(2,j,i) .lt. -0.1_dp) .or. &
-                                (NeighD(1,j,i) .gt. 0.1_dp .and. NeighD(2,j,i) .lt. -0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i) + t2 * exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i) + t2 * exp(-cmplx_i*HaldanePhase)
-                            end if
-                         else if (Species(i).eq.1) then   ! ---  A sublattice
-                            if ((NeighD(2,j,i) .lt. -0.1_dp .and. abs(NeighD(1,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(1,j,i) .gt. 0.1_dp .and. NeighD(2,j,i) .gt. 0.1_dp) .or. &
-                                (NeighD(1,j,i) .lt. -0.1_dp .and. NeighD(2,j,i) .gt. 0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i) + t2*exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i)+ t2*exp(-cmplx_i*HaldanePhase)
-                            end if
-                         end if
+                  ! graphene sublattices only (species 1, 2), as before
+                  if ((d-0.1).lt.aG .and. (d+0.1).gt.aG .and. Species(i) <= 2) then
+                     nu = HamHaldaneChirality(i,j)
+                     if (nu == 0) then
+                        nMissing = nMissing + 1
+                     else if (paperOrientation) then
+                        hopp(j,i) = hopp(j,i)*exp(nu*cmplx_i*HaldanePhase)
+                     else
+                        hopp(j,i) = hopp(j,i) + t2*exp(nu*cmplx_i*HaldanePhase)
                      end if
                   end if
                end if
@@ -6078,6 +6368,10 @@ subroutine HamHopHaldane()
          end if
       end do
       !$OMP END PARALLEL DO
+      if (nMissing > 0) then
+         call MIO_Kill('Haldane.NNN: '//trim(num2str(nMissing))//' second-neighbour bonds have no common nearest '// &
+           'neighbour, so their chirality is undefined (not a honeycomb lattice?)','ham','HamHopHaldane')
+      end if
 
 #ifdef DEBUG
    call MIO_Debug('HamHopHaldane',1)
@@ -6087,6 +6381,11 @@ end subroutine HamHopHaldane
 
 !> Magnetic field: Peierls phase on every hopping (periodic gauge) (internal procedure of HamHopping: it uses the variables of that routine)
 subroutine HamHopMagneticField()
+
+   ! Local variables of the periodic-gauge corner term (see below)
+   logical :: legacyCorner
+   real(dp) :: fluxQuanta, cellArea
+   integer :: nCorner
 
 #ifdef DEBUG
    call MIO_Debug('HamHopMagneticField',0)
@@ -6154,6 +6453,20 @@ subroutine HamHopMagneticField()
       else
          aCC = aG/sqrt(3.0_dp)
          if (frac) call AtomsSetCart()
+         ! Periodic gauge with m flux quanta through the cell: a bond to the image displaced by n1 A1 + n2 A2 needs,
+         ! besides the two terms below, the factor exp(i pi m n1 n2) of the composed magnetic translation. Without it
+         ! every bond that crosses a cell CORNER (n1 n2 /= 0) is wrong by a sign when m n1 n2 is odd, i.e. a vortex of
+         ! half a flux quantum sits at the corners (measured: hexagon fluxes off by pi, spurious levels inside the
+         ! Landau gaps). m is taken from the field actually used and the cell area; MagField.LegacyCornerPhase .true.
+         ! restores the former phases.
+         call MIO_InputParameter('MagField.LegacyCornerPhase',legacyCorner,.false.)
+         cellArea = abs(ucell(1,1)*ucell(2,2) - ucell(2,1)*ucell(1,2))
+         fluxQuanta = flux*cellArea/(pi*1.0d20)
+         if (.not. legacyCorner .and. abs(fluxQuanta - nint(fluxQuanta)) > 1.0d-6) then
+            call MIO_Kill('The number of flux quanta through the cell is not an integer ('// &
+              trim(num2str(fluxQuanta,8))//'): the periodic gauge needs an integer','ham','HamHopMagneticField')
+         end if
+         nCorner = 0
          do i=1,nAt
             do j=1,Nneigh(i)
                !if (abs(neighCell(1,j,i)).gt.1 .or. abs(neighCell(2,j,i)).gt.1) print*, i, neighCell(1,j,i), neighCell(2,j,i)
@@ -6163,9 +6476,20 @@ subroutine HamHopMagneticField()
                v2 = CrossProd(v1,v2)
                v1 = CrossProd(Rat(:,i),Rat(:,NList(j,i))) + v2 ! Implementation of third expersion in Cresti's notes
                phase = flux*v1(3)/1.0d20
+               if (.not. legacyCorner .and. neighCell(1,j,i) /= 0 .and. neighCell(2,j,i) /= 0) then
+                  phase = phase + pi*nint(fluxQuanta)*neighCell(1,j,i)*neighCell(2,j,i)
+                  nCorner = nCorner + 1
+               end if
                hopp(j,i) = hopp(j,i)*exp(cmplx_i*phase)
             end do
          end do
+         if (legacyCorner) then
+            call MIO_Print('WARNING: MagField.LegacyCornerPhase: bonds across a cell corner keep the former phase '// &
+              '(wrong by a sign for an odd number of flux quanta)','ham')
+         else
+            call MIO_Print('Peierls phases: '//trim(num2str(nint(fluxQuanta)))//' flux quanta through the cell; '// &
+              'corner term exp(i pi m n1 n2) on '//trim(num2str(nCorner))//' bonds','ham')
+         end if
       end if
 
 #ifdef DEBUG
@@ -11560,6 +11884,235 @@ end subroutine HamHopInterlayerBernalF2G2
 
 end subroutine HamHopping
 
+!> Orientation of each layer from its first-shell intralayer bonds: phi(L) [deg] = arg(sum exp(6 i theta))/6,
+!> coh(L) = |sum|/nBond(L) (1 for a perfect honeycomb).  Local atoms inode1:inode2 only.
+subroutine HamLayerOrientation(nL, phi, coh, nBond)
+
+   use neigh,                only : NeighD, NList, Nneigh, Nradii
+   use atoms,                only : Species, layerIndex, inode1, inode2
+   use constants,            only : pi, cmplx_i
+
+   integer, intent(in) :: nL
+   real(dp), intent(out) :: phi(nL), coh(nL)
+   integer, intent(out) :: nBond(nL)
+
+   integer :: i, j, L, nlay
+   real(dp) :: dxy
+   complex(dp) :: z(nL)
+
+   z = (0.0_dp,0.0_dp)
+   nBond = 0
+   do i = inode1, inode2
+      L = layerIndex(i)
+      if (L < 1 .or. L > nL) cycle
+      nlay = (Species(i) - 1)/2 + 1
+      do j = 1, Nneigh(i)
+         if (layerIndex(NList(j,i)) /= L) cycle
+         dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+         if (dxy >= Nradii(1,nlay) .or. dxy < 1.0e-6_dp) cycle
+         z(L) = z(L) + exp(6.0_dp*cmplx_i*atan2(NeighD(2,j,i),NeighD(1,j,i)))
+         nBond(L) = nBond(L) + 1
+      end do
+   end do
+   do L = 1, nL
+      phi(L) = 0.0_dp
+      coh(L) = 0.0_dp
+      if (nBond(L) > 0) then
+         phi(L) = atan2(aimag(z(L)),real(z(L)))/6.0_dp*180.0_dp/pi
+         coh(L) = abs(z(L))/nBond(L)
+      end if
+   end do
+
+end subroutine HamLayerOrientation
+
+!> Fills socBond / socBondOn, the k-independent spin blocks <i s|H|NList(j,i) s'> of the bond terms selected by
+!> SOC.RashbaConsistentPhase, SOC.KaneMele and SOC.Interlayer (see the declarations).  The block Hamiltonian adds
+!> them with the Bloch phase exp(i k.R), R = -NeighD, the Hermitian partner of the hopping's exp(-i k.R) at (in,i);
+!> each bond is visited from both ends, so every element is written once and H stays Hermitian by construction.
+subroutine HamSOCBondTables()
+
+   use neigh,                only : NeighD, NList, Nneigh, maxNeigh, Nradii
+   use atoms,                only : nAt, Species, layerIndex, inode1, inode2
+   use cell,                 only : aG
+   use constants,            only : cmplx_i
+   use parallel,             only : nDiv
+
+   integer :: i, j, in, k, L, L2, nL, nu, nKM, nIL, nILskip, nR
+   real(dp) :: aCC0, d(3), dxy, dh(2), bi(2), bj(2), c3, cpar, sz, tKM
+   real(dp), allocatable :: phi(:), coh(:)
+   integer, allocatable :: nBond(:)
+   logical, allocatable :: alignedPair(:)
+   real(dp), allocatable :: bond1(:,:)
+   complex(dp) :: eR
+   real(dp) :: tol
+
+   if (.not. RashbaConsistentPhase) return
+   if (nDiv > 1) call MIO_Kill('SOC.RashbaConsistentPhase: the block Hamiltonian runs on one MPI rank','ham', &
+     'HamSOCBondTables')
+
+   aCC0 = aG/sqrt(3.0_dp)
+   if (allocated(socBond)) deallocate(socBond)
+   if (allocated(socBondOn)) deallocate(socBondOn)
+   allocate(socBond(2,2,maxNeigh,nAt), socBondOn(maxNeigh,nAt))
+   socBond = (0.0_dp,0.0_dp)
+   socBondOn = .false.
+
+   ! one first-shell bond direction per graphene atom (its sublattice and the orientation of its layer)
+   allocate(bond1(2,nAt))
+   bond1 = 0.0_dp
+   do i = 1, nAt
+      do j = 1, Nneigh(i)
+         if (layerIndex(NList(j,i)) /= layerIndex(i)) cycle
+         dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+         if (dxy > 0.5_dp*aCC0 .and. dxy < 1.25_dp*aCC0) then
+            bond1(:,i) = NeighD(1:2,j,i)/dxy
+            exit
+         end if
+      end do
+   end do
+
+   nL = maxval(layerIndex)
+   allocate(phi(nL), coh(nL), nBond(nL), alignedPair(nL))
+   call HamLayerOrientation(nL, phi, coh, nBond)
+   call MIO_InputParameter('Stack.TwistTolerance',tol,0.05_dp)
+   alignedPair = .false.
+   do L = 1, nL - 1
+      c3 = phi(L+1) - phi(L)
+      c3 = c3 - 60.0_dp*nint(c3/60.0_dp)
+      alignedPair(L) = (nBond(L) > 0 .and. nBond(L+1) > 0 .and. abs(c3) <= tol)
+      if (InterlayerSOCterm) call MIO_Print('SOC.Interlayer: layers '//trim(num2str(L))//' - '//trim(num2str(L+1))// &
+        ', relative orientation '//trim(num2str(c3,4))//' deg: '//trim(merge('term ON (untwisted) ', &
+        'term off (twisted)  ', alignedPair(L))),'ham')
+   end do
+
+   eR = exp(-cmplx_i*rashbaAngle)
+   tKM = lambdaKM/(3.0_dp*sqrt(3.0_dp))
+   nKM = 0 ; nIL = 0 ; nILskip = 0 ; nR = 0
+   do i = 1, nAt
+      L = layerIndex(i)
+      do j = 1, Nneigh(i)
+         in = NList(j,i)
+         L2 = layerIndex(in)
+         d = NeighD(1:3,j,i)
+         dxy = sqrt(d(1)**2 + d(2)**2)
+         if (dxy < 1.0e-6_dp) cycle
+         dh = d(1:2)/dxy
+         ! Rashba, the bonds of ApplySpinFlipSOC (same layer, A-B, first shell, SOC layers only)
+         if (RashbaSOCterm .and. lambdaR /= 0.0_dp .and. in /= i .and. L2 == L .and. Species(i) /= Species(in) .and. &
+             dxy < 1.1_dp*(2.46_dp/sqrt(3.0_dp))) then
+            if (SOCEnabledForLayer(L)) then
+               socBond(1,2,j,i) = socBond(1,2,j,i) - lambdaR*eR*cmplx(dh(1),-dh(2),dp)
+               socBond(2,1,j,i) = socBond(2,1,j,i) + lambdaR*conjg(eR)*cmplx(dh(1),dh(2),dp)
+               socBondOn(j,i) = .true.
+               nR = nR + 1
+            end if
+         end if
+         ! Kane-Mele, second-neighbour graphene bonds (as HamHopHaldane): <i s|H|in s> = i s nu t
+         if (KaneMeleSOCterm .and. L2 == L .and. Species(i) <= 2 .and. abs(dxy - aG) < 0.1_dp) then
+            nu = HamHaldaneChirality(i,j)
+            if (nu == 0) call MIO_Kill('SOC.KaneMele: a second-neighbour bond has no common nearest neighbour','ham', &
+              'HamSOCBondTables')
+            socBond(1,1,j,i) = socBond(1,1,j,i) + cmplx_i*nu*tKM
+            socBond(2,2,j,i) = socBond(2,2,j,i) - cmplx_i*nu*tKM
+            socBondOn(j,i) = .true.
+            nKM = nKM + 1
+         end if
+         ! interlayer spin flip lambda_4, same sublattice of adjacent untwisted graphene layers, in-plane ~ aCC
+         if (InterlayerSOCterm .and. abs(L2 - L) == 1 .and. Species(i) <= 2 .and. Species(in) <= 2) then
+            if (.not. alignedPair(min(L,L2))) cycle
+            if (dxy < 0.75_dp*aCC0 .or. dxy > 1.25_dp*aCC0) cycle
+            bi = bond1(:,i) ; bj = bond1(:,in)
+            ! same sublattice: the two first-shell bond stars coincide (cos 3 dtheta = +1), other sublattice -1
+            c3 = cos(3.0_dp*(atan2(bj(2),bj(1)) - atan2(bi(2),bi(1))))
+            if (c3 < 0.9_dp) cycle
+            ! c_ij: d along a bond of i (+1) or against it (-1)
+            cpar = cos(3.0_dp*(atan2(dh(2),dh(1)) - atan2(bi(2),bi(1))))
+            if (abs(cpar) < 0.9_dp) then
+               nILskip = nILskip + 1
+               cycle
+            end if
+            sz = sign(1.0_dp, d(3))*sign(1.0_dp, cpar)*lambdaIL/3.0_dp
+            socBond(1,2,j,i) = socBond(1,2,j,i) + sz*cmplx(dh(1),-dh(2),dp)
+            socBond(2,1,j,i) = socBond(2,1,j,i) - sz*cmplx(dh(1),dh(2),dp)
+            socBondOn(j,i) = .true.
+            nIL = nIL + 1
+         end if
+      end do
+   end do
+   call MIO_Print('SOC bond table: '//trim(num2str(nR))//' Rashba, '//trim(num2str(nKM))//' Kane-Mele, '// &
+     trim(num2str(nIL))//' interlayer bonds','ham')
+   if (nILskip > 0) call MIO_Print('SOC.Interlayer: WARNING '//trim(num2str(nILskip))//' same-sublattice bonds '// &
+     'at in-plane ~aCC are neither parallel nor antiparallel to a bond of their atom and were left out','ham')
+   if (InterlayerSOCterm .and. nIL == 0) call MIO_Print('SOC.Interlayer: WARNING no bond found - the term is '// &
+     'absent (no untwisted pair of adjacent graphene layers, or the neighbour list stops below aCC in-plane)','ham')
+
+end subroutine HamSOCBondTables
+
+!> Chirality of the second-neighbour hop from atom i to its neighbour entry jn: +1 if the path through the
+!> common nearest neighbour (same layer, in-plane bond within 0.1 A of aG/sqrt(3)) turns clockwise, -1 if it
+!> turns anticlockwise, 0 if no such neighbour joins the two atoms through the same periodic image.
+function HamHaldaneChirality(i,jn) result(nu)
+
+   use neigh,                only : Nneigh, NList, NeighD
+   use atoms,                only : layerIndex
+   use cell,                 only : aG
+
+   integer, intent(in) :: i, jn
+   integer :: nu
+
+   integer :: k1, k2, k
+   real(dp) :: d1(2), d2(2), dij(2), cr
+
+   nu = 0
+   dij = NeighD(1:2,jn,i)
+   do k1=1,Nneigh(i)
+      k = NList(k1,i)
+      if (layerIndex(k) /= layerIndex(i)) cycle
+      d1 = NeighD(1:2,k1,i)
+      if (abs(sqrt(dot_product(d1,d1))-aG/sqrt(3.0_dp)) > 0.1_dp) cycle
+      do k2=1,Nneigh(k)
+         if (NList(k2,k) /= NList(jn,i)) cycle
+         d2 = NeighD(1:2,k2,k)
+         ! the second leg must be a first-neighbour bond too: without this test the closure below also accepts
+         ! k -> j along a longer bond, and the first such k in the list decided the sign (2026-10-16: 31 % of the
+         ! second-neighbour bonds of a relaxed five-layer cell got the wrong phase, H non-Hermitian)
+         if (abs(sqrt(dot_product(d2,d2))-aG/sqrt(3.0_dp)) > 0.1_dp) cycle
+         if (sqrt(dot_product(d1+d2-dij,d1+d2-dij)) > 0.1_dp) cycle
+         cr = d1(1)*d2(2) - d1(2)*d2(1)
+         if (cr < 0.0_dp) then
+            nu = 1
+         else
+            nu = -1
+         end if
+         return
+      end do
+   end do
+
+end function HamHaldaneChirality
+
+!> Reads an energy that the input file gives in eV and returns it in units of g0. If the input file does not set
+!> the key, value = defaultG0, the former default (already in units of g0), so such runs are unchanged.
+!> These keys were taken in units of g0 before 2026-10-14; when the input sets one, a warning says so.
+subroutine HamInputEnergyEV(key,value,defaultG0)
+
+   use tbpar,                only : g0
+
+   character(len=*), intent(in) :: key
+   real(dp), intent(out) :: value
+   real(dp), intent(in) :: defaultG0
+
+   if (.not. MIO_InputSearchLabel(key)) then
+      value = defaultG0
+      return
+   end if
+   call MIO_InputParameter(key,value,defaultG0*g0)
+   call MIO_Print('WARNING: '//key//' is read in eV since 2026-10-14 (it was taken in units of g0 before): '// &
+     'value '//trim(num2str(value,6))//' eV = '//trim(num2str(value/g0,6))//' g0. An input file written before '// &
+     'that date must multiply it by g0 = '//trim(num2str(g0,6))//' eV.','ham')
+   value = value/g0
+
+end subroutine HamInputEnergyEV
+
 !> @brief Forward discrete cosine transform of a real vector.
 !! @param[in]  n  Vector length
 !! @param[in]  d  Input data array
@@ -11865,6 +12418,21 @@ end function cross
 !> @brief Check if SOC should be applied to a specific layer
 !! @param[in] layerIndex Layer index to check
 !! @return True if SOC should be applied to this layer
+!> Layers that carry the Zeeman term: the SOC layers when SOC.LayerControl is on and Zeeman.FollowSOCLayers is
+!> .true. (default), otherwise every layer
+function ZeemanEnabledForLayer(layerIndex) result(enabled)
+
+   integer, intent(in) :: layerIndex
+   logical :: enabled
+
+   if (zeemanFollowSOC) then
+      enabled = SOCEnabledForLayer(layerIndex)
+   else
+      enabled = .true.
+   end if
+
+end function ZeemanEnabledForLayer
+
 function SOCEnabledForLayer(layerIndex) result(enabled)
 
    ! Arguments

@@ -184,11 +184,11 @@
   "status": "UNDEFINED"
  },
  "graphene+HaldaneNNN": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneBothLayers": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneLayerControl": {
@@ -196,23 +196,23 @@
   "status": "INERT"
  },
  "graphene+HaldaneNNN+HaldaneOppositePhase": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSetFluxQ": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyFlux": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyPhase": {
-  "fingerprint": "28c85faf0d12f2ed",
-  "status": "NONHERM"
+  "fingerprint": "29a41b00683ad09f",
+  "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyRange": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+paperOrientation": {
@@ -293,7 +293,7 @@
  },
  "graphene+PNPKink": {
   "fingerprint": "",
-  "status": "REFUSED"
+  "status": "UNDEFINED"
  },
  "graphene+PseudoZeemanTerm": {
   "fingerprint": "61909524e9c6043c",
@@ -304,8 +304,8 @@
   "status": "REFUSED"
  },
  "graphene+RashbaSOCterm": {
-  "fingerprint": "61909524e9c6043c",
-  "status": "INERT"
+  "fingerprint": "",
+  "status": "REFUSED"
  },
  "graphene+SOCLayerControl": {
   "fingerprint": "61909524e9c6043c",
@@ -361,7 +361,7 @@
  },
  "graphene+Zterm1DKink": {
   "fingerprint": "",
-  "status": "REFUSED"
+  "status": "UNDEFINED"
  },
  "graphene+addOnsiteEnergyShift": {
   "fingerprint": "d6aeeacfba5e0aa6",
@@ -396,11 +396,11 @@
   "status": "ok"
  },
  "graphene+cosinusModulationUsingPeriod": {
-  "fingerprint": "960117feac0459a9",
+  "fingerprint": "d708f92669b10902",
   "status": "ok"
  },
  "graphene+cosinusModulationUsingPeriodYDirection": {
-  "fingerprint": "a921d8c4f36bea59",
+  "fingerprint": "a0d0764a7e25e02f",
   "status": "ok"
  },
  "graphene+deactivateASubLattice": {
@@ -508,11 +508,11 @@
   "status": "ok"
  },
  "graphene+sinusModulationUsingPeriod": {
-  "fingerprint": "481f652a189b306a",
+  "fingerprint": "c52d651f4b580ed9",
   "status": "ok"
  },
  "graphene+sinusModulationUsingPeriodYDirection": {
-  "fingerprint": "544bd78a678e92bb",
+  "fingerprint": "5532c40b4d22851d",
   "status": "ok"
  },
  "graphene+strainedMoire": {
@@ -552,7 +552,7 @@
   "status": "ok"
  },
  "graphene_small@bands+HaldaneNNN": {
-  "fingerprint": "1350d833c4006d61",
+  "fingerprint": "1b2160fa125df1f4",
   "status": "ok"
  },
  "graphene_small@bands+IntrinsicSOCterm": {
@@ -888,7 +888,7 @@
   "status": "ok"
  },
  "tbg+HaldaneBothLayers": {
-  "fingerprint": "577457238812285b",
+  "fingerprint": "ba004fe83f4b85dd",
   "status": "ok"
  },
  "tbg+IsingSOCterm": {
@@ -984,7 +984,7 @@
   "status": "ok"
  },
  "tbg+MagField1": {
-  "fingerprint": "abd9b5d45bb95bb3",
+  "fingerprint": "6ee2750994f922a8",
   "status": "ok"
  },
  "tbg+MayouIntralayer": {
@@ -1000,8 +1000,8 @@
   "status": "INERT"
  },
  "tbg+RashbaSOCterm": {
-  "fingerprint": "2bc664a989c22727",
-  "status": "INERT"
+  "fingerprint": "",
+  "status": "REFUSED"
  },
  "tbg+TypeOfBL_BLKaxiras": {
   "fingerprint": "",
@@ -1184,7 +1184,7 @@
   "status": "ok"
  },
  "tbg_small@bands+HaldaneNNN": {
-  "fingerprint": "e63baa36c965dfc7",
+  "fingerprint": "d547149865a68af6",
   "status": "ok"
  },
  "tbg_small@bands+IntrinsicSOCterm": {
@@ -1196,7 +1196,7 @@
   "status": "INERT"
  },
  "tbg_small@bands+MagField.Integer": {
-  "fingerprint": "277b8c70c0429092",
+  "fingerprint": "26001b9c0bcd6955",
   "status": "ok"
  },
  "tbg_small@bands+PIASOCterm": {
@@ -1468,8 +1468,8 @@
   "status": "INERT"
  },
  "xyz3+addSecondLayerInteractions": {
-  "fingerprint": "28e3548d354cc880",
-  "status": "INERT"
+  "fingerprint": "26d030c1f676c20b",
+  "status": "ok"
  },
  "xyz3+basedOnMoireCellParameters": {
   "fingerprint": "28e3548d354cc880",

@@ -19,5 +19,7 @@ module io
    integer, public, save :: stdin = 5, stdout = 6, stderr = 0
    integer, public, parameter :: unit0 = 11, udebug = 10
    integer, public, parameter :: maxlinel=80, maxfnlen=60
+   ! Longest line of the input file (continuations joined); maxlinel stays the default record length of output files
+   integer, public, parameter :: maxinputl=512
 
 end module io

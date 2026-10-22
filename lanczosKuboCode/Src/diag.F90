@@ -34,6 +34,9 @@ module diag
   logical, save :: tbv_announced=.false.
   logical, save :: socDebug=.false.  ! Enable verbose debug output for SOC calculations
   logical, save :: forceBlockTAPW=.false.  ! Force block TAPW path even without Rashba SOC (for testing)
+  ! TAPW.BlockMatrixFree: the spinful block TAPW path forms H*X from the element list of BuildBlockHamiltonianOnly
+  ! instead of a dense 2N x 2N block (16*(2N)^2 bytes and a (2N)^2*2M product per k)
+  logical, save :: tapwBlockMatrixFree=.false.
   logical, save :: gammaCentred3D=.true.   ! Gamma-centred i/N grid for 3D TAPW bands (.false. = Monkhorst-Pack)
   logical, save :: calculate3DTAPWBands=.false.  ! Calculate 3D bands (kx, ky, eigenvalue) using Monkhorst-Pack grid in DiagBands
   integer, save :: nk_3D_x=10, nk_3D_y=10    ! Grid size for 3D bands calculation
@@ -121,7 +124,7 @@ module diag
    public :: orbMomentTAPW, om_degtol, om_decomp, om_nearcut
 #endif
 #ifdef SEMICL
-   public :: orbSuscTAPW
+   public :: orbSuscTAPW, qmTAPW
 #endif
    public :: gWeightsTAPW, gw_b1, gw_b2, gw_ntop, gWeightsHam
    public :: layerWeightsTAPW, lw_b1, lw_b2
@@ -664,6 +667,12 @@ subroutine DiagBands()
     call MIO_InputParameter('Diag.SparseSolver',sparseDiagSolver,.false.)
     call MIO_InputParameter('TAPW.Use',useTAPW,.false.)
     call MIO_InputParameter('TAPW.UseDenseMatrix',useDenseMatrixTAPW,.false.)
+    call MIO_InputParameter('TAPW.BlockMatrixFree',tapwBlockMatrixFree,.false.)
+    if (tapwBlockMatrixFree .and. (tapwDebug .or. forceBlockTAPW)) call MIO_Kill('TAPW.BlockMatrixFree: the '// &
+      'Diag.TAPWDebug / forceBlockTAPW checks read the dense block - switch them off or use the dense block','diag', &
+      'DiagBands')
+    if (tapwBlockMatrixFree) call MIO_Print('TAPW: spinful block path with a matrix-free H*X (TAPW.BlockMatrixFree)', &
+      'diag')
     ! The Zeeman, Ising and Rashba terms are implemented in the TAPW path only.
     if (.not. useTAPW) then
        block
@@ -993,8 +1002,12 @@ subroutine DiagBands()
                   ! TAPW + Rashba SOC: Build block Hamiltonian once, then use TAPW diagonalization
                   ! Only Rashba requires block Hamiltonian due to spin-flip terms
                   !$OMP CRITICAL
-                  if (.not. allocated(HBlock)) allocate(HBlock(2*nAt, 2*nAt))
-                  call BuildBlockHamiltonianOnly(nAt, KptsLoc, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, HBlock)
+                  if (tapwBlockMatrixFree) then
+                     if (.not. allocated(HBlock)) allocate(HBlock(1, 1))
+                  else
+                     if (.not. allocated(HBlock)) allocate(HBlock(2*nAt, 2*nAt))
+                     call BuildBlockHamiltonianOnly(nAt, KptsLoc, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, HBlock)
+                  end if
                   call DiagH0TAPW_withBlockH(nAt, nspin, is, ELoc, KptsLoc, ucell, HBlock, maxNeigh, hopp, NList, &
                         Nneigh, neighCell, neig, ip)
                   !$OMP END CRITICAL
@@ -1089,8 +1102,12 @@ subroutine DiagBands()
                else if (useTAPW .and. RashbaSOCterm .and. is == 1) then
                   ! TAPW + Rashba SOC: Build block Hamiltonian once, then use TAPW diagonalization
                   !$OMP CRITICAL
-                  if (.not. allocated(HBlock)) allocate(HBlock(2*nAt, 2*nAt))
-                  call BuildBlockHamiltonianOnly(nAt, KptsLoc, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, HBlock)
+                  if (tapwBlockMatrixFree) then
+                     if (.not. allocated(HBlock)) allocate(HBlock(1, 1))
+                  else
+                     if (.not. allocated(HBlock)) allocate(HBlock(2*nAt, 2*nAt))
+                     call BuildBlockHamiltonianOnly(nAt, KptsLoc, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, HBlock)
+                  end if
                   call DiagH0TAPW_withBlockH(nAt, nspin, is, ELoc, KptsLoc, ucell, HBlock, maxNeigh, hopp, NList, &
                         Nneigh, neighCell, neig, ip)
                   !$OMP END CRITICAL
@@ -1269,8 +1286,12 @@ subroutine DiagBands()
                   else if (socDebug) then
                      call MIO_Print('About to call BuildBlockHamiltonianOnly for TAPW+Rashba', 'diag')
                   end if
-                  if (.not. allocated(HBlock)) allocate(HBlock(2*nAt, 2*nAt))
-                  call BuildBlockHamiltonianOnly(nAt, KptsLoc, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, HBlock)
+                  if (tapwBlockMatrixFree) then
+                     if (.not. allocated(HBlock)) allocate(HBlock(1, 1))
+                  else
+                     if (.not. allocated(HBlock)) allocate(HBlock(2*nAt, 2*nAt))
+                     call BuildBlockHamiltonianOnly(nAt, KptsLoc, ucell, H0, maxNeigh, hopp, NList, Nneigh, neighCell, HBlock)
+                  end if
                   if (forceBlockTAPW) then
                      call MIO_Print('BuildBlockHamiltonianOnly completed, calling DiagH0TAPW_withBlockH', 'diag')
                   else if (socDebug) then
@@ -1386,6 +1407,8 @@ subroutine DiagBands()
 
 #ifdef SEMICL
          if (allocated(bf_evec)) call BerryFluxWrite(nk_3D_x, nk_3D_y, ptsTot)
+         ! before OrbMomentWrite, which frees the band velocities the metric check uses
+         if (allocated(qm_g)) call QuantumMetricWrite(nk_3D_x, nk_3D_y, ptsTot, E)
          if (allocated(om_M)) call OrbMomentWrite(nk_3D_x, nk_3D_y, ptsTot, E)
          if (allocated(os_w)) call OrbSuscWrite(nk_3D_x, nk_3D_y, ptsTot, E)
 #endif
@@ -5063,7 +5086,9 @@ subroutine DiagHamSparse(N, ns, is, ELoc, KLoc, cell, H0, maxN, hopp, NList, Nne
 
     nn = N
 
-    ! Initialize the starting vector resid with random values
+    ! resid is only the ARPACK work vector here: with info = 0 ARPACK draws its own random start vector. It was
+    ! left uninitialised, so the NaN check below read garbage and stopped runs at random; zero it.
+    resid = (0.0_dp, 0.0_dp)
 
     ! Check resid for initial state
     if (size(resid) /= N) then
@@ -5800,7 +5825,9 @@ subroutine DiagH0TAPW(N, ns, is, ELoc, KLoc, cell_real, H0, maxN, hopp, NList, N
 
     nn = N
 
-    ! Initialize the starting vector resid with random values
+    ! resid is only the ARPACK work vector here: with info = 0 ARPACK draws its own random start vector. It was
+    ! left uninitialised, so the NaN check below read garbage and stopped runs at random; zero it.
+    resid = (0.0_dp, 0.0_dp)
 
     ! Check resid for initial state
     if (size(resid) /= N) then
@@ -6900,7 +6927,7 @@ subroutine DiagH0TAPW_withBlockH(N, ns, is, ELoc, KLoc, cell_real, HBlock, maxN,
     integer, intent(in), optional :: kpoint_index
     real(dp), intent(out) :: ELoc(N)
     real(dp), intent(in) :: KLoc(3), cell_real(3,3)
-    complex(dp), intent(inout) :: HBlock(2*N, 2*N)  ! Pre-built block Hamiltonian (inout to allow Hermitian completion)
+    complex(dp), intent(inout) :: HBlock(2*N, *)  ! Pre-built block Hamiltonian; not referenced with TAPW.BlockMatrixFree
     complex(dp), intent(in) :: hopp(maxN,N)
     real(dp) :: tol
     real(dp) :: aGtemp
@@ -7343,7 +7370,12 @@ subroutine DiagH0TAPW_withBlockH(N, ns, is, ELoc, KLoc, cell_real, HBlock, maxN,
     !
     ! This matches the non-Rashba case when H_Rashba=0, but adds Rashba spin-flip terms.
     ! Project to (2M × 2M) space to preserve spin structure
-    call transform_block_hamiltonian_tapw(2*N, 2*M, XArray, HBlock, Hproj)
+    if (tapwBlockMatrixFree) then
+       call transform_block_hamiltonian_tapw_mf(N, 2*M, XArray, KLoc, cell_real, maxN, hopp, NList, Nneigh, &
+                                               neighCell, Hproj)
+    else
+       call transform_block_hamiltonian_tapw(2*N, 2*M, XArray, HBlock, Hproj)
+    end if
     if (tapwDebug .and. present(kpoint_index)) then
        call MIO_Print('DiagH0TAPW_withBlockH: Matrix multiplication completed','diag')
 
@@ -7513,6 +7545,19 @@ subroutine DiagH0TAPW_withBlockH(N, ns, is, ELoc, KLoc, cell_real, HBlock, maxN,
        call MIO_Print('ZHEEV failed in DiagH0TAPW_withBlockH: info = '//trim(num2str(info)), 'diag')
        call MIO_Kill('Error in TAPW block Hamiltonian diagonalization', 'diag', 'DiagH0TAPW_withBlockH')
     end if
+
+#ifdef SEMICL
+    ! Berry-flux path on the spinful block: keep the eigenvectors (2M coefficients, spin up then spin down) of the
+    ! requested sheets; column b of Hproj is sheet b of generate.bands.
+    if (allocated(bf_evec) .and. present(kpoint_index)) then
+       if (kpoint_index >= 1 .and. kpoint_index <= size(bf_evec,3)) then
+          bf_evec(:,:,kpoint_index) = cmplx(0.0_dp, 0.0_dp, kind=dp)
+          do ii = bf_b1, min(bf_b2, 2*M)
+             bf_evec(1:2*M, ii-bf_b1+1, kpoint_index) = Hproj(1:2*M, ii)
+          end do
+       end if
+    end if
+#endif
 
     ! Debug: Check eigenvalue degeneracy after diagonalization (for forceBlockTAPW testing)
     if (forceBlockTAPW .and. tapw_k_at_most(kpoint_index, 2)) then
@@ -7844,6 +7889,41 @@ subroutine transform_block_hamiltonian_tapw(N, M, X, HBlock, Hproj)
     deallocate(temp)
 
 end subroutine transform_block_hamiltonian_tapw
+
+!! Hproj = X^dagger H X without forming H: the elements of BuildBlockHamiltonianOnly come as a list and
+!! Y = H X is accumulated one column of X at a time (contiguous columns), threaded over columns with MKL's thread
+!! count as in transform_sparse_hamiltonian (TAPW runs set OMP_NUM_THREADS=1, MKL_NUM_THREADS=ncpus).
+subroutine transform_block_hamiltonian_tapw_mf(N, M2, X, KLoc, cell, maxN, hopp, NList, Nneigh, neighCell, Hproj)
+    use constants, only : cmplx_0, cmplx_1
+    use ham, only : H0
+    use omp_lib, only : omp_in_parallel
+    implicit none
+    integer, intent(in) :: N, M2, maxN, NList(maxN,N), Nneigh(N), neighCell(3,maxN,N)
+    complex(dp), intent(in) :: X(2*N, M2), hopp(maxN,N)
+    real(dp), intent(in) :: KLoc(3), cell(3,3)
+    complex(dp), intent(out) :: Hproj(M2, M2)
+    integer :: nnz, e, mcol, nthr
+    integer, allocatable, save :: rr(:), cc(:)
+    complex(dp), allocatable, save :: vv(:)
+    complex(dp), allocatable :: Y(:,:)
+    integer, external :: mkl_get_max_threads
+
+    call BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneigh, neighCell, nnz=nnz, rr=rr, cc=cc, vv=vv)
+    allocate(Y(2*N, M2))
+    nthr = max(1, mkl_get_max_threads())
+    if (omp_in_parallel()) nthr = 1
+    !$OMP PARALLEL DO NUM_THREADS(nthr) DEFAULT(SHARED) PRIVATE(mcol, e) SCHEDULE(STATIC)
+    do mcol = 1, M2
+       Y(:, mcol) = cmplx_0
+       do e = 1, nnz
+          Y(rr(e), mcol) = Y(rr(e), mcol) + vv(e) * X(cc(e), mcol)
+       end do
+    end do
+    !$OMP END PARALLEL DO
+    call ZGEMM('C', 'N', M2, M2, 2*N, cmplx_1, X, 2*N, Y, 2*N, cmplx_0, Hproj, M2)
+    deallocate(Y)
+
+end subroutine transform_block_hamiltonian_tapw_mf
 
 subroutine generate_shifted_G_list_reduced(rcell, k_ref, NGrange, Gx, Gy, NG, center_point, apply_BZ_filter)
   implicit none
@@ -9855,7 +9935,8 @@ subroutine initialize_sparse_matrix(N, maxN, H0, hopp, NList, Nneigh, neighCell,
     use atoms, only : Species, layerIndex
     use tbpar, only : U
     use neigh, only : NeighD
-    use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, SOCEnabledForLayer
+    use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, &
+                    SOCEnabledForLayer, ZeemanEnabledForLayer
     use magf, only : BmagZeeman
     implicit none
     integer, intent(in) :: N, maxN, NList(maxN,N), Nneigh(N), neighCell(3,maxN,N), ns, is
@@ -9911,7 +9992,7 @@ subroutine initialize_sparse_matrix(N, maxN, H0, hopp, NList, Nneigh, neighCell,
         ! Note: This is backward compatible - only applies when SOC is enabled
         if (Zterm .or. IntrinsicSOCterm .or. IsingSOCterm .or. PIASOCterm) then
            ! Apply Zeeman effect (λVZ) - spin-dependent onsite
-           if (Zterm .and. (ns==2)) then
+           if (Zterm .and. (ns==2) .and. ZeemanEnabledForLayer(layerIndex(i))) then
               if (is==1) then
                  soc_diagonal_contrib = soc_diagonal_contrib + gZeeman*BmagZeeman  ! Spin-up: +λVZ
               else
@@ -12838,7 +12919,7 @@ subroutine compute_block_hamiltonian_derivatives(dH_Block_dkx, dH_Block_dky, N, 
    use neigh, only : NeighD
    use interface, only : edgeHopp, nEdgeN, edgeH, nQ, edgeIndx, NeI, NedgeCell
    use atoms, only : Species, layerIndex
-   use ham, only : RashbaSOCterm, SOCEnabledForLayer, lambdaR
+   use ham, only : RashbaSOCterm, SOCEnabledForLayer, lambdaR, RashbaConsistentPhase, socBond, socBondOn
    implicit none
 
    ! Input parameters
@@ -12891,8 +12972,23 @@ subroutine compute_block_hamiltonian_derivatives(dH_Block_dkx, dH_Block_dky, N, 
             dH_Block_dkx(in + N, i + N) = dH_Block_dkx(in + N, i + N) - hopp(j, i) * derivative_factor_x
             dH_Block_dky(in + N, i + N) = dH_Block_dky(in + N, i + N) - hopp(j, i) * derivative_factor_y
 
+            ! spinful bond terms of HamSOCBondTables, written at (i,in) with exp(+i k.R): d/dk = +i R exp(+i k.R)
+            if (RashbaConsistentPhase) then
+               if (socBondOn(j, i)) then
+                  phase_factor = exp(cmplx_i * dot_product(KLoc, R))
+                  dH_Block_dkx(i, in) = dH_Block_dkx(i, in) + socBond(1,1,j,i) * cmplx_i * R(1) * phase_factor
+                  dH_Block_dky(i, in) = dH_Block_dky(i, in) + socBond(1,1,j,i) * cmplx_i * R(2) * phase_factor
+                  dH_Block_dkx(i, in + N) = dH_Block_dkx(i, in + N) + socBond(1,2,j,i) * cmplx_i * R(1) * phase_factor
+                  dH_Block_dky(i, in + N) = dH_Block_dky(i, in + N) + socBond(1,2,j,i) * cmplx_i * R(2) * phase_factor
+                  dH_Block_dkx(i + N, in) = dH_Block_dkx(i + N, in) + socBond(2,1,j,i) * cmplx_i * R(1) * phase_factor
+                  dH_Block_dky(i + N, in) = dH_Block_dky(i + N, in) + socBond(2,1,j,i) * cmplx_i * R(2) * phase_factor
+                  dH_Block_dkx(i + N, in + N) = dH_Block_dkx(i + N, in + N) &
+                                               + socBond(2,2,j,i) * cmplx_i * R(1) * phase_factor
+                  dH_Block_dky(i + N, in + N) = dH_Block_dky(i + N, in + N) &
+                                               + socBond(2,2,j,i) * cmplx_i * R(2) * phase_factor
+               end if
             ! Apply Rashba spin-flip terms derivatives if enabled
-            if (RashbaSOCterm) then
+            else if (RashbaSOCterm) then
                ! Check if SOC should be applied to this layer (matches ApplySpinFlipSOC)
                if (.not. SOCEnabledForLayer(layerIndex(i))) then
                   cycle  ! Skip Rashba derivatives for this layer
@@ -14665,7 +14761,8 @@ subroutine transform_dense_hamiltonian_tapw(N, M, X, Hproj, KLoc, cell, H0, maxN
     use atoms, only : Rat, Species, layerIndex
     use tbpar, only : U
     use neigh, only : NeighD
-    use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, SOCEnabledForLayer
+    use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, &
+                    SOCEnabledForLayer, ZeemanEnabledForLayer
     use magf, only : BmagZeeman
     implicit none
 
@@ -14718,7 +14815,7 @@ subroutine transform_dense_hamiltonian_tapw(N, M, X, Hproj, KLoc, cell, H0, maxN
         ! Note: This is backward compatible - only applies when SOC is enabled
         if (Zterm .or. IntrinsicSOCterm .or. IsingSOCterm .or. PIASOCterm) then
            ! Apply Zeeman effect (λVZ) - spin-dependent onsite
-           if (Zterm .and. (ns==2)) then
+           if (Zterm .and. (ns==2) .and. ZeemanEnabledForLayer(layerIndex(i))) then
               if (is==1) then
                  soc_diagonal_contrib = soc_diagonal_contrib + gZeeman*BmagZeeman  ! Spin-up: +λVZ
               else
@@ -15367,7 +15464,8 @@ end subroutine output_berry_curvature_data
 !!          to the Hamiltonian matrix during construction.
 subroutine ApplySOCtoHamiltonian(i, is, ns, HLoc)
 
-   use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, SOCEnabledForLayer
+   use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, &
+                   SOCEnabledForLayer, ZeemanEnabledForLayer
    use magf, only : BmagZeeman
    use atoms, only : Species, layerIndex
 
@@ -15375,7 +15473,7 @@ subroutine ApplySOCtoHamiltonian(i, is, ns, HLoc)
    complex(dp), intent(inout) :: HLoc(:,:)
 
    ! Apply Zeeman effect (λVZ) - spin-dependent onsite
-   if (Zterm .and. (ns==2)) then
+   if (Zterm .and. (ns==2) .and. ZeemanEnabledForLayer(layerIndex(i))) then
       if (is==1) then
          HLoc(i,i) = HLoc(i,i) + gZeeman*BmagZeeman  ! Spin-up: +λVZ
       else
@@ -15718,23 +15816,32 @@ end subroutine BuildBlockHamiltonian
 !! @param[in]     Nneigh    Number of neighbors per atom
 !! @param[in]     neighCell Neighbor cell indices
 !! @param[out]    HBlock    Block Hamiltonian (2N×2N)
-subroutine BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneigh, neighCell, HBlock)
+subroutine BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneigh, neighCell, HBlock, nnz, rr, cc, vv)
 
    use constants, only : cmplx_i
    use interface, only : edgeHopp, nEdgeN, edgeH, nQ, edgeIndx, NeI, NedgeCell
    use scf, only : charge, Zch
    use atoms, only : Species, layerIndex
    use tbpar, only : U
-   use ham, only : RashbaSOCterm, nspin
+   use ham, only : RashbaSOCterm, nspin, RashbaConsistentPhase, socBond, socBondOn
    use neigh, only : neighD
 
    integer, intent(in) :: N, maxN, NList(maxN,N), Nneigh(N), neighCell(3,maxN,N)
    real(dp), intent(in) :: KLoc(3), cell(3,3), H0(N)
    complex(dp), intent(in) :: hopp(maxN,N)
-   complex(dp), intent(out) :: HBlock(2*N, 2*N)
+   complex(dp), intent(out), optional :: HBlock(2*N, 2*N)
+   ! Without HBlock (TAPW.BlockMatrixFree): the same elements as a list, H(rr(e),cc(e)) += vv(e), e = 1..nnz,
+   ! for a matrix-free H*X.  Only with SOC.RashbaConsistentPhase (the former Rashba term writes HBlock directly).
+   integer, intent(out), optional :: nnz
+   integer, allocatable, intent(inout), optional :: rr(:), cc(:)
+   complex(dp), allocatable, intent(inout), optional :: vv(:)
+   logical :: dense
+   integer :: cap
+   complex(dp) :: hup, hdn
 
    integer :: i, j, in
    real(dp) :: R(3)
+   complex(dp) :: phase
    integer, parameter :: MAX_BLOCK_SIZE = 20000  ! Max atoms for block Hamiltonian
 
    ! Check that we don't exceed MAX_BLOCK_SIZE
@@ -15743,20 +15850,46 @@ subroutine BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneig
    end if
 
    ! Initialize block Hamiltonian
-   HBlock = 0.0_dp
+   dense = present(HBlock)
+   if (dense) then
+      HBlock = 0.0_dp
+   else
+      if (.not. (present(nnz) .and. present(rr) .and. present(cc) .and. present(vv))) &
+         call MIO_Kill('internal: element list arguments missing','diag','BuildBlockHamiltonianOnly')
+      if (RashbaSOCterm .and. .not. RashbaConsistentPhase) call MIO_Kill('TAPW.BlockMatrixFree needs '// &
+        'SOC.RashbaConsistentPhase .true. (the former Rashba term is written into the dense block only)','diag', &
+        'BuildBlockHamiltonianOnly')
+      cap = 2*N + 6*sum(Nneigh(1:N))
+      if (edgeHopp) cap = cap + 2*sum(nEdgeN(1:nQ))
+      if (allocated(rr)) then
+         if (size(rr) < cap) deallocate(rr, cc, vv)
+      end if
+      if (.not. allocated(rr)) allocate(rr(cap), cc(cap), vv(cap))
+      nnz = 0
+   end if
 
    ! Build Hamiltonian for both spin blocks
    ! Only set lower triangular elements (row >= col) for 'L' format in ZHEEV
    do i = 1, N
       ! Onsite energies for both spin channels (diagonal elements, always lower triangular)
+      if (dense) then
       HBlock(i, i) = H0(i)         ! Spin-up diagonal
       HBlock(i + N, i + N) = H0(i) ! Spin-down diagonal
+      end if
 
       ! Apply SCF potential if spin-polarized and SCF is enabled
       !   ! Use charge data even for non-SCF (charge is still available)
 
       ! Apply diagonal SOC terms to both blocks
-      call ApplySOCtoBlock(i, HBlock)
+      if (dense) then
+         call ApplySOCtoBlock(i, HBlock)
+      else
+         hup = H0(i)
+         hdn = H0(i)
+         call SOCOnsiteAdd(i, hup, hdn)
+         call emit(i, i, hup)
+         call emit(i + N, i + N, hdn)
+      end if
 
       ! Build hopping for both spin blocks
       ! Debug: Check neighbor count for first few atoms
@@ -15789,8 +15922,8 @@ subroutine BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneig
             R(1:2) = -NeighD(1:2, j, i)  ! Use negative to get distance from i to j
 
             ! Regular hopping (preserved in both blocks)
-            HBlock(in, i) = HBlock(in, i) - hopp(j, i) * exp(-cmplx_i * dot_product(KLoc, R))
-            HBlock(in + N, i + N) = HBlock(in + N, i + N) - hopp(j, i) * exp(-cmplx_i * dot_product(KLoc, R))
+            call emit(in, i, -hopp(j, i) * exp(-cmplx_i * dot_product(KLoc, R)))
+            call emit(in + N, i + N, -hopp(j, i) * exp(-cmplx_i * dot_product(KLoc, R)))
 
             ! Apply PIA hopping terms if enabled (matches non-TAPW SOC path)
             ! PIA hopping not yet properly implemented - commented out
@@ -15798,7 +15931,17 @@ subroutine BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneig
             ! Apply Rashba spin-flip terms if enabled
             ! Note: ApplySpinFlipSOC uses NeighD internally for bond direction (unit vector)
             ! This is correct - R (for phase) and NeighD (for direction) serve different purposes
-            if (RashbaSOCterm) then
+            if (RashbaConsistentPhase) then
+               ! spinful bond terms of HamSOCBondTables at (i,in): Bloch phase exp(+i k.R), the Hermitian
+               ! partner of the hopping's exp(-i k.R) at (in,i)
+               if (socBondOn(j,i)) then
+                  phase = exp(cmplx_i * dot_product(KLoc, R))
+                  call emit(i, in, socBond(1,1,j,i) * phase)
+                  call emit(i, in + N, socBond(1,2,j,i) * phase)
+                  call emit(i + N, in, socBond(2,1,j,i) * phase)
+                  call emit(i + N, in + N, socBond(2,2,j,i) * phase)
+               end if
+            else if (RashbaSOCterm) then
                call ApplySpinFlipSOC(i, j, in, KLoc, R, N, HBlock)
             end if
       end do
@@ -15821,11 +15964,28 @@ subroutine BuildBlockHamiltonianOnly(N, KLoc, cell, H0, maxN, hopp, NList, Nneig
             in = NeI(j, i)
             R = matmul(cell, NedgeCell(:, j, i))
             ! Apply to both spin blocks
-            HBlock(in, edgeIndx(i)) = HBlock(in, edgeIndx(i)) + edgeH(j, i) * exp(-cmplx_i * dot_product(KLoc, R))
-            HBlock(in + N, edgeIndx(i) + N) = HBlock(in + N, edgeIndx(i) + N) + edgeH(j, i) * exp(-cmplx_i * dot_product(KLoc, R))
+            call emit(in, edgeIndx(i), edgeH(j, i) * exp(-cmplx_i * dot_product(KLoc, R)))
+            call emit(in + N, edgeIndx(i) + N, edgeH(j, i) * exp(-cmplx_i * dot_product(KLoc, R)))
          end do
       end do
    end if
+
+
+contains
+
+   ! H(r,c) += v, into the dense block or onto the element list
+   subroutine emit(r, c, v)
+      integer, intent(in) :: r, c
+      complex(dp), intent(in) :: v
+      if (dense) then
+         HBlock(r, c) = HBlock(r, c) + v
+      else
+         nnz = nnz + 1
+         rr(nnz) = r
+         cc(nnz) = c
+         vv(nnz) = v
+      end if
+   end subroutine emit
 
 end subroutine BuildBlockHamiltonianOnly
 
@@ -15883,29 +16043,48 @@ end subroutine DiagBlockHamiltonian
 !! @param[inout]  HBlock  Block Hamiltonian (2N×2N)
 subroutine ApplySOCtoBlock(i, HBlock)
 
-   use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, nspin, &
-         SOCEnabledForLayer
-   use magf, only : BmagZeeman
-   use atoms, only : nAt, Species, layerIndex
+   use atoms, only : nAt
 
    integer, intent(in) :: i
    complex(dp), intent(inout) :: HBlock(2*nAt, 2*nAt)
 
+   complex(dp) :: hup, hdn
+
+   hup = HBlock(i, i)
+   hdn = HBlock(i + nAt, i + nAt)
+   call SOCOnsiteAdd(i, hup, hdn)
+   HBlock(i, i) = hup
+   HBlock(i + nAt, i + nAt) = hdn
+
+end subroutine ApplySOCtoBlock
+
+!> @brief Adds the on-site SOC terms of atom i to its spin-up (hup) and spin-down (hdn) diagonal elements
+!! (the terms ApplySOCtoBlock puts on the block Hamiltonian, in the same order)
+subroutine SOCOnsiteAdd(i, hup, hdn)
+
+   use ham, only : Zterm, gZeeman, IntrinsicSOCterm, lambdaI, IsingSOCterm, lambdaIsing, PIASOCterm, lambdaPIA, nspin, &
+         SOCEnabledForLayer, ZeemanEnabledForLayer
+   use magf, only : BmagZeeman
+   use atoms, only : nAt, Species, layerIndex
+
+   integer, intent(in) :: i
+   complex(dp), intent(inout) :: hup, hdn
+
    ! Apply Zeeman effect to block Hamiltonian
-   if (Zterm .and. nspin == 2) then
-      HBlock(i, i) = HBlock(i, i) + gZeeman * BmagZeeman       ! Spin-up: +λVZ
-      HBlock(i + nAt, i + nAt) = HBlock(i + nAt, i + nAt) - gZeeman * BmagZeeman  ! Spin-down: -λVZ
+   if (Zterm .and. nspin == 2 .and. ZeemanEnabledForLayer(layerIndex(i))) then
+      hup = hup + gZeeman * BmagZeeman       ! Spin-up: +λVZ
+      hdn = hdn - gZeeman * BmagZeeman  ! Spin-down: -λVZ
    end if
 
    ! Apply Intrinsic SOC (sublattice-dependent for gap opening)
    if (IntrinsicSOCterm .and. SOCEnabledForLayer(layerIndex(i))) then
       ! Apply +λI to sublattice A, -λI to sublattice B to open gap
       if (Species(i) == 1) then
-         HBlock(i, i) = HBlock(i, i) + lambdaI
-         HBlock(i + nAt, i + nAt) = HBlock(i + nAt, i + nAt) + lambdaI
+         hup = hup + lambdaI
+         hdn = hdn + lambdaI
       else
-         HBlock(i, i) = HBlock(i, i) - lambdaI
-         HBlock(i + nAt, i + nAt) = HBlock(i + nAt, i + nAt) - lambdaI
+         hup = hup - lambdaI
+         hdn = hdn - lambdaI
       end if
    end if
 
@@ -15917,25 +16096,25 @@ subroutine ApplySOCtoBlock(i, HBlock)
       if (.not. useKprimeValley) then
          ! K valley: τ_z = +1
          ! Spin-up (first block): +λ for all sites
-         HBlock(i, i) = HBlock(i, i) + lambdaIsing
+         hup = hup + lambdaIsing
          ! Spin-down (second block): -λ for all sites
-         HBlock(i + nAt, i + nAt) = HBlock(i + nAt, i + nAt) - lambdaIsing
+         hdn = hdn - lambdaIsing
       else
          ! K' valley: τ_z = -1 (flip sign)
          ! Spin-up (first block): -λ for all sites
-         HBlock(i, i) = HBlock(i, i) - lambdaIsing
+         hup = hup - lambdaIsing
          ! Spin-down (second block): +λ for all sites
-         HBlock(i + nAt, i + nAt) = HBlock(i + nAt, i + nAt) + lambdaIsing
+         hdn = hdn + lambdaIsing
       end if
    end if
 
    ! Apply Pseudo-inversion asymmetry
    if (PIASOCterm .and. SOCEnabledForLayer(layerIndex(i))) then
-      HBlock(i, i) = HBlock(i, i) + lambdaPIA
-      HBlock(i + nAt, i + nAt) = HBlock(i + nAt, i + nAt) + lambdaPIA
+      hup = hup + lambdaPIA
+      hdn = hdn + lambdaPIA
    end if
 
-end subroutine ApplySOCtoBlock
+end subroutine SOCOnsiteAdd
 
 #ifdef SEMICL
 #include "diag_semicl.inc"

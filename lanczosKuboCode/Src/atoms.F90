@@ -714,13 +714,7 @@ subroutine AtomsPos()
           Rat = RatTemp
           Species = SpeciesTemp
           call MIO_InputParameter('Structure.ReadLayerIndex',readLayerIndex,.false.)
-          if (readLayerIndex) then
-             open(987,FILE='layerIndex.dat',STATUS='old')
-             do i=1,nAt
-                read(987,*) layerIndex(i)
-             end do
-             close(987)
-          end if
+          if (readLayerIndex) call AtomsReadLayerIndex()
       else
         call MIO_Print('We repeat the ReadXYZ several times using the supercell flag','atoms')
         kk = 0
@@ -730,13 +724,7 @@ subroutine AtomsPos()
         call MIO_InputParameter('Structure.ReadLayerIndex',readLayerIndex,.false.)
         call MIO_InputParameter('GBN.UseDisplacementFile',GBNuseDisplacementFile,.false.)
         call MIO_InputParameter('TBG.UseDisplacementFile',tBGuseDisplacementFile,.false.)
-        if (readLayerIndex) then
-           open(987,FILE='layerIndex.dat',STATUS='old')
-           do i=1,nAt
-              read(987,*) layerIndex(i)
-           end do
-           close(987)
-        end if
+        if (readLayerIndex) call AtomsReadLayerIndex()
         do ii=1,sCell
            do jj=1,sCell
               do i=1,nAt
@@ -1184,6 +1172,40 @@ subroutine AtomsPos()
 
 end subroutine AtomsPos
 
+!> Reads layerIndex(1:nAt) from layerIndex.dat: ONE layer number per line, line i = atom i.
+!! A line with more than one value is refused: a file written as "index layer" (the format of
+!! sublatticesSorted.dat) would otherwise give layerIndex(i) = i, and the model branches that test
+!! the layer would leave most hoppings unset.
+subroutine AtomsReadLayerIndex()
+
+   integer :: i, ios, k, ntok
+   character(len=512) :: line
+   logical :: inTok
+
+   open(987,FILE='layerIndex.dat',STATUS='old')
+   do i=1,nAt
+      read(987,'(a)',iostat=ios) line
+      if (ios /= 0) call MIO_Kill('layerIndex.dat ends at line '//trim(num2str(i-1))//' but the structure has '// &
+        trim(num2str(nAt))//' atoms','atoms','AtomsReadLayerIndex')
+      ntok = 0
+      inTok = .false.
+      do k=1,len_trim(line)
+         if (line(k:k) == ' ' .or. line(k:k) == achar(9) .or. line(k:k) == ',') then
+            inTok = .false.
+         else if (.not. inTok) then
+            inTok = .true.
+            ntok = ntok + 1
+         end if
+      end do
+      if (ntok /= 1) call MIO_Kill('layerIndex.dat must hold ONE layer number per line (line '//trim(num2str(i))// &
+        ' holds '//trim(num2str(ntok))//' values). A file written as "index layer" would give layerIndex = atom '// &
+        'index.','atoms','AtomsReadLayerIndex')
+      read(line,*) layerIndex(i)
+   end do
+   close(987)
+
+end subroutine AtomsReadLayerIndex
+
 subroutine AtomsConstruct(X,mm,angle,label,d,yShift)
 
    use constants,            only : pi
@@ -1486,8 +1508,14 @@ subroutine AtomsSetFrac()
    if (.not. frac) then
       !$OMP PARALLEL DO
       do i=1,nAt
-         Rat(2,i) = ucell(1,1)*(Rat(2,i)-Rat(1,i)*ucell(2,1)/ucell(1,1))/(ucell(2,2)*ucell(1,1)-ucell(1,2)*ucell(2,1))
-         Rat(1,i) = (Rat(1,i)-Rat(2,i)*ucell(1,2))/ucell(1,1)
+         if (ucell(1,1) /= 0.0_dp) then
+            Rat(2,i) = ucell(1,1)*(Rat(2,i)-Rat(1,i)*ucell(2,1)/ucell(1,1))/(ucell(2,2)*ucell(1,1)-ucell(1,2)*ucell(2,1))
+            Rat(1,i) = (Rat(1,i)-Rat(2,i)*ucell(1,2))/ucell(1,1)
+         else
+            ! A1 along y: the expression above divides by zero (NaN positions, no neighbours); general 2x2 inverse
+            Rat(1:2,i) = [ ucell(2,2)*Rat(1,i) - ucell(1,2)*Rat(2,i), ucell(1,1)*Rat(2,i) - ucell(2,1)*Rat(1,i) ] &
+                         /(ucell(1,1)*ucell(2,2) - ucell(1,2)*ucell(2,1))
+         end if
          Rat(3,i) = Rat(3,i)/ucell(3,3)
       end do
       !$OMP END PARALLEL DO
@@ -1544,8 +1572,14 @@ subroutine AtomsSetFracTemp()
    if (.not. frac) then
       !$OMP PARALLEL DO
       do i=1,nAt
-         RatTemp(2,i) = ucell(1,1)*(RatTemp(2,i)-RatTemp(1,i)*ucell(2,1)/ucell(1,1))/(ucell(2,2)*ucell(1,1)-ucell(1,2)*ucell(2,1))
-         RatTemp(1,i) = (RatTemp(1,i)-RatTemp(2,i)*ucell(1,2))/ucell(1,1)
+         if (ucell(1,1) /= 0.0_dp) then
+            RatTemp(2,i) = ucell(1,1)*(RatTemp(2,i)-RatTemp(1,i)*ucell(2,1)/ucell(1,1))/(ucell(2,2)*ucell(1,1)-ucell(1,2)*ucell(2,1))
+            RatTemp(1,i) = (RatTemp(1,i)-RatTemp(2,i)*ucell(1,2))/ucell(1,1)
+         else
+            ! A1 along y: the expression above divides by zero (NaN positions, no neighbours); general 2x2 inverse
+            RatTemp(1:2,i) = [ ucell(2,2)*RatTemp(1,i) - ucell(1,2)*RatTemp(2,i), ucell(1,1)*RatTemp(2,i) - ucell(2,1)*RatTemp(1,i) ] &
+                         /(ucell(1,1)*ucell(2,2) - ucell(1,2)*ucell(2,1))
+         end if
          RatTemp(3,i) = RatTemp(3,i)/ucell(3,3)
       end do
       !$OMP END PARALLEL DO
