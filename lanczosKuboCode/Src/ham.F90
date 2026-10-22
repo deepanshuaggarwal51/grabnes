@@ -763,7 +763,7 @@ subroutine HamOnSite()
 
    call MIO_InputParameter('Strain.Bubbles',l,.false.)
    if (l) then
-      call MIO_InputParameter('Disorder.OnsiteShift',onsiteShift,0.1_dp)
+      call HamInputEnergyEV('Disorder.OnsiteShift',onsiteShift,0.1_dp)
       call MIO_InputParameter('Disorder.CheckerDivider',checkerDivider,10)
       call MIO_InputParameter('Disorder.CheckerDensity',checkerDensity,0.1_dp)
       allocate(checkerActivate(checkerDivider,checkerDivider))
@@ -823,8 +823,8 @@ subroutine HamOnSite()
    if (sinusModulationUsingPeriod) then
       call MIO_InputParameter('Potential.SinusModulationPeriod',sinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.SinusModulationAddMassTerm',sinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.SinusFactor',sinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusFactor',sinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -844,8 +844,8 @@ subroutine HamOnSite()
    if (sinusModulationUsingPeriodY) then
       call MIO_InputParameter('Potential.SinusModulationPeriod',sinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.SinusModulationAddMassTerm',sinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.SinusFactor',sinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusFactor',sinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.SinusMassTermFactor',sinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -865,8 +865,8 @@ subroutine HamOnSite()
    if (cosinusModulationUsingPeriod) then
       call MIO_InputParameter('Potential.CosinusModulationPeriod',cosinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.CosinusModulationAddMassTerm',cosinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.CosinusFactor',cosinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusFactor',cosinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -886,8 +886,8 @@ subroutine HamOnSite()
    if (cosinusModulationUsingPeriodY) then
       call MIO_InputParameter('Potential.CosinusModulationPeriod',cosinusModulationPeriod,135.0_dp)
       call MIO_InputParameter('Potential.CosinusModulationAddMassTerm',cosinusModulationAddMassTerm,.false.)
-      call MIO_InputParameter('Potential.CosinusFactor',cosinusFactor,0.01_dp)
-      call MIO_InputParameter('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusFactor',cosinusFactor,0.01_dp)
+      call HamInputEnergyEV('Potential.CosinusMassTermFactor',cosinusFactor2,0.01_dp)
       if (frac) call AtomsSetCart()
       !$OMP PARALLEL DO PRIVATE(i)
       do i = 1,nAt
@@ -1181,7 +1181,7 @@ subroutine HamOnSiteDeltaDisorder()
 #endif /* DEBUG */
 
       call RandSeedFromInput()
-      call MIO_InputParameter('Disorder.DeltaAmp',A,1.0_dp)
+      call HamInputEnergyEV('Disorder.DeltaAmp',A,1.0_dp)
       call MIO_Print('delta disorder','ham')
       call MIO_Print('  w: '//trim(num2str(A,4)),'ham')
       call MIO_Print('')
@@ -1231,7 +1231,7 @@ subroutine HamOnSiteSquareChecker()
 
 
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare',A,1.0_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare',A,1.0_dp)
       if (frac) call AtomsSetCart()
 
       !$OMP PARALLEL DO PRIVATE(i,H)
@@ -1273,7 +1273,7 @@ subroutine HamOnSiteZterm1DKink()
 
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.Zterm1DAmp',Amp3,0.01_dp)
+      call HamInputEnergyEV('Potential.Zterm1DAmp',Amp3,0.01_dp)
       call MIO_InputParameter('Potential.Zterm1DDelta',delta,10.0_dp)
       limit0 = 0.0_dp
       limit1 = (n*sCell*aG)*1.0_dp/4.0_dp
@@ -1313,7 +1313,7 @@ subroutine HamOnSiteZterm1D()
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Potential.SinusNumberOfPeriod',sinusNumberOfPeriod,1)
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare3',Amp3,0.01_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare3',Amp3,0.01_dp)
 
       !$OMP PARALLEL DO PRIVATE(i,H)
       do i = in1,in2
@@ -1344,7 +1344,7 @@ subroutine HamOnSiteSquareFunction2()
 
       call MIO_InputParameter('Potential.NumberOfWidthHoneycomb',NOWH,1)
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare2',Amp2,0.01_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare2',Amp2,0.01_dp)
       call MIO_InputParameter('Potential.PhaseOfSquareX',P1,0.0_dp)
       call MIO_InputParameter('Potential.PhaseOfSquareY',P2,0.0_dp)
       if (frac) call AtomsSetCart()
@@ -1433,7 +1433,7 @@ subroutine HamOnSiteSquareFunction()
 
       call MIO_InputParameter('Potential.SinusNumberOfPeriod',sinusNumberOfPeriod,1)
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.AmplitudeOfSquare',A,1.0_dp)
+      call HamInputEnergyEV('Potential.AmplitudeOfSquare',A,1.0_dp)
       if (frac) call AtomsSetCart()
 
       call MIO_InputParameter('Potential.TwoDimensional',l,.false.)
@@ -1504,7 +1504,7 @@ subroutine HamOnSitePNPKink()
 
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.PNPAmp',PNPAmp,0.01_dp)
+      call HamInputEnergyEV('Potential.PNPAmp',PNPAmp,0.01_dp)
       call MIO_InputParameter('Potential.PNPDelta',delta,10.0_dp)
       limit0 = 0.0_dp
       limit1 = (n*sCell*aG)*1.0_dp/4.0_dp
@@ -1543,7 +1543,7 @@ subroutine HamOnSitePNP()
 
       if (frac) call AtomsSetCart()
       call MIO_InputParameter('Structure.CellSize',n,50)
-      call MIO_InputParameter('Potential.PNPAmp',PNPAmp,0.01_dp)
+      call HamInputEnergyEV('Potential.PNPAmp',PNPAmp,0.01_dp)
       PNPLeft = (n*sCell*aG)/6.0_dp * 2.0_dp
       PNPRight = (n*sCell*aG)/6.0_dp * 4.0_dp
       !$OMP PARALLEL DO PRIVATE(i,H)
@@ -5997,7 +5997,7 @@ subroutine HamHopHaldane()
       call MIO_InputParameter('Haldane.SpecifyRange',lll,.false.)
       call MIO_InputParameter('Haldane.PaperOrientation',paperOrientation,.false.)
       call MIO_InputParameter('Haldane.T2Complex',t2Complex,0.0_dp)
-      call MIO_InputParameter('Haldane.T2',t2, 0.0_dp)
+      call HamInputEnergyEV('Haldane.T2',t2,0.0_dp)
       call MIO_InputParameter('Haldane.OppositePhase',HaldaneOppositePhase,.false.)
       ! Note: HaldaneBothLayers is deprecated. Use HaldaneLayerControl and HaldaneLayers instead.
       ! For backward compatibility, we still check if it's set, but it's ignored if HaldaneLayerControl is enabled.
@@ -11660,6 +11660,29 @@ function HamHaldaneChirality(i,jn) result(nu)
    end do
 
 end function HamHaldaneChirality
+
+!> Reads an energy that the input file gives in eV and returns it in units of g0. If the input file does not set
+!> the key, value = defaultG0, the former default (already in units of g0), so such runs are unchanged.
+!> These keys were taken in units of g0 before 2026-10-14; when the input sets one, a warning says so.
+subroutine HamInputEnergyEV(key,value,defaultG0)
+
+   use tbpar,                only : g0
+
+   character(len=*), intent(in) :: key
+   real(dp), intent(out) :: value
+   real(dp), intent(in) :: defaultG0
+
+   if (.not. MIO_InputSearchLabel(key)) then
+      value = defaultG0
+      return
+   end if
+   call MIO_InputParameter(key,value,defaultG0*g0)
+   call MIO_Print('WARNING: '//key//' is read in eV since 2026-10-14 (it was taken in units of g0 before): '// &
+     'value '//trim(num2str(value,6))//' eV = '//trim(num2str(value/g0,6))//' g0. An input file written before '// &
+     'that date must multiply it by g0 = '//trim(num2str(g0,6))//' eV.','ham')
+   value = value/g0
+
+end subroutine HamInputEnergyEV
 
 !> @brief Forward discrete cosine transform of a real vector.
 !! @param[in]  n  Vector length

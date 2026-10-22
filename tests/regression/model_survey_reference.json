@@ -184,11 +184,11 @@
   "status": "UNDEFINED"
  },
  "graphene+HaldaneNNN": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneBothLayers": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneLayerControl": {
@@ -196,23 +196,23 @@
   "status": "INERT"
  },
  "graphene+HaldaneNNN+HaldaneOppositePhase": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSetFluxQ": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyFlux": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyPhase": {
-  "fingerprint": "96a6ed99a68efeb5",
+  "fingerprint": "29a41b00683ad09f",
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyRange": {
-  "fingerprint": "e0c1d97c1e4e0d88",
+  "fingerprint": "c7a18247098c675d",
   "status": "ok"
  },
  "graphene+HaldaneNNN+paperOrientation": {
@@ -396,11 +396,11 @@
   "status": "ok"
  },
  "graphene+cosinusModulationUsingPeriod": {
-  "fingerprint": "960117feac0459a9",
+  "fingerprint": "d708f92669b10902",
   "status": "ok"
  },
  "graphene+cosinusModulationUsingPeriodYDirection": {
-  "fingerprint": "a921d8c4f36bea59",
+  "fingerprint": "a0d0764a7e25e02f",
   "status": "ok"
  },
  "graphene+deactivateASubLattice": {
@@ -508,11 +508,11 @@
   "status": "ok"
  },
  "graphene+sinusModulationUsingPeriod": {
-  "fingerprint": "481f652a189b306a",
+  "fingerprint": "c52d651f4b580ed9",
   "status": "ok"
  },
  "graphene+sinusModulationUsingPeriodYDirection": {
-  "fingerprint": "544bd78a678e92bb",
+  "fingerprint": "5532c40b4d22851d",
   "status": "ok"
  },
  "graphene+strainedMoire": {
@@ -552,7 +552,7 @@
   "status": "ok"
  },
  "graphene_small@bands+HaldaneNNN": {
-  "fingerprint": "1350d833c4006d61",
+  "fingerprint": "1b2160fa125df1f4",
   "status": "ok"
  },
  "graphene_small@bands+IntrinsicSOCterm": {
@@ -888,7 +888,7 @@
   "status": "ok"
  },
  "tbg+HaldaneBothLayers": {
-  "fingerprint": "577457238812285b",
+  "fingerprint": "ba004fe83f4b85dd",
   "status": "ok"
  },
  "tbg+IsingSOCterm": {
@@ -1184,7 +1184,7 @@
   "status": "ok"
  },
  "tbg_small@bands+HaldaneNNN": {
-  "fingerprint": "e63baa36c965dfc7",
+  "fingerprint": "d547149865a68af6",
   "status": "ok"
  },
  "tbg_small@bands+IntrinsicSOCterm": {
