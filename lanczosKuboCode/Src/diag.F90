@@ -124,7 +124,7 @@ module diag
    public :: orbMomentTAPW, om_degtol, om_decomp, om_nearcut
 #endif
 #ifdef SEMICL
-   public :: orbSuscTAPW
+   public :: orbSuscTAPW, qmTAPW
 #endif
    public :: gWeightsTAPW, gw_b1, gw_b2, gw_ntop, gWeightsHam
    public :: layerWeightsTAPW, lw_b1, lw_b2
@@ -1407,6 +1407,8 @@ subroutine DiagBands()
 
 #ifdef SEMICL
          if (allocated(bf_evec)) call BerryFluxWrite(nk_3D_x, nk_3D_y, ptsTot)
+         ! before OrbMomentWrite, which frees the band velocities the metric check uses
+         if (allocated(qm_g)) call QuantumMetricWrite(nk_3D_x, nk_3D_y, ptsTot, E)
          if (allocated(om_M)) call OrbMomentWrite(nk_3D_x, nk_3D_y, ptsTot, E)
          if (allocated(os_w)) call OrbSuscWrite(nk_3D_x, nk_3D_y, ptsTot, E)
 #endif
@@ -7543,6 +7545,19 @@ subroutine DiagH0TAPW_withBlockH(N, ns, is, ELoc, KLoc, cell_real, HBlock, maxN,
        call MIO_Print('ZHEEV failed in DiagH0TAPW_withBlockH: info = '//trim(num2str(info)), 'diag')
        call MIO_Kill('Error in TAPW block Hamiltonian diagonalization', 'diag', 'DiagH0TAPW_withBlockH')
     end if
+
+#ifdef SEMICL
+    ! Berry-flux path on the spinful block: keep the eigenvectors (2M coefficients, spin up then spin down) of the
+    ! requested sheets; column b of Hproj is sheet b of generate.bands.
+    if (allocated(bf_evec) .and. present(kpoint_index)) then
+       if (kpoint_index >= 1 .and. kpoint_index <= size(bf_evec,3)) then
+          bf_evec(:,:,kpoint_index) = cmplx(0.0_dp, 0.0_dp, kind=dp)
+          do ii = bf_b1, min(bf_b2, 2*M)
+             bf_evec(1:2*M, ii-bf_b1+1, kpoint_index) = Hproj(1:2*M, ii)
+          end do
+       end if
+    end if
+#endif
 
     ! Debug: Check eigenvalue degeneracy after diagonalization (for forceBlockTAPW testing)
     if (forceBlockTAPW .and. tapw_k_at_most(kpoint_index, 2)) then
