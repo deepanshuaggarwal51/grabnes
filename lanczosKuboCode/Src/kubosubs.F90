@@ -12,6 +12,7 @@ module kubosubs
    public :: KuboInterval
    public :: KuboCn
    public :: KuboEvol
+   public :: KuboChebyshevEvolve
    public :: KuboFermi
 
    interface KuboUpdate
@@ -20,7 +21,9 @@ module kubosubs
 
 contains
 
-subroutine KuboRecursion(Psi,Psin,Psinm1,nRecurs,a,b,H,H0,hopp,NList,wr,name)
+!> Lanczos recursion from the normalised state Psi. The optional arguments do not change the recursion:
+!> store(:,n) receives the n-th Lanczos vector (store(:,1) = Psi), and overlaps(n) = <q_n|overlapWith>.
+subroutine KuboRecursion(Psi,Psin,Psinm1,nRecurs,a,b,H,H0,hopp,NList,wr,name,store,overlapWith,overlaps)
 
    use kuboarrays,           only : tempZ
    use constants,            only : cmplx_0
@@ -35,6 +38,9 @@ subroutine KuboRecursion(Psi,Psin,Psinm1,nRecurs,a,b,H,H0,hopp,NList,wr,name)
    integer, intent(in) :: nRecurs
    logical, intent(in) :: wr
    character(len=*), intent(in), optional :: name
+   complex(dp), intent(out), optional :: store(:,:)
+   complex(dp), intent(in), optional :: overlapWith(inode1:)
+   complex(dp), intent(out), optional :: overlaps(nRecurs)
 
    complex(dp) :: sumc, s, cpsi
    integer :: i, j, iRec, u
@@ -51,6 +57,10 @@ subroutine KuboRecursion(Psi,Psin,Psinm1,nRecurs,a,b,H,H0,hopp,NList,wr,name)
    !$OMP PARALLEL
    !$OMP END PARALLEL
 
+   if (present(overlaps) .neqv. present(overlapWith)) then
+      call MIO_Kill('overlaps and overlapWith must be given together','kubosubs','KuboRecursion')
+   end if
+   call KuboRecursionKeep(1,Psi)
    call KuboUpdate(Psi,tempZ)
    sumc = cmplx_0
    !$OMP PARALLEL DO REDUCTION(+:sumc) PRIVATE(cpsi)
@@ -88,6 +98,7 @@ subroutine KuboRecursion(Psi,Psin,Psinm1,nRecurs,a,b,H,H0,hopp,NList,wr,name)
    end do
    !$OMP END PARALLEL DO
    do iRec=2,nRecurs
+      call KuboRecursionKeep(iRec,Psin)
       call KuboUpdate(Psin,tempZ)
       sumc = cmplx_0
       !$OMP PARALLEL DO REDUCTION(+:sumc) PRIVATE(cpsi)
@@ -173,6 +184,38 @@ subroutine KuboRecursion(Psi,Psin,Psinm1,nRecurs,a,b,H,H0,hopp,NList,wr,name)
 #ifdef DEBUG
    call MIO_Debug('KuboRecursion',1)
 #endif /* DEBUG */
+
+contains
+
+   !> Keeps the Lanczos vector q_n (in qn) and its overlap with overlapWith, when they were asked for
+   subroutine KuboRecursionKeep(n,qn)
+
+      integer, intent(in) :: n
+      complex(dp), intent(in) :: qn(inode1:)
+
+      complex(dp) :: sumo
+      integer :: ii
+
+      if (present(store)) then
+         if (n <= size(store,2)) then
+            !$OMP PARALLEL DO
+            do ii=1,nAt
+               store(ii,n) = qn(ii)
+            end do
+            !$OMP END PARALLEL DO
+         end if
+      end if
+      if (present(overlaps)) then
+         sumo = cmplx_0
+         !$OMP PARALLEL DO REDUCTION(+:sumo)
+         do ii=1,nAt
+            sumo = sumo + conjg(qn(ii))*overlapWith(ii)
+         end do
+         !$OMP END PARALLEL DO
+         overlaps(n) = sumo
+      end if
+
+   end subroutine KuboRecursionKeep
 
 end subroutine KuboRecursion
 
@@ -387,7 +430,10 @@ subroutine KuboCn(dT,ac,bc,nPol,c)
 
 end subroutine KuboCn
 
-subroutine KuboEvol(Psi,ZUPsi,Psin,Psinm1,XpnPsi,XpnPsim1,c,H0,hopp,NList,NeighD,ac,bc,nPol,prnt)
+!> One time step of Psi and of the commutator ZUPsi = [U(t), X] Psi_0 (Roche-Mayou): Psi <- U(dT) Psi,
+!> ZUPsi <- U(dT) ZUPsi + [U(dT), X] Psi. The optional dir (1 = x, 2 = y) selects the direction; without it
+!> the direction comes from Kubo.TimeEvolutionInYDirection, as before.
+subroutine KuboEvol(Psi,ZUPsi,Psin,Psinm1,XpnPsi,XpnPsim1,c,H0,hopp,NList,NeighD,ac,bc,nPol,prnt,dir)
 
    use constants,            only : cmplx_0
    use kuboarrays,           only : tempZ
@@ -401,6 +447,7 @@ subroutine KuboEvol(Psi,ZUPsi,Psin,Psinm1,XpnPsi,XpnPsim1,c,H0,hopp,NList,NeighD
    complex(dp), intent(in) :: hopp(:,inode1:)
    integer, intent(in) :: nPol, NList(1:,inode1:)
    logical, intent(in) :: prnt
+   integer, intent(in), optional :: dir
 
    integer :: i, j, iPol
    complex(dp) :: cnum, cnum2
@@ -414,44 +461,7 @@ subroutine KuboEvol(Psi,ZUPsi,Psin,Psinm1,XpnPsi,XpnPsim1,c,H0,hopp,NList,NeighD
    call MIO_TimerCount('kubo::Evol')
 #endif /* TIMER */
 
-   !$OMP PARALLEL DO
-   do i=1,nAt
-      Psinm1(i) = ZUPsi(i)*sqrt(2.0_dp)
-   end do
-   !$OMP END PARALLEL DO
-   call KuboUpdate(Psinm1,tempZ)
-   !$OMP PARALLEL DO PRIVATE(cnum)
-   do i=1,nAt
-      cnum = (H0(i)-ac)*Psinm1(i)
-      do j=1,Nneigh(i)
-         cnum = cnum - hopp(j,i)*Psinm1(NList(j,i))
-      end do
-      Psin(i) = cnum/(2.0_dp*bc)
-      ZUPsi(i) = ZUPsi(i)*c(1)
-   end do
-   !$OMP END PARALLEL DO
-
-   do iPol=2,nPol
-      call KuboUpdate(Psin,tempZ)
-      !$OMP PARALLEL DO PRIVATE(cnum)
-      do i=1,nAt
-         cnum = (H0(i)-ac)*Psin(i)
-         do j=1,Nneigh(i)
-            cnum = cnum - hopp(j,i)*Psin(NList(j,i))
-         end do
-         Psinm1(i) = (cnum-bc*Psinm1(i))/bc
-      end do
-      !$OMP END PARALLEL DO
-      !$OMP BARRIER
-      !$OMP PARALLEL DO PRIVATE(cnum)
-      do i=1,nAt
-         ZUPsi(i) = ZUPsi(i) + c(iPol)*Psin(i)
-         cnum = Psin(i)
-         Psin(i) = Psinm1(i)
-         Psinm1(i) = cnum
-      end do
-      !$OMP END PARALLEL DO
-   end do
+   call KuboChebyshevEvolve(ZUPsi,Psin,Psinm1,c,H0,hopp,NList,ac,bc,nPol)
 
    !$OMP PARALLEL DO
    do i=1,nAt
@@ -460,7 +470,11 @@ subroutine KuboEvol(Psi,ZUPsi,Psin,Psinm1,XpnPsi,XpnPsim1,c,H0,hopp,NList,NeighD
    end do
    !$OMP END PARALLEL DO
    call KuboUpdate(Psinm1,tempZ)
-   call MIO_InputParameter('Kubo.TimeEvolutionInYDirection',l,.false.)
+   if (present(dir)) then
+      l = (dir == 2)
+   else
+      call MIO_InputParameter('Kubo.TimeEvolutionInYDirection',l,.false.)
+   end if
    !$OMP PARALLEL DO PRIVATE(cnum,cnum2)
    do i=1,nAt
       cnum = (H0(i)-ac)*Psinm1(i)
@@ -534,6 +548,72 @@ subroutine KuboEvol(Psi,ZUPsi,Psin,Psinm1,XpnPsi,XpnPsim1,c,H0,hopp,NList,NeighD
 #endif /* DEBUG */
 
 end subroutine KuboEvol
+
+!> One Chebyshev time step of a single state: Z <- U(dT) Z, with the coefficients c of KuboCn.
+!> Psin and Psinm1 are work vectors (overwritten).
+subroutine KuboChebyshevEvolve(Z,Psin,Psinm1,c,H0,hopp,NList,ac,bc,nPol)
+
+   use kuboarrays,           only : tempZ
+   use neigh,                only : Nneigh
+
+   complex(dp), intent(inout) :: Z(inode1:),Psin(inode1:),Psinm1(inode1:)
+   complex(dp), intent(in) :: c(nPol)
+   real(dp), intent(in) :: ac, bc
+   real(dp), intent(in) :: H0(inode1:)
+   complex(dp), intent(in) :: hopp(:,inode1:)
+   integer, intent(in) :: nPol, NList(1:,inode1:)
+
+   integer :: i, j, iPol
+   complex(dp) :: cnum
+
+#ifdef DEBUG
+   call MIO_Debug('KuboChebyshevEvolve',0)
+#endif /* DEBUG */
+
+   !$OMP PARALLEL DO
+   do i=1,nAt
+      Psinm1(i) = Z(i)*sqrt(2.0_dp)
+   end do
+   !$OMP END PARALLEL DO
+   call KuboUpdate(Psinm1,tempZ)
+   !$OMP PARALLEL DO PRIVATE(cnum)
+   do i=1,nAt
+      cnum = (H0(i)-ac)*Psinm1(i)
+      do j=1,Nneigh(i)
+         cnum = cnum - hopp(j,i)*Psinm1(NList(j,i))
+      end do
+      Psin(i) = cnum/(2.0_dp*bc)
+      Z(i) = Z(i)*c(1)
+   end do
+   !$OMP END PARALLEL DO
+
+   do iPol=2,nPol
+      call KuboUpdate(Psin,tempZ)
+      !$OMP PARALLEL DO PRIVATE(cnum)
+      do i=1,nAt
+         cnum = (H0(i)-ac)*Psin(i)
+         do j=1,Nneigh(i)
+            cnum = cnum - hopp(j,i)*Psin(NList(j,i))
+         end do
+         Psinm1(i) = (cnum-bc*Psinm1(i))/bc
+      end do
+      !$OMP END PARALLEL DO
+      !$OMP BARRIER
+      !$OMP PARALLEL DO PRIVATE(cnum)
+      do i=1,nAt
+         Z(i) = Z(i) + c(iPol)*Psin(i)
+         cnum = Psin(i)
+         Psin(i) = Psinm1(i)
+         Psinm1(i) = cnum
+      end do
+      !$OMP END PARALLEL DO
+   end do
+
+#ifdef DEBUG
+   call MIO_Debug('KuboChebyshevEvolve',1)
+#endif /* DEBUG */
+
+end subroutine KuboChebyshevEvolve
 
 subroutine KuboUpdate_d(Array,temp)
 
