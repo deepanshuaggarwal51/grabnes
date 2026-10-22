@@ -529,6 +529,8 @@ COMPILER_DEPENDENT = {
     'graphene+SquareFunction2',
     'graphene+SublatticeDisorder',
     'graphene+Zterm1D',
+    'graphene+Zterm1DKink',
+    'graphene+PNPKink',
     'graphene+deltaDisorder',
     'graphene+sinusModulation',
     'sys_MoireEncapsulatedBilayer',
@@ -541,6 +543,8 @@ COMPILER_DEPENDENT = {
 # The on-site potentials that differ with Intel only (sinusModulation, SquareFunction*, SquareChecker2219, PNP,
 # Zterm1D) are functions of the Cartesian x or y of an atom that are not periodic in the hexagonal cell: atoms on
 # the cell boundary are placed on one side or the other depending on rounding, which changes their value.
+# Zterm1DKink and PNPKink use the same x limits; they were refused with every compiler until their boundary atoms
+# were assigned (October 2026), and since then differ between GNU and Intel in the same way.
 # The BLKaxiras interlayer model on the generated twisted bilayer was in this list until the switches of the
 # Srivani model, which its branch of the loop tests, were read for it as well (October 2026): they were
 # undefined and the leftover memory decided the outcome. Now every compiler refuses these cases in the same
