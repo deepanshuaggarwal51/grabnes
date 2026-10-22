@@ -57,6 +57,13 @@ module ham
    logical, save :: PZterm         ! Enable pseudo-Zeeman term
    logical, save :: randomStrain   ! Enable random strain effects
 
+   ! Moire.Fourier (opt-in): general moire term given by its Fourier amplitudes, read once by HamMoireFourierSetup
+   logical, save :: mfReady = .false.
+   integer, save :: mfN = 0
+   real(dp), save, allocatable :: mfQ(:,:)       ! (2,mfN) Cartesian wave vectors [1/Ang]
+   complex(dp), save, allocatable :: mfAmp(:,:)  ! (3,mfN) amplitudes of V_A, V_B, U [g0]
+   real(dp), save :: mfK(2)                      ! graphene valley momentum of U [1/Ang]
+
    ! SOC terms flags
    logical, save, public :: IntrinsicSOCterm   ! Enable intrinsic SOC (λI)
    logical, save, public :: IsingSOCterm       ! Enable Ising SOC (λIsing) - spin-dependent
@@ -1108,6 +1115,10 @@ subroutine HamOnSite()
    ! ------------------------------------------------------------------------
    call MIO_InputParameter('Moire.CDW',moireCDW,.false.)
    if (moireCDW) call HamOnSiteMoireCDW()
+
+   ! Moire.Fourier (opt-in): on-site part of the general moire term (bond part in HamHopping)
+   call MIO_InputParameter('Moire.Fourier',l,.false.)
+   if (l) call HamOnSiteMoireFourier()
 
 #ifdef DEBUG
    call MIO_Debug('HamOnSite',1)
@@ -4434,6 +4445,212 @@ subroutine MoireBondDeltaMidpoint(ri, bond, spec, epsM, thM, preShiftY, flipD, p
    end if
 end subroutine MoireBondDeltaMidpoint
 
+!> @brief Read the general moire term of Moire.Fourier once (shared by its on-site and bond parts).
+!! Block Moire.FourierHarmonics N, one row per wave vector:  h k  ReA ImA  ReB ImB  ReU ImU   [amplitudes in eV]
+!!   Q = h b1 + k b2, b1, b2 = reciprocal vectors of the INPUT cell (before SuperCell), as moireCDW;
+!!   V_s(r) = Re sum_Q s(Q) exp(iQ.r)   added to the on-site energy of Species s = 1 (A), 2 (B);
+!!   U(r)   =    sum_Q U(Q) exp(iQ.r)   AB coupling of valley K_v: every A-B nearest-neighbour bond, d = r_B - r_A,
+!!   gets the physical hopping  dt = (2/3) Re[ U(r_mid) exp(-i K_v.d) ],  so that sum_bonds dt exp(i K_v.d) = U
+!!   (its isotropic part is zero) and the other valley sees conj(U) (real hoppings: time reversal kept).
+!! K_v = graphene K (2/3,1/3) or K' (1/3,2/3) (Moire.FourierKprime) of the canonical lattice a1 = (a,0), a2 at 60 deg,
+!! rotated by Moire.FourierGrapheneAngle [deg] (the TAPW construction of Diag.UseKprimeValley / Diag.MoireAngle).
+subroutine HamMoireFourierSetup()
+   use cell,                 only : rcell, sCell, aG
+   use tbpar,                only : g0
+   use constants,            only : pi
+   use atoms,                only : nAt, Species, layerIndex
+
+   ! Other local variables
+   real(dp), allocatable :: rows(:,:)
+   real(dp) :: ang, aL, sG(2,2), rG(2,2), det, refF(2)
+   integer :: iq, scX, scY, h, k
+   logical :: kp
+
+
+   if (mfReady) return
+   if (any(Species(1:nAt) /= 1 .and. Species(1:nAt) /= 2)) then
+      call MIO_Kill('Moire.Fourier supports a single graphene layer (Species 1 and 2) only','ham','HamMoireFourierSetup')
+   end if
+   if (associated(layerIndex)) then
+      if (any(layerIndex(1:nAt) /= layerIndex(1))) then
+         call MIO_Kill('Moire.Fourier supports a single graphene layer (Species 1 and 2) only','ham','HamMoireFourierSetup')
+      end if
+   end if
+   if (.not. MIO_InputFindBlock('Moire.FourierHarmonics',mfN)) then
+      call MIO_Kill('Moire.Fourier requires a Moire.FourierHarmonics block','ham','HamMoireFourierSetup')
+   end if
+   allocate(rows(8,mfN), mfQ(2,mfN), mfAmp(3,mfN))
+   call MIO_InputBlock('Moire.FourierHarmonics',rows)
+
+   ! input cell = simulation cell / SuperCell (same logic as moireCDW)
+   call MIO_InputParameter('Structure.SuperCellX',scX,1)
+   call MIO_InputParameter('Structure.SuperCellY',scY,1)
+   if (scX == scY) then
+      scX = sCell
+      scY = sCell
+   end if
+   do iq=1,mfN
+      h = nint(rows(1,iq))
+      k = nint(rows(2,iq))
+      if (abs(rows(1,iq)-h) > 1.0e-6_dp .or. abs(rows(2,iq)-k) > 1.0e-6_dp) then
+         call MIO_Kill('Moire.FourierHarmonics: h and k must be integers','ham','HamMoireFourierSetup')
+      end if
+      mfQ(:,iq) = h*scX*rcell(1:2,1) + k*scY*rcell(1:2,2)
+      mfAmp(1,iq) = cmplx(rows(3,iq), rows(4,iq), dp)/g0
+      mfAmp(2,iq) = cmplx(rows(5,iq), rows(6,iq), dp)/g0
+      mfAmp(3,iq) = cmplx(rows(7,iq), rows(8,iq), dp)/g0
+   end do
+   deallocate(rows)
+
+   ! valley of U
+   call MIO_InputParameter('Moire.FourierKprime',kp,.false.)
+   call MIO_InputParameter('Moire.FourierGrapheneAngle',ang,0.0_dp)
+   call MIO_InputParameter('Moire.FourierLatticeConstant',aL,aG)
+   if (kp) then
+      refF = [1.0_dp/3.0_dp, 2.0_dp/3.0_dp]
+   else
+      refF = [2.0_dp/3.0_dp, 1.0_dp/3.0_dp]
+   end if
+   ang = ang*pi/180.0_dp
+   sG(:,1) = aL*[cos(ang), sin(ang)]
+   sG(:,2) = aL*[cos(ang + pi/3.0_dp), sin(ang + pi/3.0_dp)]
+   det = sG(1,1)*sG(2,2) - sG(1,2)*sG(2,1)
+   rG(:,1) = 2.0_dp*pi*[ sG(2,2), -sG(1,2)]/det
+   rG(:,2) = 2.0_dp*pi*[-sG(2,1),  sG(1,1)]/det
+   mfK = refF(1)*rG(:,1) + refF(2)*rG(:,2)
+
+   call MIO_Print('Moire.Fourier: general moire term, '//trim(num2str(real(mfN,dp),0))// &
+        ' wave vectors (units of the input-cell reciprocal lattice)','ham')
+   call MIO_Print('  U belongs to valley '//trim(merge('K'' (1/3,2/3)','K (2/3,1/3) ',kp))//' of the graphene lattice a = '// &
+        trim(num2str(aL,5))//' Ang at '//trim(num2str(ang*180.0_dp/pi,4))//' deg','ham')
+   do iq=1,mfN
+      call MIO_Print('  |Q| '//trim(num2str(sqrt(sum(mfQ(:,iq)**2)),5))//' 1/Ang   |A| '// &
+           trim(num2str(1.0e3_dp*g0*abs(mfAmp(1,iq)),3))//'  |B| '//trim(num2str(1.0e3_dp*g0*abs(mfAmp(2,iq)),3))// &
+           '  |U| '//trim(num2str(1.0e3_dp*g0*abs(mfAmp(3,iq)),3))//' meV','ham')
+   end do
+   mfReady = .true.
+
+end subroutine HamMoireFourierSetup
+
+!> @brief On-site part of Moire.Fourier: H0(i) += Re sum_Q s(Q) exp(iQ.r_i), s = A or B by Species (see HamMoireFourierSetup).
+subroutine HamOnSiteMoireFourier()
+   use atoms,                only : nAt, Rat, Species, frac, AtomsSetCart
+   use tbpar,                only : g0
+
+   ! Other local variables
+   complex(dp) :: v
+   real(dp) :: imMax, vMax
+   integer :: i, iq
+
+
+   call HamMoireFourierSetup()
+   if (frac) call AtomsSetCart()
+   imMax = 0.0_dp
+   vMax = 0.0_dp
+   do i=1,nAt
+      v = (0.0_dp, 0.0_dp)
+      do iq=1,mfN
+         v = v + mfAmp(Species(i),iq)*exp(cmplx(0.0_dp, dot_product(mfQ(:,iq),Rat(1:2,i)), dp))
+      end do
+      H0(i) = H0(i) + real(v)
+      imMax = max(imMax, abs(aimag(v)))
+      vMax = max(vMax, abs(real(v)))
+   end do
+   call MIO_Print('Moire.Fourier: on-site part added to '//trim(num2str(real(nAt,dp),0))//' atoms, max |V| '// &
+        trim(num2str(1.0e3_dp*g0*vMax,4))//' meV; imaginary part dropped '//trim(num2str(1.0e3_dp*g0*imMax,6))// &
+        ' meV (0 when s(-Q) = conj s(Q))','ham')
+
+end subroutine HamOnSiteMoireFourier
+
+!> @brief Bond part of Moire.Fourier: every A-B nearest-neighbour bond gets dt = (2/3) Re[U(r_mid) exp(-i K_v.d)],
+!! d = r_B - r_A, r_mid = bond midpoint (the same for both directions: H stays Hermitian). hopp is MINUS the hopping.
+subroutine HamHopMoireFourier()
+   use atoms,                only : nAt, Rat, Species, frac, AtomsSetCart
+   use neigh,                only : NeighD, Nneigh, NList
+   use tbpar,                only : g0
+
+   ! Other local variables
+   complex(dp) :: u, s
+   real(dp) :: d(2), rm(2), dt, dtMax
+   integer :: i, j, iq, nb, i1
+
+
+   call HamMoireFourierSetup()
+   if (frac) call AtomsSetCart()
+   nb = 0
+   dtMax = 0.0_dp
+   i1 = 0
+   do i=1,nAt
+      s = (0.0_dp, 0.0_dp)
+      do j=1,Nneigh(i)
+         if (Species(i) + Species(NList(j,i)) /= 3) cycle
+         if (sum(NeighD(1:2,j,i)**2) > 1.7_dp**2) cycle
+         d = NeighD(1:2,j,i)
+         rm = Rat(1:2,i) + 0.5_dp*d
+         if (Species(i) == 2) d = -d
+         u = (0.0_dp, 0.0_dp)
+         do iq=1,mfN
+            u = u + mfAmp(3,iq)*exp(cmplx(0.0_dp, dot_product(mfQ(:,iq),rm), dp))
+         end do
+         dt = 2.0_dp/3.0_dp*real(u*exp(cmplx(0.0_dp, -dot_product(mfK,d), dp)))
+         hopp(j,i) = hopp(j,i) - dt
+         nb = nb + 1
+         dtMax = max(dtMax, abs(dt))
+         if (Species(i) == 1) s = s + exp(cmplx(0.0_dp, dot_product(mfK,d), dp))
+      end do
+      ! the valley must be a corner of THIS lattice: the three bond phases of an A site sum to zero
+      if (i1 == 0 .and. Species(i) == 1) then
+         i1 = i
+         if (abs(s) > 1.0e-6_dp) call MIO_Kill('Moire.Fourier: K_v is not a valley of this graphene lattice ('// &
+              'check Moire.FourierGrapheneAngle and Moire.FourierLatticeConstant)','ham','HamHopMoireFourier')
+      end if
+   end do
+   call MIO_Print('Moire.Fourier: bond part added to '//trim(num2str(real(nb,dp),0))//' hoppings (both directions), max |dt| '// &
+        trim(num2str(1.0e3_dp*g0*dtMax,4))//' meV','ham')
+
+end subroutine HamHopMoireFourier
+
+!> Valley Zeeman term lambda*V (opt-in, Valley.Zeeman = lambda [eV], 0 = off). V is the valley operator of
+!> A. Ramires and J. L. Lado, PRL 121, 146801 (2018): V = i/(3 sqrt 3) sum_<<ij>> nu_ij s_i c_i^+ c_j over the
+!> second-neighbour bonds of each graphene layer, nu_ij = HamHaldaneChirality (as Kane-Mele), s_i = +1 on Species 1,
+!> -1 on Species 2. It is the Haldane pattern times the sublattice sign: tau_z instead of the tau_z sigma_z mass, so it
+!> shifts one valley by +lambda and the other by -lambda at the Dirac points (and vanishes away from them like the
+!> Haldane mass). Hermitian bond by bond (nu_ji = -nu_ij, same sublattice). Added before the Peierls phases.
+subroutine HamHopValleyZeeman()
+   use atoms,                only : nAt, Species, layerIndex
+   use neigh,                only : NeighD, Nneigh, NList
+   use tbpar,                only : g0
+   use cell,                 only : aG
+
+   real(dp) :: lam, tV, dxy
+   integer :: i, j, in, nu, nb
+
+   call MIO_InputParameter('Valley.Zeeman',lam,0.0_dp)
+   if (lam == 0.0_dp) return
+   tV = lam/g0/(3.0_dp*sqrt(3.0_dp))
+   nb = 0
+   do i=1,nAt
+      if (Species(i) > 2) cycle
+      do j=1,Nneigh(i)
+         in = NList(j,i)
+         if (in == i .or. Species(in) /= Species(i) .or. layerIndex(in) /= layerIndex(i)) cycle
+         dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+         if (abs(dxy - aG) > 0.1_dp) cycle
+         nu = HamHaldaneChirality(i,j)
+         if (nu == 0) call MIO_Kill('Valley.Zeeman: a second-neighbour bond has no common nearest neighbour','ham', &
+           'HamHopValleyZeeman')
+         ! hopp is MINUS the hopping: H(i,in) += i tV nu s_i
+         hopp(j,i) = hopp(j,i) - cmplx(0.0_dp, tV*nu*merge(1.0_dp,-1.0_dp,Species(i) == 1), dp)
+         nb = nb + 1
+      end do
+   end do
+   if (nb == 0) call MIO_Kill('Valley.Zeeman: no graphene second-neighbour bond found (does the neighbour list reach '// &
+     'aG?)','ham','HamHopValleyZeeman')
+   call MIO_Print('Valley.Zeeman: lambda = '//trim(num2str(lam,6))//' eV on '//trim(num2str(real(nb,dp),0))// &
+     ' graphene second-neighbour hoppings (both directions)','ham')
+
+end subroutine HamHopValleyZeeman
+
 !> @brief Compute off-diagonal hopping for GBN systems.
 !! @param[out] Hodjj  Off-diagonal hopping element
 !! @param[in]  dx,dy  In-plane displacements
@@ -5951,6 +6168,13 @@ subroutine HamHopping
       call MIO_Deallocate(epsyy,'epsyy','ham')
       call MIO_Deallocate(onsiteShift,'onsiteShift','ham')
    end if
+
+   ! Moire.Fourier (opt-in): bond part of the general moire term, before the Peierls phase multiplies every hopping
+   call MIO_InputParameter('Moire.Fourier',l,.false.)
+   if (l) call HamHopMoireFourier()
+
+   ! Valley.Zeeman (opt-in): valley operator term, also before the Peierls phase
+   call HamHopValleyZeeman()
 
    if (magfield) call HamHopMagneticField()
 
