@@ -6,6 +6,13 @@
 #
 # Every example is copied to the work directory and run there with its own run.sh; nothing is written
 # into examples/. OMP_NUM_THREADS sets the threads of examples 06 and 07. Exit status 1 if a comparison fails.
+#
+# Examples 06 and 07 use the recursion method from one random vector with a fixed seed. The vector comes from the
+# compiler's intrinsic random_number, so the same seed gives a different vector with another compiler, and the
+# density of states then differs at the level of the noise of one vector (about 1e-3). Their references were made
+# with GNU Fortran: with a binary from another compiler they are run and compared, but a difference is reported as
+# not comparable instead of a failure. The compiler is read from the binary's Fortran runtime symbols
+# (GRABNES_COMPILER=gnu|intel overrides it; when it cannot be told, the comparison stays strict).
 set -eu
 
 harness_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -28,7 +35,16 @@ GRABNES_BIN=${GRABNES_BIN:-$examples_dir/../lanczosKuboCode/bin/grabnes}
 case $GRABNES_BIN in /*) ;; *) GRABNES_BIN="$(pwd)/$GRABNES_BIN" ;; esac
 export GRABNES_BIN
 
+compiler=${GRABNES_COMPILER:-}
+if [ -z "$compiler" ] && command -v strings > /dev/null 2>&1; then
+    if strings "$GRABNES_BIN" | grep -q '^_gfortran_'; then compiler=gnu
+    elif strings "$GRABNES_BIN" | grep -qE '^for_(write|read|open)'; then compiler=intel
+    fi
+fi
+printf '%s\n' "Compiler of $GRABNES_BIN: ${compiler:-unknown}"
+
 failures=0
+not_comparable=0
 for name in $names; do
     printf '\n%s\n' "== $name"
     run_dir="$work_dir/$name"
@@ -48,13 +64,23 @@ for name in $names; do
     if python3 "$harness_dir/compare_output.py" "$@"; then
         printf '%s\n' "  PASS"
     else
+        case $name in
+            06_*|07_*) if [ -n "$compiler" ] && [ "$compiler" != gnu ]; then
+                           printf '%s\n' "  NOT COMPARABLE: reference made with GNU Fortran; this $compiler build draws a" \
+                               "  different random vector from the same seed (intrinsic random_number), see the header"
+                           not_comparable=$((not_comparable + 1)); continue
+                       fi ;;
+        esac
         printf '%s\n' "  FAIL: the result does not reproduce the reference"
         failures=$((failures + 1))
     fi
 done
 
 printf '\n'
-if [ "$failures" -eq 0 ]; then
+if [ "$failures" -eq 0 ] && [ "$not_comparable" -gt 0 ]; then
+    printf '%s\n' "PASS: no failure; $not_comparable random-vector example(s) not comparable with this $compiler build, the others" \
+        "reproduce their reference data (work directory: $work_dir)"
+elif [ "$failures" -eq 0 ]; then
     printf '%s\n' "PASS: the long examples reproduce their reference data (work directory: $work_dir)"
 else
     printf '%s\n' "FAIL: $failures long example(s) failed (work directory: $work_dir)"

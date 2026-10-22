@@ -51,6 +51,16 @@ compares the result with the reference data (bands to 5e-6 eV; densities of
 states to 1e-5 states per eV per atom, since the recursion method depends on
 the number of threads at the level of 1e-6).
 
+The references of examples 06 and 07 were made with GNU Fortran. These two
+examples start the recursion from one random vector with a fixed seed, and the
+vector comes from the compiler's intrinsic `random_number`: another compiler
+draws a different vector from the same seed, and the densities of states then
+differ at the noise level of one vector (about 1e-3; measured with Intel
+Fortran, while a GNU build reproduces them to 7.5e-7). The script reads the
+compiler from the binary (`GRABNES_COMPILER=gnu|intel` overrides it) and, with a
+non-GNU build, reports these two as not comparable instead of failing.
+Examples 08 and 09 are deterministic and compared strictly with any compiler.
+
 
 Run `./tests/regression/smoke_test.sh --help` for the complete list.
 
