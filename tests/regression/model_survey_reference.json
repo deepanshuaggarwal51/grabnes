@@ -292,8 +292,8 @@
   "status": "UNDEFINED"
  },
  "graphene+PNPKink": {
-  "fingerprint": "f780fd4d334214de",
-  "status": "ok"
+  "fingerprint": "",
+  "status": "UNDEFINED"
  },
  "graphene+PseudoZeemanTerm": {
   "fingerprint": "61909524e9c6043c",
@@ -360,8 +360,8 @@
   "status": "UNDEFINED"
  },
  "graphene+Zterm1DKink": {
-  "fingerprint": "91f27b332cab09c4",
-  "status": "ok"
+  "fingerprint": "",
+  "status": "UNDEFINED"
  },
  "graphene+addOnsiteEnergyShift": {
   "fingerprint": "d6aeeacfba5e0aa6",
