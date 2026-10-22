@@ -49,7 +49,7 @@ module ham
    public :: HamInit, HamOnSite, HamHopping
 
    ! Public functions
-   public :: SOCEnabledForLayer, HaldaneEnabledForLayer
+   public :: SOCEnabledForLayer, HaldaneEnabledForLayer, ZeemanEnabledForLayer
 
    ! System configuration flags (module-level state)
    logical, save :: moireStrain    ! Enable moiré pattern strain effects
@@ -97,6 +97,30 @@ module ham
    real(dp), save, public :: lambdaIsing   ! Ising SOC parameter (λIsing) - spin-dependent
    real(dp), save, public :: lambdaR       ! Rashba SOC parameter (λR)
    real(dp), save, public :: lambdaPIA     ! Pseudo-inversion asymmetry parameter (λPIA)
+
+   ! Spinful bond terms of the block (2N x 2N) Hamiltonian, opt-in (2026-10-16).  All need SOC.RashbaConsistentPhase,
+   ! which puts every spin-flip and spin-dependent bond term on the Bloch phase of the spin-diagonal hopping.
+   ! SOC.RashbaConsistentPhase: Rashba in the Kane-Mele form 2i/3 lamR' (s x d)_z with lamR' = 3/2 SOC.LambdaR
+   !    (the grabnes normalisation is kept: the K-point splitting is 3 SOC.LambdaR), Bloch phase of the hopping.
+   !    Off: the former term, whose phase carries the opposite sign of k.d (exact only at K and Gamma).
+   ! SOC.RashbaAngle [deg]: spin rotation exp(-i phi s_z/2) of the Rashba term; 0 = tangential, 90 = radial texture.
+   ! SOC.KaneMele + SOC.LambdaKM [eV]: i lamKM/(3 sqrt3) nu_ij s_z on the second-neighbour graphene bonds, nu_ij from
+   !    HamHaldaneChirality; gap 2 lamKM in a single layer.  (IntrinsicSOCterm is a spin-independent sublattice mass.)
+   ! SOC.Interlayer + SOC.LambdaInterlayer [eV]: the interlayer spin-flip term lambda_4 of Parra-Martinez et al.,
+   !    arXiv:2610.05905, between same-sublattice sites of adjacent UNTWISTED graphene layers at in-plane distance aCC:
+   !    i lam4/3 c_ij sgn(z_j - z_i) (d_ij x s)_z, c_ij = +1 if d_ij is parallel to a first-neighbour bond of i, -1 if
+   !    antiparallel (inversion fixes this sublattice sign); at K its matrix element is lam4 sigma_z s_+/- .
+   logical, save, public :: RashbaConsistentPhase = .false.
+   ! Zeeman.FollowSOCLayers (default .true., 2026-10-16): with SOC.LayerControl the Zeeman term acts on the SOC layers
+   ! only, like every other proximity term; .false. = on every layer, the behaviour before 2026-10-16
+   logical, save :: zeemanFollowSOC = .true.
+   logical, save, public :: KaneMeleSOCterm = .false.
+   logical, save, public :: InterlayerSOCterm = .false.
+   real(dp), save, public :: rashbaAngle = 0.0_dp      ! [rad]
+   real(dp), save, public :: lambdaKM = 0.0_dp, lambdaIL = 0.0_dp   ! [g0]
+   ! per bond (j,i), filled by HamSOCBondTables: socBond(s,s',j,i) = <i s|H|NList(j,i) s'> without the Bloch phase
+   complex(dp), save, allocatable, public :: socBond(:,:,:,:)
+   logical, save, allocatable, public :: socBondOn(:,:)
 
    ! Spin and system parameters
    integer, save :: spin           ! Spin index (1 or -1)
@@ -297,6 +321,49 @@ subroutine HamInit()
       call MIO_Print('Pseudo-inversion asymmetry enabled with λPIA = '//trim(num2str(lambdaPIA)),'ham')
    end if
 
+   ! Spinful bond terms of the block Hamiltonian (see the declarations); every default leaves the run unchanged
+   ! Default .true. since 2026-10-16 (NL): the former Rashba term has the wrong Bloch phase away from K/Gamma.
+   ! It only matters when a spinful bond term is on (Rashba, Kane-Mele, interlayer); see below.
+   call MIO_InputParameter('SOC.RashbaConsistentPhase',RashbaConsistentPhase,.true.)
+   call MIO_InputParameter('SOC.RashbaAngle',rashbaAngle,0.0_dp)
+   rashbaAngle = rashbaAngle*acos(-1.0_dp)/180.0_dp
+   call MIO_InputParameter('SOC.KaneMele',KaneMeleSOCterm,.false.)
+   if (KaneMeleSOCterm) then
+      call MIO_InputParameter('SOC.LambdaKM',lambdaKM,0.0_dp)
+      lambdaKM = lambdaKM/g0
+   end if
+   call MIO_InputParameter('SOC.Interlayer',InterlayerSOCterm,.false.)
+   if (InterlayerSOCterm) then
+      call MIO_InputParameter('SOC.LambdaInterlayer',lambdaIL,0.0_dp)
+      lambdaIL = lambdaIL/g0
+   end if
+   if ((KaneMeleSOCterm .or. InterlayerSOCterm .or. rashbaAngle /= 0.0_dp) .and. .not. RashbaConsistentPhase) then
+      call MIO_Kill('SOC.KaneMele, SOC.Interlayer and SOC.RashbaAngle are written in the spin convention and Bloch '// &
+        'phase of SOC.RashbaConsistentPhase: set SOC.RashbaConsistentPhase .true.','ham','HamInit')
+   end if
+   if (.not. (RashbaSOCterm .or. KaneMeleSOCterm .or. InterlayerSOCterm)) RashbaConsistentPhase = .false.
+   if (RashbaSOCterm .and. .not. RashbaConsistentPhase) call MIO_Print('WARNING: SOC.RashbaConsistentPhase .false.: '// &
+     'the former Rashba term, whose Bloch phase has the wrong sign of k.d (exact only at K and Gamma) - use it only to '// &
+     'reproduce results made before 2026-10-16','ham')
+   if (RashbaConsistentPhase) then
+      if (nspin /= 2) call MIO_Kill('The Rashba, Kane-Mele and interlayer SOC terms need a spinful run '// &
+        '(SpinPolarized .true.)','ham','HamInit')
+      if ((KaneMeleSOCterm .or. InterlayerSOCterm) .and. .not. RashbaSOCterm) then
+         ! the spinful bond terms live in the block (2N x 2N) Hamiltonian, which the Rashba switch selects
+         RashbaSOCterm = .true.
+         lambdaR = 0.0_dp
+         call MIO_Print('SOC: RashbaSOCterm switched on with LambdaR = 0 to use the spinful block Hamiltonian','ham')
+      end if
+      call MIO_Print('SOC: bond terms with the Bloch phase of the hopping (SOC.RashbaConsistentPhase); Rashba angle '// &
+        trim(num2str(rashbaAngle*180.0_dp/acos(-1.0_dp),4))//' deg','ham')
+      if (KaneMeleSOCterm) call MIO_Print('SOC: Kane-Mele term, lambda_KM = '//trim(num2str(lambdaKM*g0*1000.0_dp,6))// &
+        ' meV (gap 2 lambda_KM in a single layer)','ham')
+      if (InterlayerSOCterm) call MIO_Print('SOC: interlayer spin-flip term (arXiv:2610.05905), lambda_4 = '// &
+        trim(num2str(lambdaIL*g0*1000.0_dp,6))//' meV, untwisted adjacent graphene layers only','ham')
+   end if
+
+   call MIO_InputParameter('Zeeman.FollowSOCLayers',zeemanFollowSOC,.true.)
+
    ! Layer-specific SOC control
    call MIO_InputParameter('SOC.LayerControl',SOCLayerControl,.false.)
    if (SOCLayerControl) then
@@ -331,6 +398,14 @@ subroutine HamInit()
       allocate(SOCLayersArray(0))
       if (IntrinsicSOCterm .or. IsingSOCterm .or. RashbaSOCterm .or. PIASOCterm) &
          call MIO_Print('SOC layer control disabled. SOC will be applied to all layers.','ham')
+   end if
+
+   if (Zterm .and. SOCLayerControl) then
+      if (zeemanFollowSOC) then
+         call MIO_Print('Zeeman term on the SOC layers only (Zeeman.FollowSOCLayers .true.)','ham')
+      else
+         call MIO_Print('Zeeman term on every layer (Zeeman.FollowSOCLayers .false., the behaviour before 2026-10-16)','ham')
+      end if
    end if
 
    ! Layer-specific Haldane control
@@ -5881,6 +5956,13 @@ subroutine HamHopping
 
    call MIO_InputParameter('Haldane.NNN',l,.false.)
    if (l) call HamHopHaldane()
+
+   ! spinful bond terms of the block Hamiltonian (SOC.RashbaConsistentPhase; no Peierls phase on them yet)
+   if (RashbaConsistentPhase) then
+      if (magfield) call MIO_Kill('SOC.RashbaConsistentPhase: the spinful bond terms carry no Peierls phase - '// &
+        'not available with a magnetic field','ham','HamHopping')
+      call HamSOCBondTables()
+   end if
 
    call HamCheckFinite()
    call HamCheckHermiticity()
@@ -11619,6 +11701,129 @@ subroutine HamLayerOrientation(nL, phi, coh, nBond)
 
 end subroutine HamLayerOrientation
 
+!> Fills socBond / socBondOn, the k-independent spin blocks <i s|H|NList(j,i) s'> of the bond terms selected by
+!> SOC.RashbaConsistentPhase, SOC.KaneMele and SOC.Interlayer (see the declarations).  The block Hamiltonian adds
+!> them with the Bloch phase exp(i k.R), R = -NeighD, the Hermitian partner of the hopping's exp(-i k.R) at (in,i);
+!> each bond is visited from both ends, so every element is written once and H stays Hermitian by construction.
+subroutine HamSOCBondTables()
+
+   use neigh,                only : NeighD, NList, Nneigh, maxNeigh, Nradii
+   use atoms,                only : nAt, Species, layerIndex, inode1, inode2
+   use cell,                 only : aG
+   use constants,            only : cmplx_i
+   use parallel,             only : nDiv
+
+   integer :: i, j, in, k, L, L2, nL, nu, nKM, nIL, nILskip, nR
+   real(dp) :: aCC0, d(3), dxy, dh(2), bi(2), bj(2), c3, cpar, sz, tKM
+   real(dp), allocatable :: phi(:), coh(:)
+   integer, allocatable :: nBond(:)
+   logical, allocatable :: alignedPair(:)
+   real(dp), allocatable :: bond1(:,:)
+   complex(dp) :: eR
+   real(dp) :: tol
+
+   if (.not. RashbaConsistentPhase) return
+   if (nDiv > 1) call MIO_Kill('SOC.RashbaConsistentPhase: the block Hamiltonian runs on one MPI rank','ham', &
+     'HamSOCBondTables')
+
+   aCC0 = aG/sqrt(3.0_dp)
+   if (allocated(socBond)) deallocate(socBond)
+   if (allocated(socBondOn)) deallocate(socBondOn)
+   allocate(socBond(2,2,maxNeigh,nAt), socBondOn(maxNeigh,nAt))
+   socBond = (0.0_dp,0.0_dp)
+   socBondOn = .false.
+
+   ! one first-shell bond direction per graphene atom (its sublattice and the orientation of its layer)
+   allocate(bond1(2,nAt))
+   bond1 = 0.0_dp
+   do i = 1, nAt
+      do j = 1, Nneigh(i)
+         if (layerIndex(NList(j,i)) /= layerIndex(i)) cycle
+         dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+         if (dxy > 0.5_dp*aCC0 .and. dxy < 1.25_dp*aCC0) then
+            bond1(:,i) = NeighD(1:2,j,i)/dxy
+            exit
+         end if
+      end do
+   end do
+
+   nL = maxval(layerIndex)
+   allocate(phi(nL), coh(nL), nBond(nL), alignedPair(nL))
+   call HamLayerOrientation(nL, phi, coh, nBond)
+   call MIO_InputParameter('Stack.TwistTolerance',tol,0.05_dp)
+   alignedPair = .false.
+   do L = 1, nL - 1
+      c3 = phi(L+1) - phi(L)
+      c3 = c3 - 60.0_dp*nint(c3/60.0_dp)
+      alignedPair(L) = (nBond(L) > 0 .and. nBond(L+1) > 0 .and. abs(c3) <= tol)
+      if (InterlayerSOCterm) call MIO_Print('SOC.Interlayer: layers '//trim(num2str(L))//' - '//trim(num2str(L+1))// &
+        ', relative orientation '//trim(num2str(c3,4))//' deg: '//trim(merge('term ON (untwisted) ', &
+        'term off (twisted)  ', alignedPair(L))),'ham')
+   end do
+
+   eR = exp(-cmplx_i*rashbaAngle)
+   tKM = lambdaKM/(3.0_dp*sqrt(3.0_dp))
+   nKM = 0 ; nIL = 0 ; nILskip = 0 ; nR = 0
+   do i = 1, nAt
+      L = layerIndex(i)
+      do j = 1, Nneigh(i)
+         in = NList(j,i)
+         L2 = layerIndex(in)
+         d = NeighD(1:3,j,i)
+         dxy = sqrt(d(1)**2 + d(2)**2)
+         if (dxy < 1.0e-6_dp) cycle
+         dh = d(1:2)/dxy
+         ! Rashba, the bonds of ApplySpinFlipSOC (same layer, A-B, first shell, SOC layers only)
+         if (RashbaSOCterm .and. lambdaR /= 0.0_dp .and. in /= i .and. L2 == L .and. Species(i) /= Species(in) .and. &
+             dxy < 1.1_dp*(2.46_dp/sqrt(3.0_dp))) then
+            if (SOCEnabledForLayer(L)) then
+               socBond(1,2,j,i) = socBond(1,2,j,i) - lambdaR*eR*cmplx(dh(1),-dh(2),dp)
+               socBond(2,1,j,i) = socBond(2,1,j,i) + lambdaR*conjg(eR)*cmplx(dh(1),dh(2),dp)
+               socBondOn(j,i) = .true.
+               nR = nR + 1
+            end if
+         end if
+         ! Kane-Mele, second-neighbour graphene bonds (as HamHopHaldane): <i s|H|in s> = i s nu t
+         if (KaneMeleSOCterm .and. L2 == L .and. Species(i) <= 2 .and. abs(dxy - aG) < 0.1_dp) then
+            nu = HamHaldaneChirality(i,j)
+            if (nu == 0) call MIO_Kill('SOC.KaneMele: a second-neighbour bond has no common nearest neighbour','ham', &
+              'HamSOCBondTables')
+            socBond(1,1,j,i) = socBond(1,1,j,i) + cmplx_i*nu*tKM
+            socBond(2,2,j,i) = socBond(2,2,j,i) - cmplx_i*nu*tKM
+            socBondOn(j,i) = .true.
+            nKM = nKM + 1
+         end if
+         ! interlayer spin flip lambda_4, same sublattice of adjacent untwisted graphene layers, in-plane ~ aCC
+         if (InterlayerSOCterm .and. abs(L2 - L) == 1 .and. Species(i) <= 2 .and. Species(in) <= 2) then
+            if (.not. alignedPair(min(L,L2))) cycle
+            if (dxy < 0.75_dp*aCC0 .or. dxy > 1.25_dp*aCC0) cycle
+            bi = bond1(:,i) ; bj = bond1(:,in)
+            ! same sublattice: the two first-shell bond stars coincide (cos 3 dtheta = +1), other sublattice -1
+            c3 = cos(3.0_dp*(atan2(bj(2),bj(1)) - atan2(bi(2),bi(1))))
+            if (c3 < 0.9_dp) cycle
+            ! c_ij: d along a bond of i (+1) or against it (-1)
+            cpar = cos(3.0_dp*(atan2(dh(2),dh(1)) - atan2(bi(2),bi(1))))
+            if (abs(cpar) < 0.9_dp) then
+               nILskip = nILskip + 1
+               cycle
+            end if
+            sz = sign(1.0_dp, d(3))*sign(1.0_dp, cpar)*lambdaIL/3.0_dp
+            socBond(1,2,j,i) = socBond(1,2,j,i) + sz*cmplx(dh(1),-dh(2),dp)
+            socBond(2,1,j,i) = socBond(2,1,j,i) - sz*cmplx(dh(1),dh(2),dp)
+            socBondOn(j,i) = .true.
+            nIL = nIL + 1
+         end if
+      end do
+   end do
+   call MIO_Print('SOC bond table: '//trim(num2str(nR))//' Rashba, '//trim(num2str(nKM))//' Kane-Mele, '// &
+     trim(num2str(nIL))//' interlayer bonds','ham')
+   if (nILskip > 0) call MIO_Print('SOC.Interlayer: WARNING '//trim(num2str(nILskip))//' same-sublattice bonds '// &
+     'at in-plane ~aCC are neither parallel nor antiparallel to a bond of their atom and were left out','ham')
+   if (InterlayerSOCterm .and. nIL == 0) call MIO_Print('SOC.Interlayer: WARNING no bond found - the term is '// &
+     'absent (no untwisted pair of adjacent graphene layers, or the neighbour list stops below aCC in-plane)','ham')
+
+end subroutine HamSOCBondTables
+
 !> Chirality of the second-neighbour hop from atom i to its neighbour entry jn: +1 if the path through the
 !> common nearest neighbour (same layer, in-plane bond within 0.1 A of aG/sqrt(3)) turns clockwise, -1 if it
 !> turns anticlockwise, 0 if no such neighbour joins the two atoms through the same periodic image.
@@ -11989,6 +12194,21 @@ end function cross
 !> @brief Check if SOC should be applied to a specific layer
 !! @param[in] layerIndex Layer index to check
 !! @return True if SOC should be applied to this layer
+!> Layers that carry the Zeeman term: the SOC layers when SOC.LayerControl is on and Zeeman.FollowSOCLayers is
+!> .true. (default), otherwise every layer
+function ZeemanEnabledForLayer(layerIndex) result(enabled)
+
+   integer, intent(in) :: layerIndex
+   logical :: enabled
+
+   if (zeemanFollowSOC) then
+      enabled = SOCEnabledForLayer(layerIndex)
+   else
+      enabled = .true.
+   end if
+
+end function ZeemanEnabledForLayer
+
 function SOCEnabledForLayer(layerIndex) result(enabled)
 
    ! Arguments
