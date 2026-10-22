@@ -1285,11 +1285,12 @@ subroutine HamOnSiteZterm1DKink()
         ! >>> unset markers
         h = hamUnset
         ! <<< unset markers
+        ! atoms exactly at x = L/2 or L were left unset before 2026-10-14 (the pieces are continuous there)
         if (Rat(1,i).lt.limit2) then
           H = Amp3 * tanh((Rat(1,i)-limit1)/delta)
-        else if ((Rat(1,i).gt.limit2).and.(Rat(1,i).lt.limit4)) then
+        else if ((Rat(1,i).ge.limit2).and.(Rat(1,i).lt.limit4)) then
           H = - Amp3 * tanh((Rat(1,i)-limit3)/delta)
-        else if ((Rat(1,i).gt.limit4)) then
+        else if ((Rat(1,i).ge.limit4)) then
           H = Amp3 * tanh((Rat(1,i)-(limit4+limit1))/delta)
         end if
         H0(i) = H0(i) + (-1.0_dp)**Species(i)*H
@@ -1515,11 +1516,12 @@ subroutine HamOnSitePNPKink()
         ! >>> unset markers
         h = hamUnset
         ! <<< unset markers
+        ! atoms exactly at x = L/2 or L were left unset before 2026-10-14 (the pieces are continuous there)
         if (Rat(1,i).lt.limit2) then
           H = PNPAmp * tanh((Rat(1,i)-limit1)/delta)
-        else if ((Rat(1,i).gt.limit2).and.(Rat(1,i).lt.limit4)) then
+        else if ((Rat(1,i).ge.limit2).and.(Rat(1,i).lt.limit4)) then
           H = - PNPAmp * tanh((Rat(1,i)-limit3)/delta)
-        else if ((Rat(1,i).gt.limit4)) then
+        else if ((Rat(1,i).ge.limit4)) then
           H = PNPAmp * tanh((Rat(1,i)-(limit4+limit1))/delta)
         end if
         H0(i) = H0(i) + H
@@ -3663,25 +3665,12 @@ subroutine HamMeasureLayerTwist()
          else
             nBN(L) = nBN(L) + 1
          end if
-         rcut = Nradii(1,nlay)
-         do j = 1, Nneigh(i)
-            if (layerIndex(NList(j,i)) /= L) cycle
-            dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
-            if (dxy >= rcut .or. dxy < 1.0e-6_dp) cycle
-            z(L) = z(L) + exp(6.0_dp*cmplx_i*atan2(NeighD(2,j,i),NeighD(1,j,i)))
-            nBond(L) = nBond(L) + 1
-         end do
       end do
+      call HamLayerOrientation(nL, phi, coh, nBond)
       call MIO_Print('')
       call MIO_Print('Layer orientations measured from the structure (Stack.MeasureTwist):','ham')
       call MIO_Print('  layer   atoms  kind      orientation [deg]   coherence','ham')
       do L = 1, nL
-         phi(L) = 0.0_dp
-         coh(L) = 0.0_dp
-         if (nBond(L) > 0) then
-            phi(L) = atan2(aimag(z(L)),real(z(L)))/6.0_dp*180.0_dp/pi
-            coh(L) = abs(z(L))/nBond(L)
-         end if
          what = 'mixed'
          if (nBN(L) == 0) what = 'graphene'
          if (nC(L) == 0) what = 'hBN'
@@ -3934,17 +3923,19 @@ end subroutine HamPrintNormalStats
 subroutine HamCheckFinite()
 
    use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
-   use atoms,  only : inode1, inode2
-   use neigh,  only : Nneigh
+   use atoms,  only : inode1, inode2, layerIndex, Species
+   use neigh,  only : Nneigh, NList, NeighD
 
 
    ! Other local variables
-   integer :: i, ifirst, j, nhop, nons
+   integer :: i, ifirst, j, jfirst, nhop, nons
+   character(len=200) :: bond
 
 
    nhop = 0
    nons = 0
    ifirst = 0
+   jfirst = 0
    do i=inode1,inode2
       if (.not. ieee_is_finite(H0(i))) then
          nons = nons + 1
@@ -3953,11 +3944,21 @@ subroutine HamCheckFinite()
       do j=1,Nneigh(i)
          if (.not. (ieee_is_finite(real(hopp(j,i),dp)) .and. ieee_is_finite(aimag(hopp(j,i))))) then
             nhop = nhop + 1
-            if (ifirst==0) ifirst = i
+            if (ifirst==0) then
+               ifirst = i
+               jfirst = j
+            end if
          end if
       end do
    end do
    if (nhop + nons > 0) then
+      if (jfirst > 0) then
+         write(bond,'(a,i0,a,i0,a,i0,a,i0,a,i0,a,i0,a,f8.4,a,f8.4,a)') 'First non-finite hopping: atom ', ifirst, &
+           ' (layer ', layerIndex(ifirst), ', Species ', Species(ifirst), ') -> neighbour ', NList(jfirst,ifirst), &
+           ' (layer ', layerIndex(NList(jfirst,ifirst)), ', Species ', Species(NList(jfirst,ifirst)), '), in-plane ', &
+           sqrt(NeighD(1,jfirst,ifirst)**2 + NeighD(2,jfirst,ifirst)**2), ' Ang, dz ', NeighD(3,jfirst,ifirst), ' Ang'
+         call MIO_Print(trim(bond),'ham')
+      end if
       call MIO_Kill('The Hamiltonian contains non-finite values: '//trim(num2str(nhop))//' hopping and '// &
         trim(num2str(nons))//' on-site entries (first at atom '//trim(num2str(ifirst))//'). The selected '// &
         'combination of model switches is not valid for this structure. One known cause: a model that uses '// &
@@ -5984,6 +5985,8 @@ end subroutine HamHopWriteTables
 !> Haldane term: complex second-neighbor hopping (internal procedure of HamHopping: it uses the variables of that routine)
 subroutine HamHopHaldane()
 
+   integer :: nu, nMissing
+
 #ifdef DEBUG
    call MIO_Debug('HamHopHaldane',0)
 #endif /* DEBUG */
@@ -6019,10 +6022,19 @@ subroutine HamHopHaldane()
       if (HaldaneOppositePhase) then
         HaldanePhase = -HaldanePhase
       end if
-      call MIO_Print('Haldane phase = '//trim(num2str(HaldanePhase,6))//' rad, T2 = '//trim(num2str(t2,6))// &
-        ' eV, expected gap = '//trim(num2str(2.0_dp*sqrt(3.0_dp)*3.0_dp*t2*sin(HaldanePhase),6))// &
-        ' eV (PRL 106, 236804)','ham')
-      !$OMP PARALLEL DO PRIVATE(d)
+      if (paperOrientation) then
+         call MIO_Print('Haldane phase = '//trim(num2str(HaldanePhase,6))//' rad on the second-neighbour '// &
+           'hoppings of the model (TB.Hoppings.2); Haldane.T2 is not used','ham')
+      else
+         call MIO_Print('Haldane phase = '//trim(num2str(HaldanePhase,6))//' rad, T2 = '//trim(num2str(t2*g0,6))// &
+           ' eV added to the hopping table, expected gap 6 sqrt(3) T2 |sin phi| = '// &
+           trim(num2str(6.0_dp*sqrt(3.0_dp)*t2*g0*abs(sin(HaldanePhase)),6))//' eV','ham')
+      end if
+      ! Phase +HaldanePhase on a second-neighbour hop whose path through the common nearest neighbour turns
+      ! clockwise, -HaldanePhase if it turns anticlockwise (HamHaldaneChirality): the convention of the
+      ! paperOrientation branch, now for any orientation of the lattice and for both branches.
+      nMissing = 0
+      !$OMP PARALLEL DO PRIVATE(d,nu) REDUCTION(+:nMissing)
       do i=1,nAt
          ! >>> unset markers
          d = hamUnset
@@ -6034,43 +6046,15 @@ subroutine HamHopHaldane()
             do j=1,Nneigh(i)
                if (layerIndex(NList(j,i)).eq.layerIndex(i)) then
                   d = sqrt(dot_product(NeighD(1:2,j,i),NeighD(1:2,j,i)))
-                  if ((d-0.1).lt.aG .and. (d+0.1).gt.aG) then
-                    if (paperOrientation) then
-                         if (Species(i).eq.1) then   ! ---  B sublattice (see convention in my notes)
-                            if ((NeighD(1,j,i) .gt. 0.1_dp .and. abs(NeighD(2,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(2,j,i) .lt. -0.1_dp .and. NeighD(1,j,i) .lt. -0.1_dp) .or. &
-                                (NeighD(2,j,i) .gt. 0.1_dp .and. NeighD(1,j,i) .lt. 0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i)*exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i)*exp(-cmplx_i*HaldanePhase)
-                            end if
-                         else if (Species(i).eq.2) then   ! ---  A sublattice
-                            if ((NeighD(1,j,i) .lt. -0.1_dp .and. abs(NeighD(2,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(2,j,i) .gt. 0.1_dp .and. NeighD(1,j,i) .gt. 0.1_dp) .or. &
-                                (NeighD(2,j,i) .lt. -0.1_dp .and. NeighD(1,j,i) .gt. -0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i)*exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i)*exp(-cmplx_i*HaldanePhase)
-                            end if
-                         end if
-                     else ! when 60 degree rotaton compared to PRL paper
-                         if (Species(i).eq.2) then   ! ---  B sublattice (see convention in my notes)
-                            if ((NeighD(2,j,i) .gt. 0.1_dp .and. abs(NeighD(1,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(1,j,i) .lt. -0.1_dp .and. NeighD(2,j,i) .lt. -0.1_dp) .or. &
-                                (NeighD(1,j,i) .gt. 0.1_dp .and. NeighD(2,j,i) .lt. -0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i) + t2 * exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i) + t2 * exp(-cmplx_i*HaldanePhase)
-                            end if
-                         else if (Species(i).eq.1) then   ! ---  A sublattice
-                            if ((NeighD(2,j,i) .lt. -0.1_dp .and. abs(NeighD(1,j,i)) .lt. 0.01_dp) .or. &
-                                (NeighD(1,j,i) .gt. 0.1_dp .and. NeighD(2,j,i) .gt. 0.1_dp) .or. &
-                                (NeighD(1,j,i) .lt. -0.1_dp .and. NeighD(2,j,i) .gt. 0.1_dp)) then
-                                    hopp(j,i) = hopp(j,i) + t2*exp(cmplx_i*HaldanePhase)
-                            else
-                                    hopp(j,i) = hopp(j,i)+ t2*exp(-cmplx_i*HaldanePhase)
-                            end if
-                         end if
+                  ! graphene sublattices only (species 1, 2), as before
+                  if ((d-0.1).lt.aG .and. (d+0.1).gt.aG .and. Species(i) <= 2) then
+                     nu = HamHaldaneChirality(i,j)
+                     if (nu == 0) then
+                        nMissing = nMissing + 1
+                     else if (paperOrientation) then
+                        hopp(j,i) = hopp(j,i)*exp(nu*cmplx_i*HaldanePhase)
+                     else
+                        hopp(j,i) = hopp(j,i) + t2*exp(nu*cmplx_i*HaldanePhase)
                      end if
                   end if
                end if
@@ -6078,6 +6062,10 @@ subroutine HamHopHaldane()
          end if
       end do
       !$OMP END PARALLEL DO
+      if (nMissing > 0) then
+         call MIO_Kill('Haldane.NNN: '//trim(num2str(nMissing))//' second-neighbour bonds have no common nearest '// &
+           'neighbour, so their chirality is undefined (not a honeycomb lattice?)','ham','HamHopHaldane')
+      end if
 
 #ifdef DEBUG
    call MIO_Debug('HamHopHaldane',1)
@@ -6087,6 +6075,11 @@ end subroutine HamHopHaldane
 
 !> Magnetic field: Peierls phase on every hopping (periodic gauge) (internal procedure of HamHopping: it uses the variables of that routine)
 subroutine HamHopMagneticField()
+
+   ! Local variables of the periodic-gauge corner term (see below)
+   logical :: legacyCorner
+   real(dp) :: fluxQuanta, cellArea
+   integer :: nCorner
 
 #ifdef DEBUG
    call MIO_Debug('HamHopMagneticField',0)
@@ -6154,6 +6147,20 @@ subroutine HamHopMagneticField()
       else
          aCC = aG/sqrt(3.0_dp)
          if (frac) call AtomsSetCart()
+         ! Periodic gauge with m flux quanta through the cell: a bond to the image displaced by n1 A1 + n2 A2 needs,
+         ! besides the two terms below, the factor exp(i pi m n1 n2) of the composed magnetic translation. Without it
+         ! every bond that crosses a cell CORNER (n1 n2 /= 0) is wrong by a sign when m n1 n2 is odd, i.e. a vortex of
+         ! half a flux quantum sits at the corners (measured: hexagon fluxes off by pi, spurious levels inside the
+         ! Landau gaps). m is taken from the field actually used and the cell area; MagField.LegacyCornerPhase .true.
+         ! restores the former phases.
+         call MIO_InputParameter('MagField.LegacyCornerPhase',legacyCorner,.false.)
+         cellArea = abs(ucell(1,1)*ucell(2,2) - ucell(2,1)*ucell(1,2))
+         fluxQuanta = flux*cellArea/(pi*1.0d20)
+         if (.not. legacyCorner .and. abs(fluxQuanta - nint(fluxQuanta)) > 1.0d-6) then
+            call MIO_Kill('The number of flux quanta through the cell is not an integer ('// &
+              trim(num2str(fluxQuanta,8))//'): the periodic gauge needs an integer','ham','HamHopMagneticField')
+         end if
+         nCorner = 0
          do i=1,nAt
             do j=1,Nneigh(i)
                !if (abs(neighCell(1,j,i)).gt.1 .or. abs(neighCell(2,j,i)).gt.1) print*, i, neighCell(1,j,i), neighCell(2,j,i)
@@ -6163,9 +6170,20 @@ subroutine HamHopMagneticField()
                v2 = CrossProd(v1,v2)
                v1 = CrossProd(Rat(:,i),Rat(:,NList(j,i))) + v2 ! Implementation of third expersion in Cresti's notes
                phase = flux*v1(3)/1.0d20
+               if (.not. legacyCorner .and. neighCell(1,j,i) /= 0 .and. neighCell(2,j,i) /= 0) then
+                  phase = phase + pi*nint(fluxQuanta)*neighCell(1,j,i)*neighCell(2,j,i)
+                  nCorner = nCorner + 1
+               end if
                hopp(j,i) = hopp(j,i)*exp(cmplx_i*phase)
             end do
          end do
+         if (legacyCorner) then
+            call MIO_Print('WARNING: MagField.LegacyCornerPhase: bonds across a cell corner keep the former phase '// &
+              '(wrong by a sign for an odd number of flux quanta)','ham')
+         else
+            call MIO_Print('Peierls phases: '//trim(num2str(nint(fluxQuanta)))//' flux quanta through the cell; '// &
+              'corner term exp(i pi m n1 n2) on '//trim(num2str(nCorner))//' bonds','ham')
+         end if
       end if
 
 #ifdef DEBUG
@@ -11559,6 +11577,89 @@ subroutine HamHopInterlayerBernalF2G2(i, j, jj, numberOfInterlayerHoppings)
 end subroutine HamHopInterlayerBernalF2G2
 
 end subroutine HamHopping
+
+!> Orientation of each layer from its first-shell intralayer bonds: phi(L) [deg] = arg(sum exp(6 i theta))/6,
+!> coh(L) = |sum|/nBond(L) (1 for a perfect honeycomb).  Local atoms inode1:inode2 only.
+subroutine HamLayerOrientation(nL, phi, coh, nBond)
+
+   use neigh,                only : NeighD, NList, Nneigh, Nradii
+   use atoms,                only : Species, layerIndex, inode1, inode2
+   use constants,            only : pi, cmplx_i
+
+   integer, intent(in) :: nL
+   real(dp), intent(out) :: phi(nL), coh(nL)
+   integer, intent(out) :: nBond(nL)
+
+   integer :: i, j, L, nlay
+   real(dp) :: dxy
+   complex(dp) :: z(nL)
+
+   z = (0.0_dp,0.0_dp)
+   nBond = 0
+   do i = inode1, inode2
+      L = layerIndex(i)
+      if (L < 1 .or. L > nL) cycle
+      nlay = (Species(i) - 1)/2 + 1
+      do j = 1, Nneigh(i)
+         if (layerIndex(NList(j,i)) /= L) cycle
+         dxy = sqrt(NeighD(1,j,i)**2 + NeighD(2,j,i)**2)
+         if (dxy >= Nradii(1,nlay) .or. dxy < 1.0e-6_dp) cycle
+         z(L) = z(L) + exp(6.0_dp*cmplx_i*atan2(NeighD(2,j,i),NeighD(1,j,i)))
+         nBond(L) = nBond(L) + 1
+      end do
+   end do
+   do L = 1, nL
+      phi(L) = 0.0_dp
+      coh(L) = 0.0_dp
+      if (nBond(L) > 0) then
+         phi(L) = atan2(aimag(z(L)),real(z(L)))/6.0_dp*180.0_dp/pi
+         coh(L) = abs(z(L))/nBond(L)
+      end if
+   end do
+
+end subroutine HamLayerOrientation
+
+!> Chirality of the second-neighbour hop from atom i to its neighbour entry jn: +1 if the path through the
+!> common nearest neighbour (same layer, in-plane bond within 0.1 A of aG/sqrt(3)) turns clockwise, -1 if it
+!> turns anticlockwise, 0 if no such neighbour joins the two atoms through the same periodic image.
+function HamHaldaneChirality(i,jn) result(nu)
+
+   use neigh,                only : Nneigh, NList, NeighD
+   use atoms,                only : layerIndex
+   use cell,                 only : aG
+
+   integer, intent(in) :: i, jn
+   integer :: nu
+
+   integer :: k1, k2, k
+   real(dp) :: d1(2), d2(2), dij(2), cr
+
+   nu = 0
+   dij = NeighD(1:2,jn,i)
+   do k1=1,Nneigh(i)
+      k = NList(k1,i)
+      if (layerIndex(k) /= layerIndex(i)) cycle
+      d1 = NeighD(1:2,k1,i)
+      if (abs(sqrt(dot_product(d1,d1))-aG/sqrt(3.0_dp)) > 0.1_dp) cycle
+      do k2=1,Nneigh(k)
+         if (NList(k2,k) /= NList(jn,i)) cycle
+         d2 = NeighD(1:2,k2,k)
+         ! the second leg must be a first-neighbour bond too: without this test the closure below also accepts
+         ! k -> j along a longer bond, and the first such k in the list decided the sign (2026-10-16: 31 % of the
+         ! second-neighbour bonds of a relaxed five-layer cell got the wrong phase, H non-Hermitian)
+         if (abs(sqrt(dot_product(d2,d2))-aG/sqrt(3.0_dp)) > 0.1_dp) cycle
+         if (sqrt(dot_product(d1+d2-dij,d1+d2-dij)) > 0.1_dp) cycle
+         cr = d1(1)*d2(2) - d1(2)*d2(1)
+         if (cr < 0.0_dp) then
+            nu = 1
+         else
+            nu = -1
+         end if
+         return
+      end do
+   end do
+
+end function HamHaldaneChirality
 
 !> @brief Forward discrete cosine transform of a real vector.
 !! @param[in]  n  Vector length

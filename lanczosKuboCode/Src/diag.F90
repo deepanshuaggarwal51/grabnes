@@ -5063,7 +5063,9 @@ subroutine DiagHamSparse(N, ns, is, ELoc, KLoc, cell, H0, maxN, hopp, NList, Nne
 
     nn = N
 
-    ! Initialize the starting vector resid with random values
+    ! resid is only the ARPACK work vector here: with info = 0 ARPACK draws its own random start vector. It was
+    ! left uninitialised, so the NaN check below read garbage and stopped runs at random; zero it.
+    resid = (0.0_dp, 0.0_dp)
 
     ! Check resid for initial state
     if (size(resid) /= N) then
@@ -5800,7 +5802,9 @@ subroutine DiagH0TAPW(N, ns, is, ELoc, KLoc, cell_real, H0, maxN, hopp, NList, N
 
     nn = N
 
-    ! Initialize the starting vector resid with random values
+    ! resid is only the ARPACK work vector here: with info = 0 ARPACK draws its own random start vector. It was
+    ! left uninitialised, so the NaN check below read garbage and stopped runs at random; zero it.
+    resid = (0.0_dp, 0.0_dp)
 
     ! Check resid for initial state
     if (size(resid) /= N) then

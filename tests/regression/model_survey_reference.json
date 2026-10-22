@@ -208,8 +208,8 @@
   "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyPhase": {
-  "fingerprint": "28c85faf0d12f2ed",
-  "status": "NONHERM"
+  "fingerprint": "96a6ed99a68efeb5",
+  "status": "ok"
  },
  "graphene+HaldaneNNN+HaldaneSpecifyRange": {
   "fingerprint": "e0c1d97c1e4e0d88",
@@ -292,8 +292,8 @@
   "status": "UNDEFINED"
  },
  "graphene+PNPKink": {
-  "fingerprint": "",
-  "status": "REFUSED"
+  "fingerprint": "f780fd4d334214de",
+  "status": "ok"
  },
  "graphene+PseudoZeemanTerm": {
   "fingerprint": "61909524e9c6043c",
@@ -360,8 +360,8 @@
   "status": "UNDEFINED"
  },
  "graphene+Zterm1DKink": {
-  "fingerprint": "",
-  "status": "REFUSED"
+  "fingerprint": "91f27b332cab09c4",
+  "status": "ok"
  },
  "graphene+addOnsiteEnergyShift": {
   "fingerprint": "d6aeeacfba5e0aa6",
@@ -984,7 +984,7 @@
   "status": "ok"
  },
  "tbg+MagField1": {
-  "fingerprint": "abd9b5d45bb95bb3",
+  "fingerprint": "6ee2750994f922a8",
   "status": "ok"
  },
  "tbg+MayouIntralayer": {
@@ -1196,7 +1196,7 @@
   "status": "INERT"
  },
  "tbg_small@bands+MagField.Integer": {
-  "fingerprint": "277b8c70c0429092",
+  "fingerprint": "26001b9c0bcd6955",
   "status": "ok"
  },
  "tbg_small@bands+PIASOCterm": {
@@ -1468,8 +1468,8 @@
   "status": "INERT"
  },
  "xyz3+addSecondLayerInteractions": {
-  "fingerprint": "28e3548d354cc880",
-  "status": "INERT"
+  "fingerprint": "26d030c1f676c20b",
+  "status": "ok"
  },
  "xyz3+basedOnMoireCellParameters": {
   "fingerprint": "28e3548d354cc880",
