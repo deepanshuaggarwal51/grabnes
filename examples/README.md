@@ -14,6 +14,8 @@ moire calculations.
 | [`07_graphene_hbn_twist_series`](07_graphene_hbn_twist_series/) | Graphene on hBN at four twist angles: density of states | Ready, 5 min |
 | [`08_magic_angle_twisted_bilayer`](08_magic_angle_twisted_bilayer/) | Twisted bilayer graphene at 1.08 degrees: flat bands | Ready, 2 min |
 | [`09_alternating_twist_trilayer`](09_alternating_twist_trilayer/) | Alternating-twist trilayer at 1.54 degrees, structure read from files | Ready, 3 min |
+| [`10_twisted_bilayer_spectral_function`](10_twisted_bilayer_spectral_function/) | Twisted bilayer at 6 degrees: spectral function unfolded on the graphene lattice, per layer | Ready, 10 s |
+| [`11_alternating_twist_trilayer_spectral_function`](11_alternating_twist_trilayer_spectral_function/) | Alternating-twist trilayer at 6 degrees: the same, per layer | Ready, 30 s |
 
 ## Quick start
 
@@ -36,9 +38,10 @@ Each example contains its input, a short explanation, a plotting script, and
 reference data from a known-good calculation. Examples 01 and 02 run in a few
 seconds; examples 03 and 04 use a small, 76-atom commensurate twisted bilayer
 so they remain practical laptop checks rather than production calculations.
-Examples 05 to 09 are moire systems at realistic sizes.
+Examples 05 to 09 are moire systems at realistic sizes. Examples 10 and 11 use small moire
+cells, because their spectral functions need a direct diagonalization at every k-point.
 
-Examples 01 to 04 use exact diagonalization. Examples 05, 08 and 09 project the
+Examples 01 to 04, 10 and 11 use exact diagonalization. Examples 05, 08 and 09 project the
 Hamiltonian on plane waves around one graphene valley, which makes cells of
 several thousand atoms a matter of minutes; each of them states how the
 reduction was checked against exact diagonalization. Examples 06 and 07 use
@@ -94,3 +97,11 @@ draws all of them again from the reference data.
 ### 09: Alternating-twist trilayer graphene, structure read from files
 
 [![09: Alternating-twist trilayer graphene, structure read from files](09_alternating_twist_trilayer/reference/trilayer_bands.png)](09_alternating_twist_trilayer/)
+
+### 10: Twisted bilayer graphene, unfolded spectral function
+
+[![10: Twisted bilayer graphene, unfolded spectral function](10_twisted_bilayer_spectral_function/reference/spectral_function.png)](10_twisted_bilayer_spectral_function/)
+
+### 11: Alternating-twist trilayer graphene, unfolded spectral function
+
+[![11: Alternating-twist trilayer graphene, unfolded spectral function](11_alternating_twist_trilayer_spectral_function/reference/spectral_function.png)](11_alternating_twist_trilayer_spectral_function/)

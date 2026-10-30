@@ -46,7 +46,7 @@ module ham
    complex(dp), public, pointer :: hopp(:,:)=>NULL() ! Hopping integral matrix
 
    ! Public subroutines
-   public :: HamInit, HamOnSite, HamHopping
+   public :: HamInit, HamOnSite, HamHopping, HamInputEnergyEV
 
    ! Public functions
    public :: SOCEnabledForLayer, HaldaneEnabledForLayer, ZeemanEnabledForLayer
@@ -12092,21 +12092,27 @@ end function HamHaldaneChirality
 
 !> Reads an energy that the input file gives in eV and returns it in units of g0. If the input file does not set
 !> the key, value = defaultG0, the former default (already in units of g0), so such runs are unchanged.
-!> These keys were taken in units of g0 before 2026-10-14; when the input sets one, a warning says so.
-subroutine HamInputEnergyEV(key,value,defaultG0)
+!> These keys were taken in units of g0 before 2026-10-14 (or before the optional date since); when the input sets
+!> one, a warning says so.
+subroutine HamInputEnergyEV(key,value,defaultG0,since)
 
    use tbpar,                only : g0
 
    character(len=*), intent(in) :: key
    real(dp), intent(out) :: value
    real(dp), intent(in) :: defaultG0
+   character(len=*), intent(in), optional :: since
 
+   character(len=10) :: date
+
+   date = '2026-10-14'
+   if (present(since)) date = since
    if (.not. MIO_InputSearchLabel(key)) then
       value = defaultG0
       return
    end if
    call MIO_InputParameter(key,value,defaultG0*g0)
-   call MIO_Print('WARNING: '//key//' is read in eV since 2026-10-14 (it was taken in units of g0 before): '// &
+   call MIO_Print('WARNING: '//key//' is read in eV since '//date//' (it was taken in units of g0 before): '// &
      'value '//trim(num2str(value,6))//' eV = '//trim(num2str(value/g0,6))//' g0. An input file written before '// &
      'that date must multiply it by g0 = '//trim(num2str(g0,6))//' eV.','ham')
    value = value/g0
