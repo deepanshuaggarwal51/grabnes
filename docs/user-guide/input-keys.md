@@ -11,6 +11,8 @@ The default shown is the expression in the source; where it is not a literal, it
 input. "Read in" names the source file and routine, which is where to look for what the key does: most
 keys have no other documentation yet.
 
+A default marked (g0) belongs to a key that is given in eV: the default itself is in units of `TB.Hopping`.
+
 "Former name" is the name of the key before October 2026. It keeps working: an input file may use either
 name (if both are given, the present name is used and the solver prints a warning).
 
@@ -116,8 +118,7 @@ name (if both are given, the present name is used and the solver prints a warnin
 | `Haldane.SpecifyFlux` | `HaldaneSpecifyFlux` | logical | `.false.` | ham.F90: HamHopHaldane; magf.F90: HaldPhaseInit |
 | `Haldane.SpecifyPhase` | `HaldaneSpecifyPhase` | logical | `.false.` | ham.F90: HamCheckHermiticity; ham.F90: HamHopHaldane; magf.F90: HaldPhaseInit |
 | `Haldane.SpecifyRange` | `HaldaneSpecifyRange` | logical | `.false.` | ham.F90: HamHopHaldane; magf.F90: HaldPhaseInit |
-| `Haldane.T2` | `HaldaneT2` | real | `0.0` | tbpar.f90: TBInit |
-| `Haldane.T2` | `HaldaneT2` | real | `0.0 (g0)` | ham.F90: HamHopHaldane |
+| `Haldane.T2` | `HaldaneT2` | real | `0.0 (g0)` | ham.F90: HamHopHaldane; tbpar.f90: TBInit |
 | `Haldane.T2Complex` | `HaldaneT2Complex` | real | `0.0` | ham.F90: HamHopHaldane |
 | `HaldPhase.FinalInteger` |  | integer | `0` | magf.F90: HaldPhaseInit |
 | `HaldPhase.InitialInteger` |  | integer | `0` | magf.F90: HaldPhaseInit |

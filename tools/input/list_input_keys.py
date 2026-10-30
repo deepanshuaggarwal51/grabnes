@@ -20,6 +20,7 @@ OUT = os.path.join(ROOT, "docs", "user-guide", "input-keys.md")
 CALL = re.compile(r"MIO_InputParameter\s*\(\s*'([^']+)'\s*,\s*([^,]+?)\s*,\s*(.+)\)\s*(?:!\s*(.*))?$", re.I)
 BLOCK = re.compile(r"MIO_Input(?:FindBlock|Block)\s*\(\s*'([^']+)'", re.I)
 ROUTINE = re.compile(r"^\s*(?:recursive\s+)?(subroutine|function)\s+(\w+)", re.I)
+EV_KEYS = set()     # keys read through HamInputEnergyEV: in eV, while the default applies in units of g0
 
 
 def kind(default):
@@ -66,8 +67,8 @@ def collect():
                 for m in re.finditer(r"(MIO_InputParameter|HamInputEnergyEV)\s*\(\s*'([^']+)'\s*,\s*([^,]+?)\s*,(.*)", code, re.I):
                     key, raw = m.group(2), re.sub(r"\s*,\s*since\s*=.*", "", split_default(m.group(4)))
                     default = re.sub(r"_dp\b", "", raw)
-                    if m.group(1).lower() == "haminputenergyev":      # read in eV; the default applies in units of g0
-                        default += " (g0)"
+                    if m.group(1).lower() == "haminputenergyev":
+                        EV_KEYS.add(key.lower())
                     rows.setdefault((key.lower(), default), [key, default, kind(raw), []])[3].append(
                         f"{name}: {routine}")
                 for m in BLOCK.finditer(code):
@@ -100,6 +101,7 @@ def render():
            "The default shown is the expression in the source; where it is not a literal, it is computed from other",
            "input. \"Read in\" names the source file and routine, which is where to look for what the key does: most",
            "keys have no other documentation yet.", "",
+           "A default marked (g0) belongs to a key that is given in eV: the default itself is in units of `TB.Hopping`.", "",
            "\"Former name\" is the name of the key before October 2026. It keeps working: an input file may use either",
            "name (if both are given, the present name is used and the solver prints a warning).", "",
            "| Key | Former name | Type | Default | Read in |", "| --- | --- | --- | --- | --- |"]
@@ -108,7 +110,8 @@ def render():
             places = sorted(set(where))
             shown = "; ".join(places[:3]) + (f"; ... ({len(places)} places)" if len(places) > 3 else "")
             was = ", ".join(f"`{x}`" for x in former.get(k, []))
-            out.append(f"| `{key}` | {was} | {typ} | `{default.replace('|', '/')}` | {shown} |")
+            mark = " (g0)" if k in EV_KEYS else ""
+            out.append(f"| `{key}` | {was} | {typ} | `{default.replace('|', '/')}{mark}` | {shown} |")
     out += ["", "## Blocks", "", "| Block | Read in |", "| --- | --- |"]
     for k in sorted(blocks):
         name, where = blocks[k]
