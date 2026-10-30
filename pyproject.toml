@@ -45,6 +45,8 @@ dependencies = [
     "scipy>=1.7.0",
     "matplotlib>=3.4.0",
     "jupyter>=1.0.0",
+    "click>=8.0",
+    "ruamel.yaml>=0.17",
 ]
 
 [project.optional-dependencies]
@@ -59,6 +61,7 @@ docs = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "ruff>=0.6",
 ]
 all = [
     "grabnes[pybinding,docs,dev]",
@@ -68,6 +71,7 @@ all = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "ruff>=0.6",
 ]
 
 [project.urls]
@@ -97,3 +101,13 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 check_untyped_defs = false
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "single"      # the style of the existing tools/ Python
