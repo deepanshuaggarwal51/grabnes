@@ -2029,6 +2029,36 @@ subroutine DiagBandsG()
 
 end subroutine DiagBandsG
 
+!> Energy window of the spectral function: Spectral.Emin and Spectral.Emax are given in eV, E1 and E2 are returned
+!> in units of g0, the unit of the eigenvalues and of the energy column of the output files.
+subroutine DiagSpectralWindow(E1,E2)
+
+   use ham,                  only : HamInputEnergyEV
+
+   real(dp), intent(out) :: E1, E2
+
+   call HamInputEnergyEV('Spectral.Emin',E1,-1.0_dp,since='2026-10-30')
+   call HamInputEnergyEV('Spectral.Emax',E2,1.0_dp,since='2026-10-30')
+
+end subroutine DiagSpectralWindow
+
+!> A state adds its weight to the energy points closer than resolution [eV]: with points further apart than twice
+!> that, states fall between them and are missing from the output. E1 and E2 are in units of g0.
+subroutine DiagSpectralCheckGrid(E1,E2,Epts,resolution)
+
+   use tbpar,                only : g0
+
+   real(dp), intent(in) :: E1, E2, resolution
+   integer, intent(in) :: Epts
+
+   if (Epts < 2) return
+   if ((E2-E1)/(Epts-1) >= 2.0_dp*resolution/g0) call MIO_Print('WARNING: the energy points are '// &
+     trim(num2str((E2-E1)/(Epts-1)*g0,6))//' eV apart, Spectral.energyGridResolution '//trim(num2str(resolution,6))// &
+     ' eV: states can fall between the points and be missing from the output, unless Spectral.UseGaussianBroadening '// &
+     'is used. Raise the resolution or Kubo.NumberofEnergyPoints.','diag')
+
+end subroutine DiagSpectralCheckGrid
+
 subroutine DiagSpectralFunction()
 
    use cell,                 only : rcell, ucell
@@ -2136,8 +2166,7 @@ subroutine DiagSpectralFunction()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1],[ptsTot,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -2368,8 +2397,7 @@ subroutine DiagSpectralFunctionKGrid()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1,1],[ptsTot,nAt,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -2792,8 +2820,7 @@ subroutine DiagSpectralFunctionKGridInequivalent()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1,1],[ptsTot,nAt,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -2817,6 +2844,7 @@ subroutine DiagSpectralFunctionKGridInequivalent()
       call MIO_InputParameter('Spectral.topBottomRatio',topBottomRatio,1.0_dp)
       call MIO_InputParameter('Spectral.GaussianConvolution',GaussConv,.false.)
       call MIO_InputParameter('Spectral.energyGridResolution',energyGridResolution,0.005_dp)
+      call DiagSpectralCheckGrid(E1,E2,Epts,energyGridResolution)
       do iee=1,Epts2
           gaussian(iee) = exp(-(Energy(iee)-Energy(Epts2/2))**2/(2.0_dp*eps**2))
       end do
@@ -3306,8 +3334,7 @@ subroutine DiagSpectralFunctionKGridInequivalent_v2()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1,1],[ptsTot,nAt,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -3332,6 +3359,7 @@ subroutine DiagSpectralFunctionKGridInequivalent_v2()
       call MIO_InputParameter('Spectral.topBottomRatio',topBottomRatio,1.0_dp)
       call MIO_InputParameter('Spectral.GaussianConvolution',GaussConv,.false.)
       call MIO_InputParameter('Spectral.energyGridResolution',energyGridResolution,0.005_dp)
+      call DiagSpectralCheckGrid(E1,E2,Epts,energyGridResolution)
       call MIO_InputParameter('Spectral.DirectBandVal',DirectBand,.false.)
       do iee=1,Epts2
           gaussian(iee) = exp(-(Energy(iee)-Energy(Epts2/2))**2/(2.0_dp*eps**2))
@@ -3810,8 +3838,7 @@ subroutine DiagSpectralFunctionKGridInequivalentEnergyCut()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1,1],[ptot,nAt,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -3834,6 +3861,7 @@ subroutine DiagSpectralFunctionKGridInequivalentEnergyCut()
       is = 1
       call MIO_InputParameter('Spectral.GaussianConvolution',GaussConv,.false.)
       call MIO_InputParameter('Spectral.energyGridResolution',energyGridResolution,0.005_dp)
+      call DiagSpectralCheckGrid(E1,E2,Epts,energyGridResolution)
       call MIO_InputParameter('Spectral.topBottomRatio',topBottomRatio,1.0_dp)
       do iee=1,Epts2
           gaussian(iee) = exp(-(Energy(iee)-Energy(Epts2/2))**2/(2.0_dp*eps**2))
@@ -4291,8 +4319,7 @@ subroutine DiagSpectralFunctionKGridInequivalentEnergyCut_v2()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1,1],[ptot,nAt,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -4316,6 +4343,7 @@ subroutine DiagSpectralFunctionKGridInequivalentEnergyCut_v2()
       is = 1
       call MIO_InputParameter('Spectral.GaussianConvolution',GaussConv,.false.)
       call MIO_InputParameter('Spectral.energyGridResolution',energyGridResolution,0.005_dp)
+      call DiagSpectralCheckGrid(E1,E2,Epts,energyGridResolution)
       call MIO_InputParameter('Spectral.topBottomRatio',topBottomRatio,1.0_dp)
       call MIO_InputParameter('Spectral.DirectBandVal',DirectBand,.false.)
       do iee=1,Epts2
@@ -4768,8 +4796,7 @@ subroutine DiagSpectralFunctionKGridInequivalentEnergyCutNickDale()
       call MIO_Print('Point 1:   1   '//trim(num2str(0.0_dp,6)),'diag')
       call MIO_Allocate(Pkc,[1,1,1],[ptot,nAt,2],'Pkc','diag')
       call MIO_InputParameter('Kubo.NumberofEnergyPoints',Epts,1000)
-      call MIO_InputParameter('Spectral.Emin',E1,-1.0_dp)
-      call MIO_InputParameter('Spectral.Emax',E2,1.0_dp)
+      call DiagSpectralWindow(E1,E2)
       call MIO_Allocate(Energy,Epts,'Energy','diag')
       call MIO_InputParameter('Kubo.Epsilon',eps,0.01_dp)
       factor = (E2-E1)/(6.0*eps)
@@ -4792,6 +4819,7 @@ subroutine DiagSpectralFunctionKGridInequivalentEnergyCutNickDale()
       is = 1
       call MIO_InputParameter('Spectral.GaussianConvolution',GaussConv,.false.)
       call MIO_InputParameter('Spectral.energyGridResolution',energyGridResolution,0.005_dp)
+      call DiagSpectralCheckGrid(E1,E2,Epts,energyGridResolution)
       call MIO_InputParameter('Spectral.topBottomRatio',topBottomRatio,1.0_dp)
       do iee=1,Epts2
           gaussian(iee) = exp(-(Energy(iee)-Energy(Epts2/2))**2/(2.0_dp*eps**2))

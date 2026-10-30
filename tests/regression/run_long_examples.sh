@@ -1,5 +1,5 @@
 #!/bin/sh
-# Reproduce the reference data of the longer public examples (06 to 09): each takes minutes and
+# Reproduce the reference data of the longer public examples (06 to 11): each takes minutes and
 # example 07 needs 1.5 GB of memory, so they are not part of run_examples.sh.
 #
 #   GRABNES_BIN=/path/to/grabnes sh tests/regression/run_long_examples.sh [--work-dir DIR] [NAME ...]
@@ -27,7 +27,7 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-[ -n "$names" ] || names="06_graphene_hbn_landau_levels 07_graphene_hbn_twist_series 08_magic_angle_twisted_bilayer 09_alternating_twist_trilayer"
+[ -n "$names" ] || names="06_graphene_hbn_landau_levels 07_graphene_hbn_twist_series 08_magic_angle_twisted_bilayer 09_alternating_twist_trilayer 10_twisted_bilayer_spectral_function 11_alternating_twist_trilayer_spectral_function"
 [ -n "$work_dir" ] || work_dir=$(mktemp -d)
 mkdir -p "$work_dir"
 work_dir=$(CDPATH= cd -- "$work_dir" && pwd)
@@ -59,6 +59,8 @@ for name in $names; do
               set -- --kind table --atol 1e-5 --rtol 0 "$run_dir/result.dat" "$run_dir/reference/dos_map.dat" ;;
         07_*) (cd "$run_dir" && python3 plot.py --table result.dat > /dev/null)
               set -- --kind table --atol 1e-5 --rtol 0 "$run_dir/result.dat" "$run_dir/reference/dos.dat" ;;
+        10_*|11_*) (cd "$run_dir" && python3 plot.py --table result.dat > /dev/null)
+              set -- --kind table --atol 2e-3 --rtol 0 "$run_dir/result.dat" "$run_dir/reference/summary.dat" ;;
         *)    set -- --kind bands --atol 5e-6 --rtol 0 "$run_dir/generate.bands" "$run_dir/reference/bands.dat" ;;
     esac
     if python3 "$harness_dir/compare_output.py" "$@"; then

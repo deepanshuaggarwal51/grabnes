@@ -1,0 +1,47 @@
+Run.Description Alternating-twist trilayer graphene (6.009 degrees): spectral function unfolded on the graphene lattice
+Run.Prefix generate
+Run.TypeOfSystem ReadXYZ
+Structure.ReadLayerIndex .true.
+Structure.InterlayerDistance 3.35
+Structure.SuperCell 1
+Stack.ThreeLayers .true.
+Stack.MiddleTwist .true.
+
+Intralayer.F2G2Model .true.
+TB.NeighLevels 5
+TB.Hopping 3.5
+TB.OnSiteC 0.4914
+Interlayer.TypeOfBL Koshino
+Interlayer.KoshinoSR .true.
+Interlayer.RenormalizeCoupling .true.
+Interlayer.CouplingFactor 1.008     # rigid lattice; 0.895 is the value used with relaxed structures
+
+Kubo.Calc .false.
+Diag.Calc .true.
+Calculate.Spectral .true.
+Spectral.WeiKu .true.              # unfolded weight per layer and sublattice, one file for each
+MagField.Integer 0
+
+Spectral.NumPoints 20              # points on the first leg; the others in proportion to their length
+&begin Spectral.Path 4
+0.67032967 0.39560440 0.0   # K1 - (K2 - K1)
+0.66666667 0.33333333 0.0   # K1: Dirac point of the layer(s) aligned with the reference lattice
+0.66300366 0.27106227 0.0   # K2: Dirac point of the rotated layer
+0.65934066 0.20879121 0.0   # K2 + (K2 - K1)
+&end Spectral.Path
+
+# Spectral.Emin and Spectral.Emax are in eV. The energy column of the output files is in units
+# of TB.Hopping (3.5 eV here): plot.py multiplies it back to eV.
+# Spectral.energyGridResolution is in eV: a state adds its weight to every energy point closer
+# than this. The run prints a warning if the points are more than twice that apart, because
+# states would then fall between them and be missing from the output.
+Spectral.GaussianConvolution .false.
+Kubo.NumberofEnergyPoints 301
+Spectral.Emin 0.0-1.0
+Spectral.Emax 1.2
+Spectral.energyGridResolution 0.005
+
+Neigh.fastNNnotsquare .true.
+Neigh.LayerNeighbors 400
+Neigh.LayerDistFactor 4.0
+Output.WriteDataFiles .false.

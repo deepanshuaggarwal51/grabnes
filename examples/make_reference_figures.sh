@@ -5,7 +5,7 @@
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 export MPLBACKEND=Agg
-for example in "$here"/0*/; do
+for example in "$here"/[0-9]*/; do
     work=$(mktemp -d)
     cp "$example/plot.py" "$work/"
     mkdir "$work/reference"

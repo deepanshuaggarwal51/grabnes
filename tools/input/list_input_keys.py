@@ -63,10 +63,12 @@ def collect():
                     routine = m.group(2)
                 if code.lstrip().startswith("!"):
                     continue
-                for m in re.finditer(r"MIO_InputParameter\s*\(\s*'([^']+)'\s*,\s*([^,]+?)\s*,(.*)", code, re.I):
-                    key, default = m.group(1), split_default(m.group(3))
-                    default = re.sub(r"_dp\b", "", default)
-                    rows.setdefault((key.lower(), default), [key, default, kind(m.group(3) and split_default(m.group(3))), []])[3].append(
+                for m in re.finditer(r"(MIO_InputParameter|HamInputEnergyEV)\s*\(\s*'([^']+)'\s*,\s*([^,]+?)\s*,(.*)", code, re.I):
+                    key, raw = m.group(2), re.sub(r"\s*,\s*since\s*=.*", "", split_default(m.group(4)))
+                    default = re.sub(r"_dp\b", "", raw)
+                    if m.group(1).lower() == "haminputenergyev":      # read in eV; the default applies in units of g0
+                        default += " (g0)"
+                    rows.setdefault((key.lower(), default), [key, default, kind(raw), []])[3].append(
                         f"{name}: {routine}")
                 for m in BLOCK.finditer(code):
                     blocks.setdefault(m.group(1).lower(), [m.group(1), []])[1].append(f"{name}: {routine}")
